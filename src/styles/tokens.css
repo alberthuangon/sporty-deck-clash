@@ -1,0 +1,44 @@
+/* SportyKickDeck design tokens — source: PRD §17.4 (sampled from SportyBet test site) */
+:root {
+  /* surfaces */
+  --bg: #1B1E25;
+  --surface: #2C3039;
+  --surface-hi: #353A45;
+  --surface-lo: #23262E;
+  --divider: #3A3F4A;
+
+  /* brand */
+  --red: #E41827;
+  --green: #32CE62;        /* accent: odds numbers, highlights, active tab underline */
+  --cta: #33EA6A;          /* mint CTA */
+  --cta-deep: #0D9737;
+
+  /* text */
+  --text: #FFFFFF;
+  --text-2: #9CA0AB;
+  --text-3: #6E7380;
+
+  /* rarity */
+  --r-c: #9CA0AB;
+  --r-r: #4C9BFF;
+  --r-e: #B069F8;
+  --r-l: #F5A524;
+
+  /* team colours (match player) */
+  --home: #E41827;
+  --home-dim: #8E1019;
+  --away: #2F7BE8;
+  --away-dim: #1C4C91;
+
+  /* layout */
+  --frame-w: 430px;
+  --topbar-h: 48px;
+  --tabbar-h: 58px;
+
+  /* type */
+  --font: Roboto, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 12px;
+}

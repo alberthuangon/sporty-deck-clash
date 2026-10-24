@@ -1,0 +1,26 @@
+{
+  "comment": "Demo card catalogue — PRD appendix B. Stats are NEVER hand-written: engine/cards.js derives Lv.1-10 x 6 axes from rarity budget + archetype weights + seed.",
+  "cards": [
+    { "id": "G1", "name": "Obi",      "class": "gk",       "rarity": "C", "role": "reactive",  "venue": "neutral", "seed": 11, "tagline": "Starter keeper" },
+    { "id": "G2", "name": "Bello",    "class": "gk",       "rarity": "C", "role": "commander", "venue": "home",    "seed": 23, "tagline": "Home-system entry" },
+    { "id": "G3", "name": "Diallo",   "class": "gk",       "rarity": "R", "role": "reactive",  "venue": "away",    "seed": 37, "tagline": "Guardian of the away run" },
+    { "id": "G4", "name": "Mensah",   "class": "gk",       "rarity": "E", "role": "commander", "venue": "home",    "seed": 53, "tagline": "The home fortress wall" },
+
+    { "id": "F1",  "name": "Adeyemi", "class": "outfield", "rarity": "C", "role": "striker",   "venue": "neutral", "seed": 5,  "tagline": "Starter striker" },
+    { "id": "F2",  "name": "Eze",     "class": "outfield", "rarity": "C", "role": "playmaker", "venue": "neutral", "seed": 17, "tagline": "Starter playmaker" },
+    { "id": "F3",  "name": "Nwosu",   "class": "outfield", "rarity": "C", "role": "defender",  "venue": "neutral", "seed": 29, "tagline": "Starter defender" },
+    { "id": "F4",  "name": "Kalu",    "class": "outfield", "rarity": "C", "role": "allround",  "venue": "neutral", "seed": 41, "tagline": "Utility filler" },
+    { "id": "F5",  "name": "Sani",    "class": "outfield", "rarity": "C", "role": "striker",   "venue": "home",    "seed": 59, "tagline": "First taste of venue bias" },
+    { "id": "F6",  "name": "Tijani",  "class": "outfield", "rarity": "C", "role": "defender",  "venue": "away",    "seed": 67, "tagline": "Away-side anchor" },
+    { "id": "F7",  "name": "Amadi",   "class": "outfield", "rarity": "R", "role": "striker",   "venue": "away",    "seed": 71, "tagline": "Away points raider" },
+    { "id": "F8",  "name": "Femi",    "class": "outfield", "rarity": "R", "role": "playmaker", "venue": "home",    "seed": 79, "tagline": "Home metronome" },
+    { "id": "F9",  "name": "Chukwu",  "class": "outfield", "rarity": "R", "role": "defender",  "venue": "home",    "seed": 83, "tagline": "Home iron gate" },
+    { "id": "F10", "name": "Osei",    "class": "outfield", "rarity": "R", "role": "allround",  "venue": "away",    "seed": 89, "tagline": "Away glue" },
+    { "id": "F11", "name": "Ibrahim", "class": "outfield", "rarity": "R", "role": "playmaker", "venue": "neutral", "seed": 97, "tagline": "Neutral upgrade" },
+    { "id": "F12", "name": "Okonkwo", "class": "outfield", "rarity": "E", "role": "striker",   "venue": "home",    "seed": 7,  "tagline": "Pack showcase card" },
+    { "id": "F13", "name": "Danjuma", "class": "outfield", "rarity": "E", "role": "defender",  "venue": "away",    "seed": 13, "tagline": "Away wall" },
+    { "id": "F14", "name": "Garba",   "class": "outfield", "rarity": "E", "role": "allround",  "venue": "home",    "seed": 19, "tagline": "Home-system core" },
+    { "id": "F15", "name": "Okafor",  "class": "outfield", "rarity": "L", "role": "striker",   "venue": "home",    "seed": 3,  "tagline": "Legendary home dragon" },
+    { "id": "F16", "name": "Zuberi",  "class": "outfield", "rarity": "L", "role": "playmaker", "venue": "away",    "seed": 31, "tagline": "Away maestro" }
+  ]
+}
