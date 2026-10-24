@@ -7,9 +7,49 @@
    maps labels to files without touching the choreography. */
 
 import gsap from 'gsap'
-import { SLOTS, basePos, wavePos, passChain, shotTarget, BEAT } from './stageModel.js'
+import { SLOTS, basePos, wavePos, reactedPos, slotStagger, passChain, shotTarget, BEAT } from './stageModel.js'
 
 function pos (el) { return { left: el[0] + '%', top: el[1] + '%' } }
+
+/* ---------------------------------------------------------------- *
+ * Ambient off-ball motion.
+ * Runs on its own clock, independent of the match timeline, so players are
+ * never completely still. It animates x/y (pixels) while the match timeline
+ * animates left/top (percent) — the two compose instead of fighting.
+ * ---------------------------------------------------------------- */
+let idleTl = null
+
+const IDLE_SPAN = 150          // seconds, longer than any match so it never loops
+
+export function startIdle (stage, amp = BEAT.idle) {
+  stopIdle()
+  idleTl = gsap.timeline()
+  stage.allTokens().forEach((el, i) => {
+    const isKeeper = el.classList.contains('keeper')
+    const ax = isKeeper ? amp * 0.5 : amp
+    const ay = isKeeper ? amp * 1.3 : amp
+    let at = (i * 0.37) % 1.6
+    while (at < IDLE_SPAN) {
+      const d = 0.9 + Math.random() * 1.4
+      idleTl.to(el, {
+        x: (Math.random() - 0.5) * ax * 2,
+        y: (Math.random() - 0.5) * ay * 2,
+        duration: d,
+        ease: 'sine.inOut'
+      }, at)
+      at += d
+    }
+  })
+  return idleTl
+}
+
+export function stopIdle () {
+  if (idleTl) { idleTl.kill(); idleTl = null }
+}
+
+/* Seekable so a frame-exact recorder can advance the ambient motion in step
+   with the match timeline instead of letting it run on wall-clock time. */
+export function idleTimeline () { return idleTl }
 
 /* Draw a fading trail along one leg of the ball's journey. The SVG uses a
    0..100 viewBox with preserveAspectRatio none, so pitch percentages are the
@@ -27,18 +67,43 @@ function sfx (tl, at, label, onSfx) {
   if (onSfx) tl.call(() => onSfx(label), null, at)
 }
 
-/* Move every token to its wave position (attackers surge, defenders drop). */
-export function formationTo (tl, stage, attackingSide, at, beat) {
+/* Move every token to its wave position (attackers surge, defenders drop),
+   shaped around the lane the ball is in and staggered so the eight tokens do
+   not move as one block. */
+export function formationTo (tl, stage, attackingSide, at, beat, laneY = 50, press = 0) {
   for (const side of ['home', 'away']) {
     for (const slot of SLOTS) {
       const el = stage.token(side, slot)
       if (!el) continue
       tl.to(el, {
-        ...pos(wavePos(side, slot, attackingSide)),
-        duration: beat.buildUp,
+        ...pos(reactedPos(side, slot, attackingSide, laneY, press)),
+        duration: beat.buildUp * (0.85 + Math.random() * 0.3),
         ease: 'power2.inOut'
-      }, at)
+      }, at + slotStagger(slot))
     }
+  }
+}
+
+/* Mid-wave adjustment: the defending side squeezes towards the ball while the
+   attack is being carried in. */
+export function pressTo (tl, stage, attackingSide, at, duration, laneY, press) {
+  const defSide = attackingSide === 'home' ? 'away' : 'home'
+  for (const slot of SLOTS) {
+    const el = stage.token(defSide, slot)
+    if (!el) continue
+    tl.to(el, {
+      ...pos(reactedPos(defSide, slot, attackingSide, laneY, press)),
+      duration, ease: 'power1.inOut'
+    }, at + slotStagger(slot) * 0.5)
+  }
+  // the two attackers not on the ball keep making themselves available
+  for (const slot of ['df', 'mf', 'fw']) {
+    const el = stage.token(attackingSide, slot)
+    if (!el) continue
+    tl.to(el, {
+      top: reactedPos(attackingSide, slot, attackingSide, laneY, press * 0.6)[1] + '%',
+      duration, ease: 'sine.inOut'
+    }, at + slotStagger(slot) * 0.5)
   }
 }
 
@@ -47,7 +112,11 @@ export function formationRest (tl, stage, at, beat) {
     for (const slot of SLOTS) {
       const el = stage.token(side, slot)
       if (!el) continue
-      tl.to(el, { ...pos(basePos(side, slot)), duration: beat.reset, ease: 'power2.inOut' }, at)
+      tl.to(el, {
+        ...pos(basePos(side, slot)),
+        duration: beat.reset * (0.85 + Math.random() * 0.35),
+        ease: 'power2.inOut'
+      }, at + slotStagger(slot) * 0.6)
     }
   }
 }
@@ -71,9 +140,10 @@ export function buildWave (stage, opts, beat = BEAT, onSfx = null, onRate = null
   const tl = gsap.timeline()
   let t = 0
 
-  // 1. build-up: shape shifts, first carrier lights up
+  // 1. build-up: shape shifts around the lane the move is in
   const chain = passChain(actorSlot)
-  formationTo(tl, stage, side, t, beat)
+  const laneY = wavePos(side, actorSlot, side)[1]
+  formationTo(tl, stage, side, t, beat, laneY, beat.press * 0.45)
   const startPos = wavePos(side, chain[0], side)
   tl.set(stage.ball(), pos(startPos), t)
   highlight(tl, stage, side, chain[0], t + beat.buildUp * 0.55)
@@ -93,7 +163,8 @@ export function buildWave (stage, opts, beat = BEAT, onSfx = null, onRate = null
     t += beat.pass
   }
 
-  // 3. carry into the box
+  // 3. carry into the box — the defending side squeezes in as it happens
+  pressTo(tl, stage, side, t, beat.carry * 1.1, laneY, beat.press)
   const carryTo = wavePos(side, actorSlot, side)
   const toward = side === 'home' ? 13 : -13
   const carryEnd = [Math.max(5, Math.min(95, carryTo[0] + toward)), carryTo[1]]
@@ -126,6 +197,13 @@ export function buildWave (stage, opts, beat = BEAT, onSfx = null, onRate = null
     const dy = target[1] < 50 ? -13 : 13
     tl.to(gk, { top: (50 + dy) + '%', scale: 1.15, duration: beat.shot * 0.9, ease: 'power2.out' }, t + beat.shot * 0.1)
     tl.to(gk, { scale: 1, duration: .3 }, t + beat.shot + .1)
+  }
+  // everyone reacts to the strike with a small flinch towards the ball
+  for (const slot of SLOTS) {
+    const el = stage.token(defSide, slot)
+    if (el && slot !== 'gk') {
+      tl.to(el, { scale: 1.08, duration: .1, yoyo: true, repeat: 1, ease: 'power1.out' }, t + beat.shot * 0.5)
+    }
   }
   t += beat.shot
 
@@ -229,12 +307,14 @@ export function resetStage (stage) {
   for (const side of ['home', 'away']) {
     for (const slot of SLOTS) {
       const el = stage.token(side, slot)
-      if (el) gsap.set(el, { ...pos(basePos(side, slot)), scale: 1 })
+      // xPercent/yPercent carries the centring, which frees x/y for the
+      // ambient drift and leaves left/top for the match timeline
+      if (el) gsap.set(el, { ...pos(basePos(side, slot)), scale: 1, xPercent: -50, yPercent: -50, x: 0, y: 0 })
       const ring = el && el.querySelector('.ring')
       if (ring) gsap.set(ring, { opacity: 0, scale: .7 })
     }
   }
-  gsap.set(stage.ball(), { left: '50%', top: '50%', scale: 1 })
+  gsap.set(stage.ball(), { left: '50%', top: '50%', scale: 1, xPercent: -50, yPercent: -50, x: 0, y: 0 })
   const tr = stage.trail()
   if (tr) { gsap.set(tr, { opacity: 0 }); tr.setAttribute('d', '') }
   gsap.set(stage.flash(), { opacity: 0 })

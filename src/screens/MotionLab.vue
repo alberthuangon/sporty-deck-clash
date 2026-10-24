@@ -50,7 +50,8 @@
       <div class="sec-title" style="margin-top:14px">Beat lengths (seconds)</div>
       <div v-for="k in BEAT_KEYS" :key="k" class="beat">
         <span class="bk">{{ k }}</span>
-        <input type="range" :min="k === 'slowmo' ? 0.15 : 0.05" :max="range(k)" step="0.01" v-model.number="beat[k]" />
+        <input type="range" :min="k === 'idle' || k === 'press' ? 0 : (k === 'slowmo' ? 0.15 : 0.05)"
+               :max="range(k)" step="0.01" v-model.number="beat[k]" @input="k === 'idle' && restartIdle()" />
         <span class="bv">{{ beat[k].toFixed(2) }}</span>
       </div>
 
@@ -84,7 +85,7 @@ import gsap from 'gsap'
 import Stage from '../match/Stage.vue'
 import { go, BY_ID } from '../game.js'
 import { buildTeam } from '../engine/model.js'
-import { buildWave, buildGoalCutIn, buildSaveCutIn, resetStage } from '../match/player.js'
+import { buildWave, buildGoalCutIn, buildSaveCutIn, resetStage, startIdle, stopIdle, idleTimeline } from '../match/player.js'
 import { BEAT, waveDuration, matchDuration } from '../match/stageModel.js'
 
 const OUTCOMES = [
@@ -94,7 +95,7 @@ const OUTCOMES = [
   { id: 'SHOT_OFF', label: 'Wide' },
   { id: 'TACKLED', label: 'Tackled' }
 ]
-const BEAT_KEYS = ['buildUp', 'pass', 'carry', 'shot', 'goalHang', 'slowmo', 'cutIn', 'saveCutIn', 'rebound', 'reset', 'gap', 'clockRun']
+const BEAT_KEYS = ['buildUp', 'pass', 'carry', 'shot', 'goalHang', 'slowmo', 'cutIn', 'saveCutIn', 'rebound', 'reset', 'gap', 'clockRun', 'idle', 'press']
 
 const home = buildTeam({
   gk: { def: BY_ID.G2, level: 3 }, fw: { def: BY_ID.F12, level: 4 },
@@ -128,15 +129,20 @@ function stageApi () { return stageRef.value && stageRef.value.api }
 
 function onSfx (label) { sfxLog.value.push(label) }
 
+function restartIdle () {
+  const api = stageApi()
+  if (api) startIdle(api, beat.idle)
+}
+
 function stop () {
   if (tl) { tl.kill(); tl = null }
   running.value = false
   const api = stageApi()
-  if (api) { resetStage(api); api.reset() }
+  if (api) { stopIdle(); resetStage(api); api.reset(); startIdle(api, beat.idle) }
   sfxLog.value = []
 }
 
-async function play () {
+async function play (opts = {}) {
   stop()
   await nextTick()
   const api = stageApi()
@@ -146,7 +152,10 @@ async function play () {
   const master = gsap.timeline({
     onComplete: () => { running.value = false; lastLen.value = master.duration() }
   })
-  const onRate = (rate) => { gsap.to(master, { timeScale: rate * speed.value, duration: .12, ease: 'power2.out' }) }
+  const onRate = (rate) => {
+    if (opts.paused) return          // recorder drives the clock itself
+    gsap.to(master, { timeScale: rate * speed.value, duration: .12, ease: 'power2.out' })
+  }
   master.add(buildWave(api, {
     side: side.value, actorSlot: actor.value, outcome: outcome.value, variance: Math.random()
   }, beat, onSfx, onRate))
@@ -167,18 +176,53 @@ async function play () {
   master.timeScale(speed.value)
   lastLen.value = master.duration()
   tl = master
+  if (opts.paused) { master.pause(0); running.value = false }
+  return master.duration()
+}
+
+/* timeline window during which a goal runs in slow motion */
+function slowmoWindow () {
+  const start = beat.buildUp + beat.pass * 2 + beat.carry
+  return { start, end: start + beat.shot + beat.goalHang, rate: beat.slowmo }
+}
+
+/* Dev hook: lets a frame-exact recorder drive the timeline from outside.
+   Stripped from production builds. */
+if (import.meta.env.DEV) {
+  window.__lab = {
+    arm: async (o = {}) => {
+      if (o.side) side.value = o.side
+      if (o.outcome) outcome.value = o.outcome
+      if (o.actor) actor.value = o.actor
+      await nextTick()
+      const d = await play({ paused: true })
+      const idle = idleTimeline()
+      if (idle) idle.pause(0)
+      return { duration: d, slowmo: o.outcome === 'GOAL' ? slowmoWindow() : null }
+    },
+    seek: (p) => {
+      const q = Math.max(0, Math.min(1, p))
+      if (tl) tl.progress(q)
+      const idle = idleTimeline()
+      if (idle) { idle.pause(); idle.time(q * (tl ? tl.duration() : 0)) }
+    },
+    reset: () => stop()
+  }
 }
 
 function range (k) {
-  if (k === 'slowmo') return 1
+  if (k === 'slowmo' || k === 'press') return 1
+  if (k === 'idle') return 8
   if (k === 'cutIn') return 3.5
   if (k === 'clockRun') return 6
   return 1.6
 }
 function resetBeats () { Object.assign(beat, BEAT) }
 
-onMounted(() => { nextTick(() => { const a = stageApi(); if (a) resetStage(a) }) })
-onUnmounted(() => { if (tl) tl.kill() })
+onMounted(() => {
+  nextTick(() => { const a = stageApi(); if (a) { resetStage(a); startIdle(a, beat.idle) } })
+})
+onUnmounted(() => { if (tl) tl.kill(); stopIdle() })
 </script>
 
 <style scoped>

@@ -33,7 +33,9 @@ export const BEAT = {
   reset: 0.42,         // formation easing back
   gap: 0.18,           // breath between waves
   clockRun: 2.00,      // clock fast-forwarding between waves (step 5 uses this)
-  slowmo: 0.38         // timeScale during the goal impact, not a duration
+  slowmo: 0.38,        // timeScale during the goal impact, not a duration
+  idle: 2.6,           // ambient off-ball drift amplitude, px (not a duration)
+  press: 0.45          // how far defenders slide into the ball's lane, 0-1
 }
 
 export function basePos (side, slot) {
@@ -49,6 +51,22 @@ export function wavePos (side, slot, attackingSide) {
 }
 
 function clamp (v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
+
+/* Off-ball shape. Defenders slide towards the lane the ball is in and
+   attackers fan away from it, so the eight tokens read as a team reacting to
+   play rather than eight markers sitting on their marks. */
+export function reactedPos (side, slot, attackingSide, laneY, press) {
+  const [x, y] = wavePos(side, slot, attackingSide)
+  if (slot === 'gk') return [x, y + (laneY - 50) * 0.35 * press]
+  const defending = side !== attackingSide
+  const pull = defending ? press : -press * 0.45      // attackers drift off the lane
+  return [x, clamp(y + (laneY - y) * pull, 12, 88)]
+}
+
+/* A small deterministic-ish spread so the eight tokens never move in lockstep. */
+export function slotStagger (slot) {
+  return { gk: 0.10, df: 0, mf: 0.05, fw: 0.08 }[slot] || 0
+}
 
 /* The pass chain for a wave: two team-mates feeding the named actor.
    Keeps the keeper out of open play and never passes to the same slot twice. */

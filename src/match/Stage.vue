@@ -187,7 +187,7 @@ onMounted(() => { /* refs are live from here on */ })
 .trail path { fill: none; stroke: rgba(255,255,255,.55); stroke-width: .5; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 
 .token {
-  position: absolute; transform: translate(-50%,-50%);
+  position: absolute; transform: translate(-50%,-50%);   /* GSAP takes this over via xPercent/yPercent */
   width: 23px; height: 23px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 8px; font-weight: 800; color: #fff; letter-spacing: .02em;
