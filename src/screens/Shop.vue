@@ -34,8 +34,12 @@
           <span>{{ o.pct }}%</span>
         </div>
         <p class="muted fine">
-          Rates are per card. Every pack contains {{ showOdds.cards }} cards.
-          {{ showOdds.guarantee }}.
+          Per-card rates across the whole pack, including the guaranteed slot —
+          these are the numbers the draw actually uses.
+          Every pack contains {{ showOdds.cards }} cards:
+          {{ showOdds.cards - 1 }} open slots plus one slot restricted to
+          {{ showOdds.guaranteedFrom.join('/') }}, which is how
+          "{{ showOdds.guarantee.split(' ·')[0].toLowerCase() }}" is kept.
         </p>
         <button class="btn" @click="showOdds = null">Close</button>
       </div>

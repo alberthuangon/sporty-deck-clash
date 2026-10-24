@@ -15,7 +15,13 @@ export function shardCost (rarity, level) {
   return SHARD_COST[rarity][level]
 }
 
-/* §6.2 pack types */
+/* §6.2 pack types.
+
+   A pack is (cards - 1) normal slots plus one slot restricted to the pack's
+   guaranteed floor, which is how the "at least 1 Rare / Epic" promise is kept
+   without distorting anything after the fact. `odds` is the PUBLISHED per-card
+   table and is derived from that structure, so what the rate screen shows is
+   exactly what the sampler produces — verified in packRates() below. */
 export const PACKS = [
   {
     id: 'standard',
@@ -23,6 +29,14 @@ export const PACKS = [
     price: 100,
     cards: 5,
     guarantee: 'At least 1 Rare',
+    slotOdds: [
+      { rarity: 'C', pct: 87.5 },
+      { rarity: 'R', pct: 10 },
+      { rarity: 'E', pct: 2.0833333 },
+      { rarity: 'L', pct: 0.4166667 }
+    ],
+    guaranteedFrom: ['R', 'E', 'L'],
+    // marginal per-card rates implied by the above -- PRD §6.2's table exactly
     odds: [
       { rarity: 'C', label: 'Common', pct: 70 },
       { rarity: 'R', label: 'Rare', pct: 24 },
@@ -36,14 +50,66 @@ export const PACKS = [
     price: 450,
     cards: 5,
     guarantee: 'At least 1 Epic · double Legendary rate',
+    slotOdds: [
+      { rarity: 'C', pct: 62.5 },
+      { rarity: 'R', pct: 25 },
+      { rarity: 'E', pct: 11.6666667 },
+      { rarity: 'L', pct: 0.8333333 }
+    ],
+    guaranteedFrom: ['E', 'L'],
     odds: [
-      { rarity: 'C', label: 'Common', pct: 55 },
-      { rarity: 'R', label: 'Rare', pct: 32 },
-      { rarity: 'E', label: 'Epic', pct: 11 },
+      { rarity: 'C', label: 'Common', pct: 50 },
+      { rarity: 'R', label: 'Rare', pct: 20 },
+      { rarity: 'E', label: 'Epic', pct: 28 },
       { rarity: 'L', label: 'Legendary', pct: 2 }
     ]
   }
 ]
+
+export const RARITY_ORDER = { C: 0, R: 1, E: 2, L: 3 }
+
+function drawRarity (odds, rng) {
+  const total = odds.reduce((t, o) => t + o.pct, 0)
+  let r = rng() * total
+  for (const o of odds) { r -= o.pct; if (r <= 0) return o.rarity }
+  return odds[odds.length - 1].rarity
+}
+
+/* Draw one pack. Pure: catalogue is passed in and randomness is injectable,
+   so the sampler is testable under plain node (see packRates). */
+export function rollPack (pack, catalogue, rng = Math.random) {
+  const ofRarity = (rarity) => {
+    const pool = catalogue.filter(c => c.rarity === rarity)
+    return pool[Math.floor(rng() * pool.length)]
+  }
+
+  const picks = []
+  for (let i = 0; i < pack.cards - 1; i++) {
+    picks.push(ofRarity(drawRarity(pack.slotOdds, rng)))
+  }
+  const guaranteed = pack.slotOdds.filter(o => pack.guaranteedFrom.includes(o.rarity))
+  picks.push(ofRarity(drawRarity(guaranteed, rng)))
+
+  // highest rarity always revealed last (PRD §6.2 "神抽時刻")
+  picks.sort((a, b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity])
+  return picks
+}
+
+/* Exact marginal per-card rates implied by a pack's slot structure.
+   The published `odds` table must equal this — asserted by npm run sim. */
+export function packRates (pack) {
+  const n = pack.cards
+  const slotTotal = pack.slotOdds.reduce((t, o) => t + o.pct, 0)
+  const gSlots = pack.slotOdds.filter(o => pack.guaranteedFrom.includes(o.rarity))
+  const gTotal = gSlots.reduce((t, o) => t + o.pct, 0)
+  const out = {}
+  pack.slotOdds.forEach(o => {
+    const normal = (n - 1) * (o.pct / slotTotal)
+    const guaranteed = pack.guaranteedFrom.includes(o.rarity) ? o.pct / gTotal : 0
+    out[o.rarity] = ((normal + guaranteed) / n) * 100
+  })
+  return out
+}
 
 /* §6.5 entry fee tiers. unlockPower = required collection power (q_ref scale). */
 export const TIERS = [

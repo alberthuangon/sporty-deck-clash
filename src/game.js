@@ -9,7 +9,7 @@ import { buildCard, RARITY, MAX_LEVEL } from './engine/cards.js'
 import { buildTeam, priceMatch, drawResult, settle, powerOf, powerStars, powerScore } from './engine/model.js'
 import { findOpponent } from './engine/opponents.js'
 import { buildScript } from './engine/scriptgen.js'
-import { shardCost, TIERS, stakeRange, applyRankDelta, rankWin, RANK_LOSS, REWARD_ROAD, ladderIndex, rankLabel } from './engine/economy.js'
+import { shardCost, TIERS, stakeRange, applyRankDelta, rankWin, RANK_LOSS, REWARD_ROAD, ladderIndex, rankLabel, rollPack } from './engine/economy.js'
 
 export const CATALOGUE = cardData.cards
 export const BY_ID = Object.fromEntries(CATALOGUE.map(c => [c.id, c]))
@@ -100,8 +100,27 @@ export function venueLean (deck = store.deck) {
   return (h - a) / (h + a)          // >0 home-leaning, <0 away-leaning
 }
 
-/* "collection power" = the strongest squad this account can field (PRD §6.5) */
+/* "collection power" = the strongest squad this account can field (PRD §6.5).
+   Memoised on the collection signature: this is O(keepers x outfield^3) and
+   both Home and TierSelect read it on every render. */
+let colCache = { sig: null, value: 0 }
+
+function collectionSignature () {
+  return Object.entries(store.ownedCards)
+    .map(([id, e]) => id + ':' + e.level)
+    .sort()
+    .join('|')
+}
+
 export function collectionPower () {
+  const sig = collectionSignature()
+  if (colCache.sig === sig) return colCache.value
+  const value = computeCollectionPower()
+  colCache = { sig, value }
+  return value
+}
+
+function computeCollectionPower () {
   const gks = ownedIds().filter(id => BY_ID[id].class === 'gk')
   const ofs = ownedIds().filter(id => BY_ID[id].class === 'outfield')
   if (!gks.length || ofs.length < 3) return 0
@@ -136,7 +155,7 @@ export function bestPlacement (gk, three) {
 }
 
 export function tierUnlocked (tier) { return collectionPower() >= tier.unlockPower }
-export { TIERS, stakeRange, rankLabel, REWARD_ROAD, ladderIndex, RARITY, MAX_LEVEL }
+export { TIERS, stakeRange, rankLabel, REWARD_ROAD, ladderIndex, RARITY, MAX_LEVEL, rollPack }
 
 /* ---------- missions ---------- */
 
@@ -150,16 +169,26 @@ export function claimTask (id) {
 
 /* ---------- pack (scripted for the demo, PRD §6.2 Phase 0) ---------- */
 
+/* The FIRST pack is scripted, because the demo's narrative depends on it
+   (2 duplicates -> shards, a new Rare, Okonkwo last). Every pack after that is
+   drawn for real from the published rate table, so the odds screen is not
+   decoration — PRD §6.2. */
 export const PACK_SCRIPT = ['F1', 'F4', 'F2', 'F11', 'F12']   // dupe, new, dupe, new R, Okonkwo E
 
 export function buyPack (pack) {
   if (store.diamonds < pack.price) return null
   store.diamonds -= pack.price
-  const pulls = PACK_SCRIPT.map(id => {
-    const wasOwned = owned(id)
-    return { id, def: BY_ID[id], isNew: !wasOwned }
+  const defs = store.flags.packOpened
+    ? rollPack(pack, CATALOGUE)
+    : PACK_SCRIPT.map(id => BY_ID[id])
+  // a real draw can repeat a card inside one pack, so "new" has to account for
+  // the earlier cards in this same pack, not just what was owned beforehand
+  const seen = new Set()
+  return defs.map(def => {
+    const isNew = !owned(def.id) && !seen.has(def.id)
+    seen.add(def.id)
+    return { id: def.id, def, isNew }
   })
-  return pulls
 }
 
 export function commitPull (pull) { return grantCard(pull.id) }
@@ -191,6 +220,7 @@ export function confirmBet (stake) {
   if (!ctx.priced) return false
   if (store.cash < stake) return false
   store.cash -= stake                    // PRD §3.8: deduct, then lock, then toss
+  store.pendingBet = { stake, tierFee: matchView.tierFee }
   matchView.stake = stake
   return true
 }
@@ -225,6 +255,9 @@ export function runToss () {
 
 /* settlement + rank, applied once the match animation is over */
 export function finishMatch () {
+  if (!store.pendingBet) return null     // already settled: settlement is single-shot
+  store.pendingBet = null
+
   const s = settle(ctx.priced, ctx.result, matchView.stake, matchView.tierFee)
   const won = ctx.result.winner === 'A'
   store.cash += s.payoutA
@@ -258,6 +291,11 @@ export function finishMatch () {
 }
 
 export function abandonMatch () {
+  // cancelling before the toss refunds; after settlement pendingBet is already null
+  if (store.pendingBet) {
+    store.cash += store.pendingBet.stake
+    store.pendingBet = null
+  }
   matchView.active = false
   ctx.priced = null; ctx.result = null; ctx.script = null
 }

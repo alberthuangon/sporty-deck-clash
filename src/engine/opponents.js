@@ -54,5 +54,62 @@ export function findOpponent (playerTeam, opts = {}) {
     if (priced.matchable) return { opponent: cand, priced, walked }
     walked.push({ handle: cand.handle, power: cand.power, oddsA: priced.oddsA, oddsB: priced.oddsB })
   }
-  return { opponent: null, priced: null, walked, oddsCap: ODDS_CAP }
+  // every queued candidate priced outside the cap -> platform takes the book
+  const sys = systemOpponent(playerTeam, myPower)
+  return { ...sys, walked, usedSystem: true, oddsCap: ODDS_CAP }
+}
+
+/* ---------- liquidity backstop (PRD §11.3) ----------
+   When no queued opponent prices inside the cap, the player may take the
+   platform's own side instead — mathematically identical to Instant Virtual
+   (same model, same odds formula, platform carries the book). We build the
+   System XI from the real card pool so the match script still has named
+   cards to credit goals and saves to. */
+
+const SYSTEM_SETS = [
+  ['G4', 'F3', 'F2', 'F11'],
+  ['G2', 'F14', 'F8', 'F9'],
+  ['G1', 'F4', 'F11', 'F6'],
+  ['G3', 'F10', 'F16', 'F13'],
+  ['G3', 'F15', 'F16', 'F13']
+]
+
+let ladder = null
+function systemLadder () {
+  if (ladder) return ladder
+  ladder = []
+  for (const set of SYSTEM_SETS) {
+    for (let level = 1; level <= 10; level++) {
+      const team = buildTeam({
+        gk: { def: byId[set[0]], level },
+        fw: { def: byId[set[1]], level },
+        mf: { def: byId[set[2]], level },
+        df: { def: byId[set[3]], level }
+      }, 'System XI')
+      ladder.push({ team, power: powerOf(team) })
+    }
+  }
+  ladder.sort((a, b) => a.power - b.power)
+  return ladder
+}
+
+export function systemOpponent (playerTeam, myPower) {
+  const target = myPower !== undefined ? myPower : powerOf(playerTeam)
+  const ranked = systemLadder()
+    .map(e => ({ ...e, gap: Math.abs(e.power - target) }))
+    .sort((a, b) => a.gap - b.gap)
+
+  for (const cand of ranked) {
+    const priced = priceMatch(playerTeam, cand.team)
+    if (priced.matchable) {
+      return { opponent: { handle: 'System XI', team: cand.team, power: cand.power, isSystem: true }, priced }
+    }
+  }
+  // last resort: mirror the player's own squad — q is exactly 0.5, so it can
+  // never fail the cap
+  const mirror = { ...playerTeam, name: 'System XI' }
+  return {
+    opponent: { handle: 'System XI', team: mirror, power: target, isSystem: true },
+    priced: priceMatch(playerTeam, mirror)
+  }
 }

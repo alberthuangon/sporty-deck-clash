@@ -12,6 +12,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildTeam, priceMatch, drawResult, settle, powerOf, LEAGUE, MARGIN, ODDS_CAP } from './model.js'
+import { PACKS, rollPack, packRates, RARITY_ORDER } from './economy.js'
+import { systemOpponent } from './opponents.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const CARDS = JSON.parse(fs.readFileSync(path.join(here, '../data/cards.json'), 'utf8')).cards
@@ -204,7 +206,40 @@ function gate () {
   line('PK decided by a single sample', 'yes', true)
   line('payout flooring applied', String(settle(priced, { winner: 'A' }, 50, 50).payoutA), true)
 
-  const pass = rtpOk && drawOk && r.oddsOverCap === 0 && worst < 1e-9
+  console.log('\nCard packs: the published rate table must equal what the sampler draws')
+  let packsOk = true
+  for (const pack of PACKS) {
+    const exact = packRates(pack)
+    const published = Object.fromEntries(pack.odds.map(o => [o.rarity, o.pct]))
+    const maxErr = Math.max(...Object.keys(exact).map(k => Math.abs(exact[k] - published[k])))
+    const rnd2 = rngFactory(31337)
+    const counts = { C: 0, R: 0, E: 0, L: 0 }
+    const floor = pack.id === 'gold' ? 'E' : 'R'
+    let gFail = 0
+    const N = 50000
+    for (let i = 0; i < N; i++) {
+      const p = rollPack(pack, CARDS, rnd2)
+      p.forEach(c => { counts[c.rarity]++ })
+      if (!p.some(c => RARITY_ORDER[c.rarity] >= RARITY_ORDER[floor])) gFail++
+    }
+    const sampErr = Math.max(...Object.keys(counts)
+      .map(k => Math.abs((counts[k] / (N * pack.cards)) * 100 - published[k])))
+    const ok = maxErr < 1e-6 && sampErr < 0.5 && gFail === 0
+    packsOk = packsOk && ok
+    line(pack.name + ' published vs exact', maxErr.toExponential(1), maxErr < 1e-6)
+    line(pack.name + ' published vs sampled', sampErr.toFixed(2) + 'pp', sampErr < 0.5)
+    line(pack.name + ' guarantee violations', gFail, gFail === 0)
+  }
+
+  console.log('\nMatchmaking can never dead-end (PRD §11.3 liquidity backstop)')
+  const rnd3 = rngFactory(606)
+  let sysFail = 0
+  for (let i = 0; i < 400; i++) {
+    if (!systemOpponent(randomTeam(rnd3)).priced.matchable) sysFail++
+  }
+  line('system-team failures over 400 squads', sysFail, sysFail === 0)
+
+  const pass = rtpOk && drawOk && r.oddsOverCap === 0 && worst < 1e-9 && packsOk && sysFail === 0
   console.log('\n' + (pass ? 'GATE PASSED' : 'GATE FAILED') + '\n')
   process.exitCode = pass ? 0 : 1
 }

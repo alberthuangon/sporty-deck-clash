@@ -47,6 +47,13 @@ function initialState () {
     match: null,
     lastResult: null,
 
+    /* Stake held by a match that has been paid for but not yet settled.
+       The match context itself lives outside the store (engine objects are
+       not serialisable), so a reload during a match would otherwise lose the
+       match and keep the money. load() refunds it — settlement stays
+       single-shot either way, PRD §12.4. */
+    pendingBet: null,
+
     // demo switches (settings screen)
     settings: {
       forcePkScenario: true,   // demo: condition the draw on a regular-time tie so PK always shows
@@ -65,7 +72,15 @@ function load () {
     const saved = JSON.parse(raw)
     const base = initialState()
     // shallow-merge so new fields added during development don't break saves
-    return { ...base, ...saved, settings: { ...base.settings, ...(saved.settings || {}) } }
+    const merged = { ...base, ...saved, settings: { ...base.settings, ...(saved.settings || {}) } }
+
+    // a match was paid for but never settled (reload mid-flow): refund and reset
+    if (merged.pendingBet) {
+      merged.cash += merged.pendingBet.stake
+      merged.pendingBet = null
+      merged.currentScreen = 'home'
+    }
+    return merged
   } catch (e) {
     return initialState()
   }
@@ -77,7 +92,8 @@ watch(
   () => JSON.stringify({
     diamonds: store.diamonds, cash: store.cash, tickets: store.tickets,
     ownedCards: store.ownedCards, deck: store.deck, rank: store.rank,
-    tasks: store.tasks, stats: store.stats, settings: store.settings, flags: store.flags
+    tasks: store.tasks, stats: store.stats, settings: store.settings, flags: store.flags,
+    pendingBet: store.pendingBet
   }),
   (v) => { try { localStorage.setItem(KEY, v) } catch (e) {} }
 )

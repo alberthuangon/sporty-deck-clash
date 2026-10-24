@@ -71,3 +71,7 @@ Tap the top-bar title 5× for demo settings:
 | Reset demo state | — | Wipes localStorage, back to 80 ◆ / ₦5,000 / Bronze III 40-50. |
 
 Neither override is used by `npm run sim`; the gate always samples truthfully.
+
+> **On stage:** if the pitch says out loud that the result is decided entirely
+> by the model, **Force a win must be off**. It is the one switch that makes
+> that sentence untrue.
