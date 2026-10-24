@@ -1,0 +1,252 @@
+/* Timeline compiler — PRD §14.2, §15.2.
+   Takes an already-decided script and an opaque `stage` API, returns GSAP
+   timelines. No probability lives here: by the time anything in this file
+   runs, the result is a fact (PRD §14.1).
+
+   Every beat carries an `sfx` label through onStart, so the audio pass just
+   maps labels to files without touching the choreography. */
+
+import gsap from 'gsap'
+import { SLOTS, basePos, wavePos, passChain, shotTarget, BEAT } from './stageModel.js'
+
+function pos (el) { return { left: el[0] + '%', top: el[1] + '%' } }
+
+/* Draw a fading trail along one leg of the ball's journey. The SVG uses a
+   0..100 viewBox with preserveAspectRatio none, so pitch percentages are the
+   path coordinates directly. */
+function trail (tl, stage, from, to, at, duration) {
+  const path = stage.trail()
+  if (!path) return
+  tl.call(() => {
+    path.setAttribute('d', `M ${from[0]} ${from[1]} L ${to[0]} ${to[1]}`)
+  }, null, at)
+  tl.fromTo(path, { opacity: .7 }, { opacity: 0, duration: duration + .22, ease: 'power2.out' }, at)
+}
+
+function sfx (tl, at, label, onSfx) {
+  if (onSfx) tl.call(() => onSfx(label), null, at)
+}
+
+/* Move every token to its wave position (attackers surge, defenders drop). */
+export function formationTo (tl, stage, attackingSide, at, beat) {
+  for (const side of ['home', 'away']) {
+    for (const slot of SLOTS) {
+      const el = stage.token(side, slot)
+      if (!el) continue
+      tl.to(el, {
+        ...pos(wavePos(side, slot, attackingSide)),
+        duration: beat.buildUp,
+        ease: 'power2.inOut'
+      }, at)
+    }
+  }
+}
+
+export function formationRest (tl, stage, at, beat) {
+  for (const side of ['home', 'away']) {
+    for (const slot of SLOTS) {
+      const el = stage.token(side, slot)
+      if (!el) continue
+      tl.to(el, { ...pos(basePos(side, slot)), duration: beat.reset, ease: 'power2.inOut' }, at)
+    }
+  }
+}
+
+/* Pulse the ring on the token currently on the ball. */
+function highlight (tl, stage, side, slot, at) {
+  const el = stage.token(side, slot)
+  if (!el) return
+  const ring = el.querySelector('.ring')
+  tl.fromTo(ring, { opacity: .9, scale: .7 }, { opacity: 0, scale: 1.5, duration: .45, ease: 'power2.out' }, at)
+  tl.fromTo(el, { scale: 1 }, { scale: 1.22, duration: .12, yoyo: true, repeat: 1, ease: 'power2.out' }, at)
+}
+
+/* ---------------------------------------------------------------- *
+ * One attack wave — the演出 unit of PRD §15.2.
+ * opts: { side, actorSlot, outcome, keeperSlot, variance }
+ * ---------------------------------------------------------------- */
+export function buildWave (stage, opts, beat = BEAT, onSfx = null, onRate = null) {
+  const { side, actorSlot = 'fw', outcome = 'SHOT_OFF', variance = 0.5 } = opts
+  const defSide = side === 'home' ? 'away' : 'home'
+  const tl = gsap.timeline()
+  let t = 0
+
+  // 1. build-up: shape shifts, first carrier lights up
+  const chain = passChain(actorSlot)
+  formationTo(tl, stage, side, t, beat)
+  const startPos = wavePos(side, chain[0], side)
+  tl.set(stage.ball(), pos(startPos), t)
+  highlight(tl, stage, side, chain[0], t + beat.buildUp * 0.55)
+  sfx(tl, t, 'crowd_build', onSfx)
+  t += beat.buildUp
+
+  // 2. passes along the chain
+  for (let i = 1; i < chain.length; i++) {
+    const from = wavePos(side, chain[i - 1], side)
+    const to = wavePos(side, chain[i], side)
+    trail(tl, stage, from, to, t, beat.pass)
+    tl.to(stage.ball(), { ...pos(to), duration: beat.pass, ease: 'power1.out' }, t)
+    // a small lift so a pass reads differently from a carry
+    tl.to(stage.ball(), { scale: 1.35, duration: beat.pass / 2, yoyo: true, repeat: 1, ease: 'sine.out' }, t)
+    highlight(tl, stage, side, chain[i], t + beat.pass * 0.8)
+    sfx(tl, t, 'pass', onSfx)
+    t += beat.pass
+  }
+
+  // 3. carry into the box
+  const carryTo = wavePos(side, actorSlot, side)
+  const toward = side === 'home' ? 13 : -13
+  const carryEnd = [Math.max(5, Math.min(95, carryTo[0] + toward)), carryTo[1]]
+  tl.to(stage.ball(), {
+    left: Math.max(5, Math.min(95, carryTo[0] + toward)) + '%',
+    top: carryTo[1] + '%',
+    duration: beat.carry, ease: 'power1.inOut'
+  }, t)
+  tl.to(stage.token(side, actorSlot), {
+    left: Math.max(5, Math.min(95, carryTo[0] + toward * 0.8)) + '%',
+    duration: beat.carry, ease: 'power1.inOut'
+  }, t)
+  t += beat.carry
+
+  // 4. the strike. A goal drops into slow motion just before contact and comes
+  //    back to full speed once the ball is in (PRD §15.1 "關鍵事件變速放慢").
+  const target = shotTarget(outcome, side, variance)
+  const shotEase = outcome === 'GOAL' ? 'power3.in' : 'power2.out'
+  if (outcome === 'GOAL' && onRate) {
+    tl.call(() => onRate(beat.slowmo), null, Math.max(0, t - 0.06))
+  }
+  trail(tl, stage, carryEnd, target, t, beat.shot)
+  tl.to(stage.ball(), { ...pos(target), duration: beat.shot, ease: shotEase }, t)
+  tl.to(stage.ball(), { scale: 1.5, duration: beat.shot * .5, yoyo: true, repeat: 1 }, t)
+  sfx(tl, t, outcome === 'GOAL' ? 'shot_hard' : 'shot', onSfx)
+
+  // keeper lunges on anything on target
+  if (outcome === 'SHOT_SAVE' || outcome === 'GOAL') {
+    const gk = stage.token(defSide, 'gk')
+    const dy = target[1] < 50 ? -13 : 13
+    tl.to(gk, { top: (50 + dy) + '%', scale: 1.15, duration: beat.shot * 0.9, ease: 'power2.out' }, t + beat.shot * 0.1)
+    tl.to(gk, { scale: 1, duration: .3 }, t + beat.shot + .1)
+  }
+  t += beat.shot
+
+  // 5. resolution
+  if (outcome === 'GOAL') {
+    sfx(tl, t, 'goal', onSfx)
+    tl.to(stage.flash(), { opacity: .55, duration: .07 }, t)
+    tl.to(stage.flash(), { opacity: 0, duration: .32 }, t + .07)
+    tl.set(stage.shock(), { ...pos(target) }, t)
+    tl.fromTo(stage.shock(), { opacity: .9, scale: .3 },
+      { opacity: 0, scale: 3.4, duration: .52, ease: 'power2.out' }, t)
+    t += beat.goalHang
+    if (onRate) tl.call(() => onRate(1), null, t)
+    // ball back to the centre spot for the restart, otherwise it sits in the
+    // net and the next wave starts from nowhere
+    tl.to(stage.ball(), { left: '50%', top: '50%', duration: beat.reset, ease: 'power2.inOut' }, t)
+  } else if (outcome === 'SHOT_SAVE') {
+    sfx(tl, t, 'save', onSfx)
+    const gk = stage.token(defSide, 'gk')
+    tl.to(gk, { scale: 1.3, duration: .1, yoyo: true, repeat: 1 }, t)
+    const away = side === 'home' ? -18 : 18
+    tl.to(stage.ball(), {
+      left: (target[0] + away) + '%', top: (target[1] + (target[1] < 50 ? 16 : -16)) + '%',
+      duration: beat.rebound, ease: 'power2.out'
+    }, t + .08)
+    t += beat.rebound
+  } else if (outcome === 'SHOT_POST') {
+    sfx(tl, t, 'post', onSfx)
+    const away = side === 'home' ? -20 : 20
+    tl.to(stage.ball(), { left: (target[0] + away) + '%', top: '22%', duration: .36, ease: 'power2.out' }, t)
+    t += .3
+  }
+
+  // 6. shape eases back
+  formationRest(tl, stage, t, beat)
+  const gk = stage.token(defSide, 'gk')
+  tl.to(gk, { ...pos(basePos(defSide, 'gk')), scale: 1, duration: beat.reset, ease: 'power2.inOut' }, t)
+  t += beat.reset + beat.gap
+
+  return tl
+}
+
+/* ---------------------------------------------------------------- *
+ * Goal cut-in — the scorer's named moment (PRD §2.8, §15.2)
+ * ---------------------------------------------------------------- */
+export function buildGoalCutIn (stage, { card, scoreSide, scoreHome, scoreAway, subtitle },
+  beat = BEAT, onSfx = null) {
+  const ci = stage.cutin()
+  const tl = gsap.timeline()
+
+  tl.call(() => stage.setCutIn(card, 'GOAL!', subtitle || `${card.name} scores`))
+  tl.set(ci.root, { visibility: 'visible' })
+  tl.fromTo(ci.bg, { opacity: 0 }, { opacity: 1, duration: .16, ease: 'power2.out' }, 0)
+  tl.fromTo(ci.streaks, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: .5, ease: 'power2.out' }, 0)
+  tl.to(ci.streaks, { x: 40, duration: beat.cutIn, ease: 'none' }, .1)
+
+  const cardEl = ci.body.querySelector('.ci-card')
+  tl.fromTo(cardEl,
+    { x: -110, opacity: 0, rotate: -9, scale: .82 },
+    { x: 0, opacity: 1, rotate: 0, scale: 1, duration: .42, ease: 'back.out(1.5)' }, .04)
+
+  tl.fromTo(ci.text,
+    { scale: 2.1, opacity: 0, letterSpacing: '0.3em' },
+    { scale: 1, opacity: 1, letterSpacing: '0.04em', duration: .34, ease: 'back.out(2.2)' }, .2)
+  sfx(tl, .2, 'goal_shout', onSfx)
+
+  // scoreboard digit punches at the peak of the cut-in
+  tl.call(() => stage.setScore(scoreHome, scoreAway), null, .36)
+  const digit = stage.scoreEl(scoreSide)
+  if (digit) {
+    tl.fromTo(digit, { scale: 1.9, color: '#33EA6A' },
+      { scale: 1, color: '#ffffff', duration: .5, ease: 'back.out(2)' }, .36)
+  }
+
+  tl.to([ci.bg, ci.body, ci.streaks], { opacity: 0, duration: .26, ease: 'power2.in' }, beat.cutIn)
+  tl.set(ci.root, { visibility: 'hidden' })
+  tl.set([ci.bg, ci.body, ci.streaks], { opacity: 1 })
+  return tl
+}
+
+/* Keeper's named moment — shorter, cooler palette */
+export function buildSaveCutIn (stage, { card, subtitle }, beat = BEAT, onSfx = null) {
+  const ci = stage.cutin()
+  const tl = gsap.timeline()
+  tl.call(() => stage.setCutIn(card, 'SAVED', subtitle || `${card.name} keeps it out`))
+  tl.set(ci.root, { visibility: 'visible' })
+  tl.fromTo(ci.bg, { opacity: 0 }, { opacity: 1, duration: .14 }, 0)
+  const cardEl = ci.body.querySelector('.ci-card')
+  tl.fromTo(cardEl, { y: 70, opacity: 0, scale: .9 },
+    { y: 0, opacity: 1, scale: 1, duration: .34, ease: 'back.out(1.4)' }, .03)
+  tl.fromTo(ci.text, { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: .26, ease: 'back.out(2)' }, .14)
+  sfx(tl, .14, 'save_shout', onSfx)
+  tl.to([ci.bg, ci.body], { opacity: 0, duration: .22, ease: 'power2.in' }, beat.saveCutIn)
+  tl.set(ci.root, { visibility: 'hidden' })
+  tl.set([ci.bg, ci.body], { opacity: 1 })
+  return tl
+}
+
+/* Put every element back where it started, for replays. */
+export function resetStage (stage) {
+  for (const side of ['home', 'away']) {
+    for (const slot of SLOTS) {
+      const el = stage.token(side, slot)
+      if (el) gsap.set(el, { ...pos(basePos(side, slot)), scale: 1 })
+      const ring = el && el.querySelector('.ring')
+      if (ring) gsap.set(ring, { opacity: 0, scale: .7 })
+    }
+  }
+  gsap.set(stage.ball(), { left: '50%', top: '50%', scale: 1 })
+  const tr = stage.trail()
+  if (tr) { gsap.set(tr, { opacity: 0 }); tr.setAttribute('d', '') }
+  gsap.set(stage.flash(), { opacity: 0 })
+  gsap.set(stage.shock(), { opacity: 0, scale: 1 })
+  for (const side of ['home', 'away']) {
+    const d = stage.scoreEl(side)
+    if (d) gsap.set(d, { clearProps: 'all' })
+  }
+  const ci = stage.cutin()
+  gsap.set(ci.root, { visibility: 'hidden' })
+  gsap.set([ci.bg, ci.body, ci.streaks], { opacity: 1, x: 0, y: 0 })
+  const card = ci.body && ci.body.querySelector('.ci-card')
+  if (card) gsap.set(card, { clearProps: 'all' })
+  if (ci.text) gsap.set(ci.text, { clearProps: 'all' })
+}

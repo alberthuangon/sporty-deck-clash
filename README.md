@@ -59,6 +59,18 @@ Result    payout, rank, promotion, jackpot tickets
 Rank      hex badge, reward road, ticket count
 ```
 
+## Motion lab
+
+Demo settings → **Motion lab**. Replays a single attack wave in isolation and
+exposes every beat length as a live slider, so the rhythm can be retuned
+without a reload. The readout shows the projected whole-match length against
+PRD §15.1's 45–60 second window.
+
+The script generator solves its wasted-attack count against the same budget
+(`planWaveCount`), so a 0–0 gets more waves and a 4–0 gets fewer, and every
+scoreline lands near the target. Measured over 4,000 generated scripts:
+median 53.2s, 84.5% inside 45–60s. Only 6+ goal matches (3% of draws) run long.
+
 ## Demo hatch
 
 Tap the top-bar title 5× for demo settings:

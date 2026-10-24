@@ -5,6 +5,37 @@
 
 import { lambdas } from './model.js'
 
+/* How long each演出 unit costs on screen, in seconds. Defaults mirror the
+   stage's default beat lengths; the match screen passes the live values so
+   retuning the motion automatically retunes the script's pacing. Kept as
+   plain numbers here so engine/ stays free of any presentation import. */
+export const DEFAULT_PACING = {
+  goal: 5.30, save: 3.88, miss: 2.39, transition: 2.00,
+  target: 52,          // PRD §15.1 wants 45-60s; aim at the middle
+  saveShare: 0.45      // share of wasted attacks that end as a save
+}
+
+function estimateLength (goals, waves, p) {
+  return goals * p.goal +
+    waves * (p.saveShare * p.save + (1 - p.saveShare) * p.miss) +
+    (goals + waves + 1) * p.transition
+}
+
+/* Pick the number of wasted attacks that lands the compiled timeline closest
+   to the target length. A goal costs more than twice a miss, so high-scoring
+   matches get fewer wasted waves and low-scoring ones get more — which is what
+   keeps every scoreline inside the window. */
+export function planWaveCount (goals, pacing = DEFAULT_PACING, rng = Math.random) {
+  let best = 3
+  let bestErr = Infinity
+  for (let n = 3; n <= 11; n++) {
+    const err = Math.abs(estimateLength(goals, n, pacing) - pacing.target)
+    if (err < bestErr) { bestErr = err; best = n }
+  }
+  const jitter = Math.floor(rng() * 3) - 1          // -1 / 0 / +1, keeps it alive
+  return Math.max(3, Math.min(11, best + jitter))
+}
+
 function pick (rng, arr) { return arr[Math.floor(rng() * arr.length)] }
 
 function weightedPick (rng, items, weightOf) {
@@ -23,7 +54,7 @@ const MISS_TYPES = ['SHOT_OFF', 'SHOT_POST', 'TACKLED']
 
 /* ---------- regular time ---------- */
 
-export function buildMatchScript (result, rng = Math.random) {
+export function buildMatchScript (result, rng = Math.random, pacing = DEFAULT_PACING) {
   const { home, away, homeScore, awayScore } = result
   const lam = lambdas(home, away)
 
@@ -61,15 +92,16 @@ export function buildMatchScript (result, rng = Math.random) {
     })
   })
 
-  /* 4-8 wasted attacks, alternating, the higher-lambda side gets slightly more */
-  const waveCount = 4 + Math.floor(rng() * 5)
+  /* Wasted attacks, budgeted against the target length (see planWaveCount). */
+  const waveCount = planWaveCount(total, pacing, rng)
   const homeShare = lam.home / (lam.home + lam.away)
   const waveMinutes = []
   guard = 0
-  while (waveMinutes.length < waveCount && guard++ < 800) {
+  while (waveMinutes.length < waveCount && guard++ < 2000) {
     const m = 3 + Math.floor(rng() * 86)
+    const spacing = waveCount > 8 ? 3 : 5
     if (events.every(e => Math.abs(e.minute - m) >= 4) &&
-        waveMinutes.every(x => Math.abs(x - m) >= 5)) waveMinutes.push(m)
+        waveMinutes.every(x => Math.abs(x - m) >= spacing)) waveMinutes.push(m)
   }
   waveMinutes.forEach(minute => {
     const side = rng() < homeShare ? 'HOME' : 'AWAY'
@@ -223,9 +255,9 @@ export function buildPenaltyScript (result, rng = Math.random) {
   }
 }
 
-export function buildScript (result, rng = Math.random) {
+export function buildScript (result, rng = Math.random, pacing = DEFAULT_PACING) {
   return {
-    events: buildMatchScript(result, rng),
+    events: buildMatchScript(result, rng, pacing),
     penalty: result.pk ? buildPenaltyScript(result, rng) : null
   }
 }

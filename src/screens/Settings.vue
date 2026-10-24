@@ -32,6 +32,14 @@
       </label>
     </div>
 
+    <h2 class="sec-title" style="margin-top:18px">Tools</h2>
+    <div class="card pad">
+      <div class="rs muted" style="margin-bottom:10px">
+        Replay a single attack wave and retune the beat lengths live.
+      </div>
+      <button class="btn" @click="go('motionlab')">Motion lab</button>
+    </div>
+
     <h2 class="sec-title" style="margin-top:18px">Danger zone</h2>
     <div class="card pad">
       <div class="rs muted" style="margin-bottom:10px">
