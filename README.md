@@ -42,6 +42,32 @@ src/
    then play it.
 3. No real player names or likenesses — all card names are fictional (PRD appendix B).
 
+## Golden path
+
+```
+Missions  claim the ₦200 bet mission      80 -> 110 diamonds
+Shop      Standard Pack, 100 diamonds
+PackOpen  2 duplicates -> shards, a new Rare, Okonkwo (Epic) last
+Upgrade   Okonkwo Lv.1 -> Lv.2 with the ghost-outline preview
+DeckEdit  swap Okonkwo into the forward slot, Power moves
+Play      Start match -> ₦50 Home Arena (₦200 is Power-locked)
+Matchmaking  the real two-stage search, with the numbers on screen
+Confirm   IV-style odds cells + stake slider ₦50-199
+Toss      home/away reveal, stakes lock here
+Match     event script plays out, Skip available
+Result    payout, rank, promotion, jackpot tickets
+Rank      hex badge, reward road, ticket count
+```
+
 ## Demo hatch
 
-Tap the top-bar title 5× for demo settings (force-PK switch, state reset).
+Tap the top-bar title 5× for demo settings:
+
+| Switch | Default | What it does |
+| --- | --- | --- |
+| Force PK scenario | on | Conditions the draw on the tie diagonal of the same matrix, so the shootout always appears. The PK winner is still one sample. |
+| Force a win | **off** | Presenter aid: redraws until the player wins so the promotion beat lands on stage. **This rigs the outcome** — payout and rank figures stop representing the model while it is on. |
+| Fast match | off | 3× timeline, for rehearsals. |
+| Reset demo state | — | Wipes localStorage, back to 80 ◆ / ₦5,000 / Bronze III 40-50. |
+
+Neither override is used by `npm run sim`; the gate always samples truthfully.

@@ -1,0 +1,265 @@
+/* Game actions — the bridge between the reactive store and the pure engine.
+   Heavy engine objects (score matrices, team objects) are kept OUT of the
+   reactive store in `ctx`; the store only holds display-safe scalars. */
+
+import { reactive } from 'vue'
+import cardData from './data/cards.json' with { type: 'json' }
+import { store, go } from './store.js'
+import { buildCard, RARITY, MAX_LEVEL } from './engine/cards.js'
+import { buildTeam, priceMatch, drawResult, settle, powerOf, powerStars, powerScore } from './engine/model.js'
+import { findOpponent } from './engine/opponents.js'
+import { buildScript } from './engine/scriptgen.js'
+import { shardCost, TIERS, stakeRange, applyRankDelta, rankWin, RANK_LOSS, REWARD_ROAD, ladderIndex, rankLabel } from './engine/economy.js'
+
+export const CATALOGUE = cardData.cards
+export const BY_ID = Object.fromEntries(CATALOGUE.map(c => [c.id, c]))
+
+/* non-reactive match context */
+export const ctx = { priced: null, result: null, script: null, opponent: null, playerTeam: null }
+
+/* reactive, display-safe mirror of the current match */
+export const matchView = reactive({
+  active: false, tierFee: 0, stake: 0,
+  opponentName: '', opponentPower: 0,
+  myOdds: 0, theirOdds: 0, myQ: 0,
+  aIsHome: null, homeScore: 0, awayScore: 0,
+  wentToPk: false, pkHome: 0, pkAway: 0, won: false,
+  payout: 0, rankDelta: 0, promotions: []
+})
+
+/* ---------- collection ---------- */
+
+export function owned (id) {
+  const e = store.ownedCards[id]
+  return !!e && e.level >= 1
+}
+export function entry (id) {
+  return store.ownedCards[id] || { level: 0, shards: 0 }
+}
+export function cardOf (id) {
+  return buildCard(BY_ID[id], Math.max(1, entry(id).level))
+}
+export function ownedIds () {
+  return CATALOGUE.filter(c => owned(c.id)).map(c => c.id)
+}
+export function upgradeCost (id) {
+  const e = entry(id)
+  if (e.level < 1 || e.level >= MAX_LEVEL) return null
+  return shardCost(BY_ID[id].rarity, e.level)
+}
+export function canUpgrade (id) {
+  const cost = upgradeCost(id)
+  return cost !== null && entry(id).shards >= cost
+}
+export function upgradeCard (id) {
+  if (!canUpgrade(id)) return false
+  const e = store.ownedCards[id]
+  e.shards -= upgradeCost(id)
+  e.level += 1
+  return true
+}
+export function addShards (id, n) {
+  if (!store.ownedCards[id]) store.ownedCards[id] = { level: 0, shards: 0 }
+  store.ownedCards[id].shards += n
+}
+export function grantCard (id) {
+  if (!store.ownedCards[id]) store.ownedCards[id] = { level: 0, shards: 0 }
+  if (store.ownedCards[id].level === 0) { store.ownedCards[id].level = 1; return 'new' }
+  addShards(id, 1)
+  return 'shard'
+}
+
+/* ---------- squad ---------- */
+
+export function deckCards () {
+  return {
+    gk: cardOf(store.deck.gk),
+    fw: cardOf(store.deck.fw),
+    mf: cardOf(store.deck.mf),
+    df: cardOf(store.deck.df)
+  }
+}
+
+export function teamFromDeck (deck = store.deck, name = 'Your Squad') {
+  return buildTeam({
+    gk: { def: BY_ID[deck.gk], level: entry(deck.gk).level || 1 },
+    fw: { def: BY_ID[deck.fw], level: entry(deck.fw).level || 1 },
+    mf: { def: BY_ID[deck.mf], level: entry(deck.mf).level || 1 },
+    df: { def: BY_ID[deck.df], level: entry(deck.df).level || 1 }
+  }, name)
+}
+
+export function deckPower (deck = store.deck) { return powerOf(teamFromDeck(deck)) }
+export { powerStars, powerScore }
+
+/* home/away lean of the squad, for the "betting on the toss" indicator */
+export function venueLean (deck = store.deck) {
+  const t = teamFromDeck(deck)
+  const h = t.homeAtk + t.homeDef
+  const a = t.awayAtk + t.awayDef
+  return (h - a) / (h + a)          // >0 home-leaning, <0 away-leaning
+}
+
+/* "collection power" = the strongest squad this account can field (PRD §6.5) */
+export function collectionPower () {
+  const gks = ownedIds().filter(id => BY_ID[id].class === 'gk')
+  const ofs = ownedIds().filter(id => BY_ID[id].class === 'outfield')
+  if (!gks.length || ofs.length < 3) return 0
+  let best = 0
+  for (const gk of gks) {
+    for (let i = 0; i < ofs.length; i++) {
+      for (let j = 0; j < ofs.length; j++) {
+        for (let k = 0; k < ofs.length; k++) {
+          if (i === j || j === k || i === k) continue
+          best = Math.max(best, deckPower({ gk, fw: ofs[i], mf: ofs[j], df: ofs[k] }))
+        }
+      }
+    }
+  }
+  return best
+}
+
+/* best assignment of three chosen outfield cards (PRD §5 auto-placement) */
+export function bestPlacement (gk, three) {
+  let best = null
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      for (let k = 0; k < 3; k++) {
+        if (i === j || j === k || i === k) continue
+        const deck = { gk, fw: three[i], mf: three[j], df: three[k] }
+        const p = deckPower(deck)
+        if (!best || p > best.power) best = { deck, power: p }
+      }
+    }
+  }
+  return best
+}
+
+export function tierUnlocked (tier) { return collectionPower() >= tier.unlockPower }
+export { TIERS, stakeRange, rankLabel, REWARD_ROAD, ladderIndex, RARITY, MAX_LEVEL }
+
+/* ---------- missions ---------- */
+
+export function claimTask (id) {
+  const t = store.tasks.find(x => x.id === id)
+  if (!t || !t.done || t.claimed) return 0
+  t.claimed = true
+  store.diamonds += t.reward
+  return t.reward
+}
+
+/* ---------- pack (scripted for the demo, PRD §6.2 Phase 0) ---------- */
+
+export const PACK_SCRIPT = ['F1', 'F4', 'F2', 'F11', 'F12']   // dupe, new, dupe, new R, Okonkwo E
+
+export function buyPack (pack) {
+  if (store.diamonds < pack.price) return null
+  store.diamonds -= pack.price
+  const pulls = PACK_SCRIPT.map(id => {
+    const wasOwned = owned(id)
+    return { id, def: BY_ID[id], isNew: !wasOwned }
+  })
+  return pulls
+}
+
+export function commitPull (pull) { return grantCard(pull.id) }
+
+/* ---------- match flow ---------- */
+
+export function startMatchmaking (tierFee) {
+  const team = teamFromDeck()
+  const found = findOpponent(team)
+  if (!found.opponent) return null
+  ctx.playerTeam = team
+  ctx.opponent = found.opponent
+  ctx.priced = found.priced
+  ctx.result = null
+  ctx.script = null
+  Object.assign(matchView, {
+    active: true, tierFee, stake: tierFee,
+    opponentName: found.opponent.handle,
+    opponentPower: found.opponent.power,
+    myOdds: found.priced.oddsA, theirOdds: found.priced.oddsB, myQ: found.priced.qA,
+    aIsHome: null, homeScore: 0, awayScore: 0,
+    wentToPk: false, pkHome: 0, pkAway: 0, won: false,
+    payout: 0, rankDelta: 0, promotions: []
+  })
+  return { ...found, candidates: found.walked }
+}
+
+export function confirmBet (stake) {
+  if (!ctx.priced) return false
+  if (store.cash < stake) return false
+  store.cash -= stake                    // PRD §3.8: deduct, then lock, then toss
+  matchView.stake = stake
+  return true
+}
+
+/* toss + draw + script, all in one deterministic step (PRD §14.2: the whole
+   timeline is compiled before a single frame plays, which is what makes Skip
+   safe) */
+export function runToss () {
+  const opts = { forceDraw: store.settings.forcePkScenario, minTieGoals: 1 }
+  let result = drawResult(ctx.priced, Math.random, opts)
+  // presenter switch: keep redrawing until the player wins. Demo only — it is a
+  // conditioned sample, so the stage show is guaranteed but the figures stop
+  // representing the model. Off by default, never used by the sim harness.
+  if (store.settings.forceWin) {
+    for (let i = 0; i < 300 && result.winner !== 'A'; i++) {
+      result = drawResult(ctx.priced, Math.random, opts)
+    }
+  }
+  ctx.result = result
+  ctx.script = buildScript(result, Math.random)
+  matchView.aIsHome = result.aIsHome
+  matchView.homeScore = result.homeScore
+  matchView.awayScore = result.awayScore
+  matchView.wentToPk = result.wentToPk
+  if (ctx.script.penalty) {
+    matchView.pkHome = ctx.script.penalty.homeGoals
+    matchView.pkAway = ctx.script.penalty.awayGoals
+  }
+  matchView.won = result.winner === 'A'
+  return result
+}
+
+/* settlement + rank, applied once the match animation is over */
+export function finishMatch () {
+  const s = settle(ctx.priced, ctx.result, matchView.stake, matchView.tierFee)
+  const won = ctx.result.winner === 'A'
+  store.cash += s.payoutA
+  matchView.payout = s.payoutA
+
+  const delta = won ? rankWin(ctx.priced.qA) : RANK_LOSS
+  const before = { ...store.rank }
+  const { rank, promotions } = applyRankDelta(store.rank, delta)
+  store.rank = { ...rank, peakNodes: before.peakNodes }
+
+  // reward road: peak-based, first claim within the season (PRD §6.4.3)
+  const claimed = []
+  promotions.forEach(p => {
+    const idx = ladderIndex(p.tierIndex, p.subtier) - 1
+    const node = REWARD_ROAD[idx]
+    if (node && !store.rank.peakNodes.includes(node.id)) {
+      store.rank.peakNodes.push(node.id)
+      if (node.reward.diamonds) store.diamonds += node.reward.diamonds
+      if (node.reward.tickets) store.tickets += node.reward.tickets
+      claimed.push(node)
+    }
+  })
+
+  store.stats.played += 1
+  if (won) store.stats.won += 1
+  if (won && ctx.result.wentToPk) store.stats.pkWon += 1
+
+  matchView.rankDelta = delta
+  matchView.promotions = claimed
+  return { settle: s, delta, promotions: claimed }
+}
+
+export function abandonMatch () {
+  matchView.active = false
+  ctx.priced = null; ctx.result = null; ctx.script = null
+}
+
+export { go, store }

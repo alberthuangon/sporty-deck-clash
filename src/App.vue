@@ -5,7 +5,7 @@
         :title="screenTitle"
         :cash="store.cash"
         :diamonds="store.diamonds"
-        :can-back="!isTabScreen"
+        :can-back="!!backTarget"
         @back="back"
         @title="titleTap"
       />
@@ -22,7 +22,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import gsap from 'gsap'
-import { store, TABS, go, isTab } from './store.js'
+import { store, go, isTab } from './store.js'
+import { canUpgrade, CATALOGUE } from './game.js'
 import TopBar from './components/TopBar.vue'
 import TabBar from './components/TabBar.vue'
 
@@ -64,9 +65,10 @@ const SCREENS = {
 const screenComponent = computed(() => (SCREENS[store.currentScreen] || SCREENS.home).c)
 const screenTitle = computed(() => (SCREENS[store.currentScreen] || SCREENS.home).title)
 const isTabScreen = computed(() => isTab(store.currentScreen))
+const backTarget = computed(() => (SCREENS[store.currentScreen] || {}).back)
 
 const tabs = computed(() => [
-  { id: 'cards', label: 'Cards', icon: '&#127183;', dot: false },
+  { id: 'cards', label: 'Cards', icon: '&#127183;', dot: CATALOGUE.some(c => canUpgrade(c.id)) },
   { id: 'shop', label: 'Shop', icon: '&#128717;', dot: store.diamonds >= 100 },
   { id: 'home', label: 'Play', icon: '&#9917;', dot: false },
   { id: 'tasks', label: 'Missions', icon: '&#128203;', dot: store.tasks.some(t => t.done && !t.claimed) },
@@ -74,10 +76,7 @@ const tabs = computed(() => [
 ])
 
 function navTab (id) { go(id) }
-function back () {
-  const b = (SCREENS[store.currentScreen] || {}).back
-  if (b) go(b)
-}
+function back () { if (backTarget.value) go(backTarget.value) }
 
 /* GSAP-driven screen transition (also proves the GSAP wiring) */
 function onEnter (el, done) {

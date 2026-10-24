@@ -37,13 +37,20 @@ function initialState () {
     currentScreen: 'home',
     overlay: null,
 
+    // transient hand-off between screens
+    pendingPack: null,
+    pendingTier: null,
+    upgradeTarget: null,
+    cardTarget: null,
+
     // live match context (built during the betting flow)
     match: null,
     lastResult: null,
 
     // demo switches (settings screen)
     settings: {
-      forcePkScenario: true,   // demo: condition the draw on a 1:1 regular-time tie so PK always shows
+      forcePkScenario: true,   // demo: condition the draw on a regular-time tie so PK always shows
+      forceWin: false,         // presenter only: rig the player to win (see Settings)
       fastMatch: false
     },
 

@@ -12,6 +12,17 @@
         </div>
         <input type="checkbox" v-model="store.settings.forcePkScenario" />
       </label>
+      <label class="row warn">
+        <div>
+          <div class="rt">Force a win <span class="tagd">presenter only</span></div>
+          <div class="rs muted">
+            Keeps redrawing until you win, so the promotion and jackpot-ticket
+            beat always lands on stage. This rigs the outcome — the payout and
+            rank figures stop representing the model while it is on.
+          </div>
+        </div>
+        <input type="checkbox" v-model="store.settings.forceWin" />
+      </label>
       <label class="row">
         <div>
           <div class="rt">Fast match</div>
@@ -46,5 +57,7 @@ function doReset () { resetStore(); go('home') }
 .row input { margin-left: auto; width: 20px; height: 20px; accent-color: var(--cta); flex: 0 0 auto; }
 .rt { font-weight: 700; margin-bottom: 2px; }
 .rs { font-size: 12px; line-height: 1.4; }
+.row.warn .rt { color: #F5A524; }
+.tagd { font-size: 9px; background: #5A4512; color: #F5A524; border-radius: 3px; padding: 1px 5px; margin-left: 4px; vertical-align: middle; letter-spacing: .04em; }
 .build { font-size: 11px; text-align: center; margin-top: 22px; }
 </style>

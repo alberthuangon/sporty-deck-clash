@@ -1,42 +1,98 @@
 <template>
-  <div class="scroll pad">
-    <div class="card pad" style="margin-bottom:12px">
-      <h2 class="sec-title" style="margin-bottom:6px">Scaffold check</h2>
-      <div class="muted" style="font-size:12px;line-height:1.5">
-        Shell is live: red top bar, wallet chips, 5-tab bar, screen switching,
-        GSAP screen transition, tokens as CSS variables, localStorage-backed store.
-        Tap the title 5&times; for demo settings.
+  <div class="scroll pad hm">
+    <div class="squad card">
+      <div class="sq-head">
+        <div>
+          <div class="muted lbl">Squad Power</div>
+          <PowerStars :q="power" />
+        </div>
+        <div class="venue">
+          <div class="muted lbl">{{ leanLabel }}</div>
+          <div class="vbar"><i :style="{ left: (50 + lean * 900) + '%' }"></i></div>
+        </div>
+      </div>
+      <div class="lineup">
+        <div v-for="s in SLOTS" :key="s.key" class="lu">
+          <div class="lu-lbl">{{ s.short }}</div>
+          <CardFace :card="cardOf(store.deck[s.key])" size="sm" :radar="false" />
+        </div>
+      </div>
+      <button class="btn edit" @click="go('deckedit')">Edit squad</button>
+    </div>
+
+    <button class="btn btn-cta big" data-sfx="start" @click="go('tierselect')">Start match</button>
+
+    <div class="tiers card">
+      <div class="sec-title" style="margin-bottom:8px">Arenas</div>
+      <div v-for="t in TIERS" :key="t.id" class="trow">
+        <span class="tf">₦{{ t.fee }}</span>
+        <span class="tn muted">{{ t.name }}</span>
+        <span v-if="unlocked(t)" class="ok">✓</span>
+        <span v-else class="lock muted">🔒 Raise your Power to unlock</span>
       </div>
     </div>
 
-    <h2 class="sec-title">Stack screens (temporary nav)</h2>
-    <div class="grid">
-      <button v-for="s in stack" :key="s" class="btn" @click="go(s)">{{ s }}</button>
-    </div>
-
-    <h2 class="sec-title" style="margin-top:18px">Token swatches</h2>
-    <div class="sw-row">
-      <div v-for="s in swatches" :key="s.v" class="sw">
-        <i :style="{ background: s.v }"></i><span>{{ s.n }}</span>
+    <div class="jp card">
+      <div>
+        <div class="muted lbl">Season Jackpot</div>
+        <div class="jp-v">₦{{ jackpot.toLocaleString() }}</div>
+      </div>
+      <div class="jp-t">
+        <div class="muted lbl">Your tickets</div>
+        <div class="jp-n">{{ store.tickets }}</div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { go } from '../store.js'
-const stack = ['packopen', 'upgrade', 'deckedit', 'tierselect', 'matchmaking', 'confirm', 'toss', 'match', 'result']
-const swatches = [
-  { n: 'bg', v: '#1B1E25' }, { n: 'surface', v: '#2C3039' }, { n: 'surface-hi', v: '#353A45' },
-  { n: 'red', v: '#E41827' }, { n: 'green', v: '#32CE62' }, { n: 'cta', v: '#33EA6A' },
-  { n: 'cta-deep', v: '#0D9737' }, { n: 'text-2', v: '#9CA0AB' }
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import CardFace from '../components/CardFace.vue'
+import PowerStars from '../components/PowerStars.vue'
+import { store, go, cardOf, deckPower, venueLean, collectionPower, TIERS } from '../game.js'
+
+const SLOTS = [
+  { key: 'gk', short: 'GK' }, { key: 'df', short: 'DF' },
+  { key: 'mf', short: 'MF' }, { key: 'fw', short: 'FW' }
 ]
+const power = computed(() => deckPower())
+const lean = computed(() => venueLean())
+const leanLabel = computed(() => {
+  const v = lean.value * 100
+  if (v > 0.4) return 'Home specialist'
+  if (v < -0.4) return 'Away specialist'
+  return 'Balanced squad'
+})
+const colPower = computed(() => collectionPower())
+function unlocked (t) { return colPower.value >= t.unlockPower }
+
+const jackpot = ref(2847310)
+let timer
+onMounted(() => { timer = setInterval(() => { jackpot.value += 1 + Math.floor(Math.random() * 40) }, 900) })
+onUnmounted(() => clearInterval(timer))
 </script>
 
 <style scoped>
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.grid .btn { height: 38px; font-size: 13px; font-weight: 600; }
-.sw-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.sw { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; color: var(--text-2); width: 60px; }
-.sw i { width: 46px; height: 28px; border-radius: 4px; border: 1px solid rgba(255,255,255,.1); }
+.hm { display: flex; flex-direction: column; gap: 12px; }
+.lbl { font-size: 11px; }
+.squad { padding: 12px; }
+.sq-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 14px; }
+.venue { flex: 0 0 130px; }
+.vbar { position: relative; height: 5px; background: var(--surface-hi); border-radius: 999px; margin-top: 7px; }
+.vbar i { position: absolute; top: -3px; width: 11px; height: 11px; border-radius: 50%; background: var(--green); transform: translateX(-50%); }
+.lineup { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+.lu-lbl { font-size: 9px; font-weight: 700; color: var(--text-2); text-align: center; margin-bottom: 4px; }
+.edit { height: 36px; font-size: 13px; }
+.big { height: 52px; font-size: 17px; }
+.tiers { padding: 12px; }
+.trow { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--divider); font-size: 13px; }
+.trow:last-child { border-bottom: 0; }
+.tf { font-weight: 700; width: 48px; }
+.tn { flex: 1; font-size: 12px; }
+.ok { color: var(--green); font-weight: 700; }
+.lock { font-size: 10px; text-align: right; }
+.jp { display: flex; justify-content: space-between; align-items: center; padding: 12px; }
+.jp-v { font-size: 19px; font-weight: 800; color: var(--r-l); font-variant-numeric: tabular-nums; }
+.jp-t { text-align: right; }
+.jp-n { font-size: 19px; font-weight: 800; }
 </style>
