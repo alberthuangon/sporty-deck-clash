@@ -20,31 +20,26 @@
       </div>
     </div>
 
-    <div class="odds">
-      <OddsCell label="You win" :odds="matchView.myOdds" big />
-      <OddsCell :label="matchView.opponentName" :odds="matchView.theirOdds" big />
-    </div>
-    <div class="margin muted">
-      Both prices carry the same <b>{{ (MARGIN * 100).toFixed(0) }}% margin</b> —
-      your expected cost is the same whatever cards you hold.
-    </div>
-
-    <div class="venue card" v-if="branches">
-      <div class="v-head">
-        <span class="v-t">Home or away</span>
-        <span class="v-tbd">decided by coin toss</span>
+    <!-- one price card: what you pay, what the toss does to it, what the
+         house takes. The opponent's price used to sit here too, but once the
+         margin is stated it carries nothing a player can act on — relative
+         strength is already in the Power row above. -->
+    <div class="price card">
+      <div class="p-head">
+        <span class="p-t">Your price</span>
+        <span class="p-tbd">home or away decided by coin toss</span>
       </div>
-      <div class="v-legs">
-        <span class="v-leg">home <b>{{ branches.home.toFixed(2) }}</b></span>
-        <i class="v-dot"></i>
-        <span class="v-leg">away <b>{{ branches.away.toFixed(2) }}</b></span>
-        <span class="v-arrow">→</span>
-        <span class="v-leg">you pay <b class="green">{{ matchView.myOdds.toFixed(2) }}</b></span>
+      <div class="odds-cell p-cell">{{ matchView.myOdds.toFixed(2) }}</div>
+      <div class="p-legs" v-if="branches">
+        <span class="p-leg">home <b>{{ branches.home.toFixed(2) }}</b></span>
+        <i class="p-dot"></i>
+        <span class="p-leg">away <b>{{ branches.away.toFixed(2) }}</b></span>
       </div>
-      <div class="v-note muted">
+      <div class="p-note muted">
         The toss happens after both players confirm, so your price averages the
-        two. A squad built for one venue is betting on the toss; a balanced one
-        is not.
+        two — a squad built for one venue is betting on the toss. Both sides
+        pay the same <b>{{ (MARGIN * 100).toFixed(0) }}% margin</b>, whatever
+        cards you hold.
       </div>
     </div>
 
@@ -90,7 +85,6 @@
 <script setup>
 import { ref, computed } from 'vue'
 import PowerStars from '../components/PowerStars.vue'
-import OddsCell from '../components/OddsCell.vue'
 import { store, go, matchView, ctx, cardOf, deckPower, confirmBet, stakeRange, abandonMatch, branchOdds } from '../game.js'
 import { MARGIN } from '../engine/model.js'
 
@@ -118,21 +112,16 @@ function cancel () { abandonMatch(); go('home') }
 .ln { flex: 1; }
 .ln.right { text-align: right; }
 .lp { width: 34px; text-align: center; font-size: 10px; font-weight: 700; }
-.odds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-/* the house edge is stated, not left to be reverse-engineered from the book */
-.margin { font-size: 10px; line-height: 1.5; text-align: center; margin: -2px 2px 0; }
-.margin b { color: var(--text-2); }
-.venue { padding: 10px 12px; }
-.v-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
-.v-t { font-size: 12px; font-weight: 700; }
-.v-tbd { font-size: 10px; color: var(--r-l); font-weight: 700; letter-spacing: .04em; }
-/* one compact line: the branch prices are context for the headline odds, not
-   a second set of offers competing with them */
-.v-legs { display: flex; align-items: baseline; gap: 7px; font-size: 11px; color: var(--text-2); }
-.v-leg b { font-size: 13px; color: var(--text); margin-left: 3px; font-variant-numeric: tabular-nums; }
-.v-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-3); align-self: center; }
-.v-arrow { color: var(--text-3); margin: 0 1px; }
-.v-note { font-size: 10px; line-height: 1.5; margin-top: 7px; }
+.price { padding: 10px 12px; }
+.p-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.p-t { font-size: 12px; font-weight: 700; }
+.p-tbd { font-size: 10px; color: var(--r-l); font-weight: 700; text-align: right; }
+.p-cell { height: 52px; font-size: 28px; }
+.p-legs { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-2); margin-top: 8px; }
+.p-leg b { font-size: 13px; color: var(--text); margin-left: 3px; font-variant-numeric: tabular-nums; }
+.p-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-3); }
+.p-note { font-size: 10px; line-height: 1.5; margin-top: 8px; }
+.p-note b { color: var(--text-2); }
 .stake { padding: 12px; }
 .st-head { display: flex; justify-content: space-between; align-items: baseline; }
 .st-v { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
