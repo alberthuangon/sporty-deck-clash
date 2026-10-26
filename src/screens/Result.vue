@@ -14,7 +14,10 @@
 
     <div class="money card">
       <div class="mrow"><span class="muted">Stake</span><span>₦{{ matchView.stake }}</span></div>
-      <div class="mrow"><span class="muted">Your odds</span><span class="green">{{ matchView.myOdds.toFixed(2) }}</span></div>
+      <div class="mrow">
+        <span class="muted">Your price ({{ matchView.aIsHome ? 'home' : 'away' }})</span>
+        <span class="odds-cell r-cell">{{ matchView.myOdds.toFixed(2) }}</span>
+      </div>
       <div class="mrow big">
         <span>{{ matchView.won ? 'Payout' : 'Lost' }}</span>
         <span :class="matchView.won ? 'green' : ''">
@@ -86,7 +89,8 @@ function again () { abandonMatch(); go('tierselect') }
 .pk { font-size: 12px; margin-top: 2px; }
 .names { font-size: 11px; margin-top: 6px; }
 .money { padding: 4px 12px; }
-.mrow { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--divider); font-size: 13px; }
+.mrow { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--divider); font-size: 13px; }
+.r-cell { padding: 3px 10px; font-size: 15px; }
 .mrow.big { font-size: 17px; font-weight: 800; border-bottom: 0; }
 .fine { font-size: 10px; padding-bottom: 10px; }
 .rank { padding: 12px; }

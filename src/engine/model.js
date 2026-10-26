@@ -136,25 +136,49 @@ export function floorTo (x, dp) {
 export function oddsFor (q) { return (1 - MARGIN) / q }
 export function displayOdds (q) { return floorTo(oddsFor(q), 2) }   // PRD §11.2: floor to 2dp
 
-/* Price a pairing BEFORE the toss. Returns the single probability object that
-   both the odds and the eventual draw are taken from. */
+/* Price a pairing (PRD v0.21 §11.2).
+   Each branch of the toss carries its OWN settlement price: the home/away
+   assignment is drawn when the match is created and kept hidden, so by the
+   time a player confirms, both prices are quoted and locked and the toss only
+   reveals which one applies. Nobody can act on the reveal, so there is nothing
+   to arbitrage.
+
+   The blended q survives for exactly two jobs — the matching condition and
+   Power — and never settles anything. Keeping the cap on the blended figure is
+   what stops branch prices (which run past 3.5) from shrinking the pool. */
 export function priceMatch (teamA, teamB, L = LEAGUE) {
   const aHome = branch(teamA, teamB, L)      // branch where A is the home side
   const bHome = branch(teamB, teamA, L)      // branch where B is the home side
 
-  const qA = 0.5 * aHome.qHome + 0.5 * (1 - bHome.qHome)
+  // settlement prices, per branch, per side
+  aHome.qA = aHome.qHome
+  aHome.qB = 1 - aHome.qHome
+  aHome.oddsA = displayOdds(aHome.qA)
+  aHome.oddsB = displayOdds(aHome.qB)
+
+  bHome.qA = 1 - bHome.qHome
+  bHome.qB = bHome.qHome
+  bHome.oddsA = displayOdds(bHome.qA)
+  bHome.oddsB = displayOdds(bHome.qB)
+
+  // blended: matching condition and Power only
+  const qA = 0.5 * aHome.qA + 0.5 * bHome.qA
   const qB = 1 - qA
+  const capOddsA = displayOdds(qA)
+  const capOddsB = displayOdds(qB)
 
   return {
     teamA, teamB, league: L,
     branches: { aHome, bHome },
     qA, qB,
-    oddsA: displayOdds(qA),
-    oddsB: displayOdds(qB),
-    exactOddsA: oddsFor(qA),
-    exactOddsB: oddsFor(qB),
-    matchable: displayOdds(qA) <= ODDS_CAP && displayOdds(qB) <= ODDS_CAP
+    capOddsA, capOddsB,
+    matchable: capOddsA <= ODDS_CAP && capOddsB <= ODDS_CAP
   }
+}
+
+/* The branch a drawn assignment settles at. */
+export function settlementBranch (priced, aIsHome) {
+  return aIsHome ? priced.branches.aHome : priced.branches.bHome
 }
 
 /* Power = q_ref, this team's pre-toss win probability against the league
@@ -190,10 +214,9 @@ function pickFromMatrix (matrix, r) {
    switch only. It still samples from the very same matrix, just restricted to
    the tie diagonal, and the PK is still one sample. The simulation harness
    never uses it, because conditioned samples say nothing about RTP. */
-export function drawResult (priced, rng = Math.random, opts = {}) {
-  // 1. coin toss decides home/away
-  const aIsHome = rng() < 0.5
-  const br = aIsHome ? priced.branches.aHome : priced.branches.bHome
+export function drawResult (priced, aIsHome, rng = Math.random, opts = {}) {
+  // the assignment was drawn when the match was created; this only consumes it
+  const br = settlementBranch(priced, aIsHome)
   const home = aIsHome ? priced.teamA : priced.teamB
   const away = aIsHome ? priced.teamB : priced.teamA
 
@@ -235,8 +258,10 @@ export function drawResult (priced, rng = Math.random, opts = {}) {
 /* ---------- settlement (PRD §12) ---------- */
 
 export function settle (priced, result, stakeA, stakeB) {
-  const payoutA = result.winner === 'A' ? Math.floor(stakeA * priced.oddsA) : 0
-  const payoutB = result.winner === 'B' ? Math.floor(stakeB * priced.oddsB) : 0
+  // paid at the price of the branch that actually happened, not an average
+  const br = settlementBranch(priced, result.aIsHome)
+  const payoutA = result.winner === 'A' ? Math.floor(stakeA * br.oddsA) : 0
+  const payoutB = result.winner === 'B' ? Math.floor(stakeB * br.oddsB) : 0
   return {
     payoutA, payoutB,
     netA: payoutA - stakeA,

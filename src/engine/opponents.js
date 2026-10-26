@@ -52,7 +52,7 @@ export function findOpponent (playerTeam, opts = {}) {
   for (const cand of ranked) {
     const priced = priceMatch(playerTeam, cand.team)
     if (priced.matchable) return { opponent: cand, priced, walked }
-    walked.push({ handle: cand.handle, power: cand.power, oddsA: priced.oddsA, oddsB: priced.oddsB })
+    walked.push({ handle: cand.handle, power: cand.power, capOddsA: priced.capOddsA, capOddsB: priced.capOddsB })
   }
   // every queued candidate priced outside the cap -> platform takes the book
   const sys = systemOpponent(playerTeam, myPower)

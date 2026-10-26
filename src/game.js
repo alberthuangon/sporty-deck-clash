@@ -6,7 +6,7 @@ import { reactive } from 'vue'
 import cardData from './data/cards.json' with { type: 'json' }
 import { store, go } from './store.js'
 import { buildCard, RARITY, MAX_LEVEL } from './engine/cards.js'
-import { buildTeam, priceMatch, drawResult, settle, powerOf, powerStars, powerScore, displayOdds } from './engine/model.js'
+import { buildTeam, priceMatch, drawResult, settle, powerOf, powerStars, powerScore, settlementBranch } from './engine/model.js'
 import { findOpponent } from './engine/opponents.js'
 import { buildScript } from './engine/scriptgen.js'
 import { shardCost, TIERS, stakeRange, applyRankDelta, rankWin, RANK_LOSS, REWARD_ROAD, ladderIndex, rankLabel, rollPack } from './engine/economy.js'
@@ -14,14 +14,16 @@ import { shardCost, TIERS, stakeRange, applyRankDelta, rankWin, RANK_LOSS, REWAR
 export const CATALOGUE = cardData.cards
 export const BY_ID = Object.fromEntries(CATALOGUE.map(c => [c.id, c]))
 
-/* non-reactive match context */
-export const ctx = { priced: null, result: null, script: null, opponent: null, playerTeam: null }
+/* Non-reactive match context. aIsHome is drawn when the match is created and
+   lives ONLY here until the toss reveals it — it must never reach matchView,
+   which is what the screens render (PRD v0.21 §3.9). */
+export const ctx = { priced: null, result: null, script: null, opponent: null, playerTeam: null, aIsHome: null }
 
 /* reactive, display-safe mirror of the current match */
 export const matchView = reactive({
   active: false, tierFee: 0, stake: 0,
   opponentName: '', opponentPower: 0,
-  myOdds: 0, theirOdds: 0, myQ: 0,
+  oddsIfHome: 0, oddsIfAway: 0, myOdds: 0, myQ: 0,
   aIsHome: null, homeScore: 0, awayScore: 0,
   wentToPk: false, pkHome: 0, pkAway: 0, won: false,
   payout: 0, rankDelta: 0, promotions: []
@@ -202,13 +204,17 @@ export function startMatchmaking (tierFee) {
   ctx.playerTeam = team
   ctx.opponent = found.opponent
   ctx.priced = found.priced
+  // drawn now, revealed later — same rule as the result itself
+  ctx.aIsHome = Math.random() < 0.5
   ctx.result = null
   ctx.script = null
   Object.assign(matchView, {
     active: true, tierFee, stake: tierFee,
     opponentName: found.opponent.handle,
     opponentPower: found.opponent.power,
-    myOdds: found.priced.oddsA, theirOdds: found.priced.oddsB, myQ: found.priced.qA,
+    oddsIfHome: found.priced.branches.aHome.oddsA,
+    oddsIfAway: found.priced.branches.bHome.oddsA,
+    myOdds: 0, myQ: found.priced.qA,
     aIsHome: null, homeScore: 0, awayScore: 0,
     wentToPk: false, pkHome: 0, pkAway: 0, won: false,
     payout: 0, rankDelta: 0, promotions: []
@@ -216,20 +222,14 @@ export function startMatchmaking (tierFee) {
   return { ...found, candidates: found.walked }
 }
 
-/* Your chance of winning in each outcome of the toss (PRD v0.20 §3.7).
-   Deliberately probabilities, not prices: the price is locked at confirm
-   whatever the toss does, so a second set of odds on this screen would be
-   numbers dressed as offers that are never offered.
-
-   NOTE these two do not sum to 100 — they are two separate branches, not a
-   split. Measured across 38,703 matched pairings the sum runs 75.7%-124.3%,
-   so the UI must not invite adding them. */
-export function tossChances () {
+/* Both branch prices, quoted and locked at confirm (PRD v0.21 §3.7).
+   These ARE offers now — one of them settles the bet — so the screen shows
+   them in IV odds cells, unlike the v0.20 design where they were hypothetical. */
+export function branchQuotes () {
   if (!ctx.priced) return null
-  return {
-    home: ctx.priced.branches.aHome.qHome,
-    away: 1 - ctx.priced.branches.bHome.qHome
-  }
+  const h = ctx.priced.branches.aHome
+  const a = ctx.priced.branches.bHome
+  return { home: h.oddsA, away: a.oddsA, qHome: h.qA, qAway: a.qA }
 }
 
 export function confirmBet (stake) {
@@ -244,20 +244,24 @@ export function confirmBet (stake) {
 /* toss + draw + script, all in one deterministic step (PRD §14.2: the whole
    timeline is compiled before a single frame plays, which is what makes Skip
    safe) */
+/* The toss REVEALS the assignment drawn at match creation; it does not decide
+   it. Revealing is also when the realized price stops being two numbers and
+   becomes one. */
 export function runToss () {
   const opts = { forceDraw: store.settings.forcePkScenario, minTieGoals: 1 }
-  let result = drawResult(ctx.priced, Math.random, opts)
+  let result = drawResult(ctx.priced, ctx.aIsHome, Math.random, opts)
   // presenter switch: keep redrawing until the player wins. Demo only — it is a
   // conditioned sample, so the stage show is guaranteed but the figures stop
   // representing the model. Off by default, never used by the sim harness.
   if (store.settings.forceWin) {
     for (let i = 0; i < 300 && result.winner !== 'A'; i++) {
-      result = drawResult(ctx.priced, Math.random, opts)
+      result = drawResult(ctx.priced, ctx.aIsHome, Math.random, opts)
     }
   }
   ctx.result = result
   ctx.script = buildScript(result, Math.random)
   matchView.aIsHome = result.aIsHome
+  matchView.myOdds = settlementBranch(ctx.priced, result.aIsHome).oddsA
   matchView.homeScore = result.homeScore
   matchView.awayScore = result.awayScore
   matchView.wentToPk = result.wentToPk
@@ -279,7 +283,9 @@ export function finishMatch () {
   store.cash += s.payoutA
   matchView.payout = s.payoutA
 
-  const delta = won ? rankWin(ctx.priced.qA) : RANK_LOSS
+  // rank scores against the branch that actually happened (PRD v0.21 §6.4.1)
+  const qRealized = settlementBranch(ctx.priced, ctx.result.aIsHome).qA
+  const delta = won ? rankWin(qRealized) : RANK_LOSS
   const before = { ...store.rank }
   const { rank, promotions } = applyRankDelta(store.rank, delta)
   store.rank = { ...rank, peakNodes: before.peakNodes }
@@ -313,7 +319,7 @@ export function abandonMatch () {
     store.pendingBet = null
   }
   matchView.active = false
-  ctx.priced = null; ctx.result = null; ctx.script = null
+  ctx.priced = null; ctx.result = null; ctx.script = null; ctx.aIsHome = null
 }
 
 export { go, store }

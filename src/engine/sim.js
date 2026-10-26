@@ -11,7 +11,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { buildTeam, priceMatch, drawResult, settle, powerOf, LEAGUE, MARGIN, ODDS_CAP } from './model.js'
+import { buildTeam, priceMatch, drawResult, settle, powerOf, settlementBranch, LEAGUE, MARGIN, ODDS_CAP } from './model.js'
 import { PACKS, rollPack, packRates, RARITY_ORDER } from './economy.js'
 import { systemOpponent } from './opponents.js'
 
@@ -65,7 +65,9 @@ function run (n, L, opts = {}) {
   let pairs = 0; let rejections = 0; let unmatchable = 0
   let oddsOverCap = 0
   let rankSum = 0
+  let worstPlatform = 0
   const oddsHist = []
+  const evByBranch = { home: [], away: [] }
 
   for (let i = 0; i < n; i++) {
     const pair = matchedPair(rnd, L)
@@ -73,11 +75,19 @@ function run (n, L, opts = {}) {
     const { priced } = pair
     pairs++
     rejections += pair.rejected
-    if (priced.oddsA > ODDS_CAP || priced.oddsB > ODDS_CAP) oddsOverCap++
-    oddsHist.push(priced.oddsA, priced.oddsB)
+    if (priced.capOddsA > ODDS_CAP || priced.capOddsB > ODDS_CAP) oddsOverCap++
+    oddsHist.push(priced.capOddsA, priced.capOddsB)
 
-    const result = drawResult(priced, rnd)
+    // conditional EV per branch — each must land on 1 - margin on its own,
+    // which is the whole point of pricing the branches separately
+    evByBranch.home.push(priced.branches.aHome.qA * priced.branches.aHome.oddsA)
+    evByBranch.away.push(priced.branches.bHome.qA * priced.branches.bHome.oddsA)
+
+    // assignment is drawn at match creation, then consumed
+    const aIsHome = rnd() < 0.5
+    const result = drawResult(priced, aIsHome, rnd)
     const s = settle(priced, result, stake, stake)
+    worstPlatform = Math.min(worstPlatform, s.platform / stake)
 
     staked += stake * 2
     returned += s.payoutA + s.payoutB
@@ -85,7 +95,8 @@ function run (n, L, opts = {}) {
     if (result.homeScore > result.awayScore) homeWins++
     else if (result.homeScore < result.awayScore) awayWins++
 
-    const qWinner = result.winner === 'A' ? priced.qA : priced.qB
+    const br = settlementBranch(priced, result.aIsHome)
+    const qWinner = result.winner === 'A' ? br.qA : br.qB
     rankSum += Math.floor((5 + (1 - qWinner) * 20) / qWinner) - 20
   }
 
@@ -101,7 +112,10 @@ function run (n, L, opts = {}) {
     oddsOverCap,
     oddsMedian: oddsHist[Math.floor(oddsHist.length / 2)],
     oddsP95: oddsHist[Math.floor(oddsHist.length * 0.95)],
-    rankDriftPerMatch: rankSum / pairs / 2
+    rankDriftPerMatch: rankSum / pairs / 2,
+    evHome: evByBranch.home.reduce((a, b) => a + b, 0) / pairs,
+    evAway: evByBranch.away.reduce((a, b) => a + b, 0) / pairs,
+    worstPlatform
   }
 }
 
@@ -156,9 +170,17 @@ function gate () {
   line('draw rate -> PK rate', pct(r.drawRate), drawOk)
   line('home win rate (regular time)', pct(r.homeWinRate))
   line('away win rate (regular time)', pct(r.awayWinRate))
-  line('median priced odds', r.oddsMedian.toFixed(2))
-  line('95th pct priced odds', r.oddsP95.toFixed(2), r.oddsP95 <= ODDS_CAP)
+  line('median blended odds (cap check)', r.oddsMedian.toFixed(2))
+  line('95th pct blended odds', r.oddsP95.toFixed(2), r.oddsP95 <= ODDS_CAP)
   line('pairings priced over cap', r.oddsOverCap, r.oddsOverCap === 0)
+
+  // PRD v0.21: each branch settles at its own price, so each has to carry the
+  // margin on its own — an overall RTP of 95% could otherwise hide one branch
+  // subsidising the other
+  const evOk = Math.abs(r.evHome - (1 - MARGIN)) < 0.01 && Math.abs(r.evAway - (1 - MARGIN)) < 0.01
+  line('conditional EV, you at home', pct(r.evHome), Math.abs(r.evHome - (1 - MARGIN)) < 0.01)
+  line('conditional EV, you away', pct(r.evAway), Math.abs(r.evAway - (1 - MARGIN)) < 0.01)
+  line('platform worst single match', r.worstPlatform.toFixed(2) + 'x stake', r.worstPlatform > -2.5)
   line('avg opponents rejected', r.avgRejections.toFixed(2))
   line('rank drift per player per match', r.rankDriftPerMatch.toFixed(2),
     Math.abs(r.rankDriftPerMatch - 5) < 1.5)
@@ -190,7 +212,9 @@ function gate () {
   line('Power — starter squad', powerOf(starter).toFixed(4))
   line('Power — after Okonkwo Lv.2 swap', powerOf(upgraded).toFixed(4))
   const demo = priceMatch(upgraded, starter)
-  line('demo pairing odds', demo.oddsA.toFixed(2) + ' / ' + demo.oddsB.toFixed(2), demo.matchable)
+  line('demo pairing, you at home', demo.branches.aHome.oddsA.toFixed(2) + ' / ' + demo.branches.aHome.oddsB.toFixed(2))
+  line('demo pairing, you away', demo.branches.bHome.oddsA.toFixed(2) + ' / ' + demo.branches.bHome.oddsB.toFixed(2))
+  line('blended, for the cap', demo.capOddsA.toFixed(2) + ' / ' + demo.capOddsB.toFixed(2), demo.matchable)
   line('demo pairing draw rate', pct((demo.branches.aHome.pDraw + demo.branches.bHome.pDraw) / 2))
 
   console.log('\nRed-line checks')
@@ -200,11 +224,11 @@ function gate () {
   const rnd2 = rngFactory(42)
   let pkSamples = 0
   for (let i = 0; i < 2000; i++) {
-    const res = drawResult(priced, rnd2)
+    const res = drawResult(priced, rnd2() < 0.5, rnd2)
     if (res.wentToPk) pkSamples++
   }
   line('PK decided by a single sample', 'yes', true)
-  line('payout flooring applied', String(settle(priced, { winner: 'A' }, 50, 50).payoutA), true)
+  line('payout flooring applied', String(settle(priced, { winner: 'A', aIsHome: true }, 50, 50).payoutA), true)
 
   console.log('\nCard packs: the published rate table must equal what the sampler draws')
   let packsOk = true
@@ -239,7 +263,7 @@ function gate () {
   }
   line('system-team failures over 400 squads', sysFail, sysFail === 0)
 
-  const pass = rtpOk && drawOk && r.oddsOverCap === 0 && worst < 1e-9 && packsOk && sysFail === 0
+  const pass = rtpOk && drawOk && r.oddsOverCap === 0 && worst < 1e-9 && packsOk && sysFail === 0 && evOk
   console.log('\n' + (pass ? 'GATE PASSED' : 'GATE FAILED') + '\n')
   process.exitCode = pass ? 0 : 1
 }

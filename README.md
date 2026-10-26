@@ -33,6 +33,36 @@ src/
   data/cards.json 20-card catalogue (stats derived, never hand-written)
 ```
 
+## Branch pricing (PRD v0.21)
+
+Home/away is drawn when the match is created and kept hidden; the coin toss
+only reveals it. That is the same rule as the result itself — decided first,
+performed afterwards — and it is what makes per-branch settlement honest:
+by the time a player confirms, **both** branch prices are quoted and locked,
+so the reveal is information nobody can act on.
+
+```
+Confirm     if you're HOME  1.61  win ₦80
+            if you're AWAY  2.29  win ₦114      both locked
+Toss        reveals AWAY — 2.29 lights up, 1.61 fades
+Settle      floor(stake × 2.29)
+```
+
+The blended q survives for exactly two jobs, the matching condition and Power,
+and settles nothing. Keeping the 2.50 cap on the blended figure is what stops
+branch prices (which reach ~3.6) from shrinking the matching pool — an earlier
+analysis of mine wrongly applied the cap to branch prices and concluded 64% of
+pairings would break, which was a framing error, not a result.
+
+Verified by `npm run sim`: each branch carries the margin **on its own**
+(94.70% / 94.80% conditional EV against a 95% target), which an overall RTP
+figure could otherwise hide if one branch subsidised the other. Platform
+exposure on a single match widens from 0.5× stake to ~1.5× — still bounded,
+and each pound of it is still +margin in expectation.
+
+Rank scores against the realized branch, so winning from the away side pays
+more (it was the less likely outcome). Drift stays at +5 per match.
+
 ## The margin is stated, not hidden
 
 The confirm screen says "both prices carry the same 5% margin" out loud. The
