@@ -10,7 +10,7 @@
         <div class="sc">
           <b ref="scoreHomeEl">{{ scoreHome }}</b><span>:</span><b ref="scoreAwayEl">{{ scoreAway }}</b>
         </div>
-        <div v-if="pkScore" class="sc-pk">pens {{ pkScore }}</div>
+        <div class="sc-pk">{{ pkScore ? 'pens ' + pkScore : '' }}</div>
       </div>
       <div class="side right" :class="{ me: !homeIsMe }">
         <span class="nm">{{ awayName }}</span>
@@ -297,7 +297,9 @@ onMounted(() => { /* refs are live from here on */ })
 </script>
 
 <style scoped>
-.stage { display: flex; flex-direction: column; position: relative; }
+/* overlays are inset:0 on the stage and several of them scale or translate
+   past it on the way in and out. Without this they paint over the feed. */
+.stage { display: flex; flex-direction: column; position: relative; overflow: hidden; }
 
 /* board and clock sit ABOVE the cut-in, so the score flip is visible while the
    scorer's card is on screen — the two beats are meant to land together */
@@ -313,7 +315,9 @@ onMounted(() => { /* refs are live from here on */ })
 .sc-wrap { display: flex; flex-direction: column; align-items: center; }
 .sc { display: flex; align-items: baseline; gap: 5px; font-size: 25px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .sc span { font-size: 17px; color: var(--text-2); }
-.sc-pk { font-size: 9px; font-weight: 700; color: var(--r-l); letter-spacing: .06em; margin-top: -1px; }
+/* always present, empty in regular time: appearing mid-match used to grow
+   the board by 11px and shove the pitch and the feed down with it */
+.sc-pk { font-size: 9px; font-weight: 700; color: var(--r-l); letter-spacing: .06em; margin-top: -1px; line-height: 12px; min-height: 12px; }
 
 .clockbar { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--surface-lo); padding: 4px; }
 .clk { font-size: 12px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }

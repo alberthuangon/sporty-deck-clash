@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "sim": "node src/engine/sim.js"
+    "sim": "node src/engine/sim.js",
+    "layout": "node tools/layout/run.mjs"
   },
   "dependencies": {
     "gsap": "^3.12.5",

@@ -12,7 +12,15 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build    # -> dist/ (base './', zero external CDN, works offline)
 npm run sim      # 10,000-match engine sanity check (RTP / draw rate / odds cap)
+npm run layout   # drives a real match in headless Chrome; asserts nothing shifts
 ```
+
+`npm run sim` runs in node against a fake stage, so it can see a thrown
+animation callback but not a scoreboard row that appears at kick-off and
+shoves the feed down 11px. `npm run layout` covers that second kind: it
+mounts the real match screen, steps a compiled match frame by frame, and
+fails if the stage's height or the feed's position ever changes. It needs
+Chrome (override the path with `CHROME=...`).
 
 Designed for a 430px portrait phone frame; on desktop the frame is centred.
 
