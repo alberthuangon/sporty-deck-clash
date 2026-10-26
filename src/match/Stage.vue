@@ -50,6 +50,33 @@
       <div class="shock" ref="shockEl"></div>
     </div>
 
+    <!-- penalty showdown: the decisive kick leaves the pitch entirely and
+         becomes shooter card vs keeper card (PRD §16.4) -->
+    <div class="pk" ref="pkEl">
+      <div class="pk-bg"></div>
+      <div class="pk-vig" ref="pkVigEl"></div>
+      <div class="pk-head" ref="pkHeadEl">{{ pkLabel }}</div>
+      <div class="pk-stage" ref="pkStageEl">
+        <!-- goal mouth sits BEHIND the keeper, which is where it is -->
+        <div class="pk-net" ref="pkNetEl"></div>
+        <div class="pk-row-cards">
+          <CardFace :card="pkShooterCard" size="md" class="pk-card shooter" />
+          <CardFace :card="pkKeeperCard" size="md" class="pk-card keeper" />
+        </div>
+        <!-- the ball lives across the whole stage so the strike has room to read -->
+        <div class="pk-lane">
+          <div class="pk-ball" ref="pkBallEl"></div>
+        </div>
+      </div>
+      <div class="pk-board">
+        <div v-for="side in ['HOME','AWAY']" :key="side" class="pk-row">
+          <span class="pk-side" :class="side.toLowerCase()">{{ side === 'HOME' ? 'H' : 'A' }}</span>
+          <i v-for="(k,i) in pkBoard[side]" :key="i" class="pk-pip" :class="k"></i>
+        </div>
+      </div>
+      <div class="pk-stamp" ref="pkStampEl">{{ pkStamp }}</div>
+    </div>
+
     <!-- cut-in overlay -->
     <div class="cutin" ref="cutinEl">
       <div class="ci-bg" ref="ciBgEl"></div>
@@ -83,6 +110,15 @@ const phaseLabel = ref('')
 const cutCard = ref(null)
 const cutText = ref('')
 const cutSub = ref('')
+const pkShooter = ref(null)
+const pkKeeper = ref(null)
+const pkLabel = ref('')
+const pkStamp = ref('')
+const pkBoard = ref({ HOME: [], AWAY: [] })
+/* the showdown cards stay mounted so the timeline compiler always has real
+   elements to animate; setPk only swaps which card they show */
+const pkShooterCard = computed(() => pkShooter.value || props.home.cards.fw)
+const pkKeeperCard = computed(() => pkKeeper.value || props.away.cards.gk)
 
 const pitchEl = ref(null)
 const ballEl = ref(null)
@@ -96,6 +132,13 @@ const ciTextEl = ref(null)
 const ciStreakEl = ref(null)
 const scoreHomeEl = ref(null)
 const scoreAwayEl = ref(null)
+const pkEl = ref(null)
+const pkVigEl = ref(null)
+const pkHeadEl = ref(null)
+const pkStageEl = ref(null)
+const pkBallEl = ref(null)
+const pkNetEl = ref(null)
+const pkStampEl = ref(null)
 
 const tokenEls = reactive({})
 function setToken (key, el) { if (el) tokenEls[key] = el }
@@ -129,6 +172,26 @@ const api = {
     text: ciTextEl.value, streaks: ciStreakEl.value
   }),
   scoreEl: (side) => (side === 'home' ? scoreHomeEl.value : scoreAwayEl.value),
+  /* query the card elements rather than unwrapping component refs — CardFace
+     is a <script setup> component and its ref proxy does not hand back $el
+     reliably, while these nodes are always mounted */
+  pk: () => {
+    const root = pkEl.value
+    return {
+      root,
+      bg: root && root.querySelector('.pk-bg'),
+      vig: pkVigEl.value, head: pkHeadEl.value, stage: pkStageEl.value,
+      shooter: root && root.querySelector('.pk-card.shooter'),
+      keeper: root && root.querySelector('.pk-card.keeper'),
+      ball: pkBallEl.value, net: pkNetEl.value, stamp: pkStampEl.value
+    }
+  },
+  setPk: (shooter, keeper, label, board) => {
+    pkShooter.value = shooter; pkKeeper.value = keeper
+    pkLabel.value = label || ''
+    if (board) pkBoard.value = board
+  },
+  setPkStamp: (t) => { pkStamp.value = t || '' },
   card: (side, slot) => (side === 'home' ? props.home : props.away).cards[slot],
   setScore: (h, a) => { scoreHome.value = h; scoreAway.value = a },
   setClock: (t) => { clockLabel.value = t },
@@ -138,6 +201,9 @@ const api = {
     scoreHome.value = 0; scoreAway.value = 0
     clockLabel.value = "0'"; phaseLabel.value = ''
     cutCard.value = null; cutText.value = ''; cutSub.value = ''
+    pkShooter.value = null; pkKeeper.value = null
+    pkLabel.value = ''; pkStamp.value = ''
+    pkBoard.value = { HOME: [], AWAY: [] }
   }
 }
 
@@ -212,6 +278,54 @@ onMounted(() => { /* refs are live from here on */ })
 .shock {
   position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px;
   border-radius: 50%; border: 2px solid #fff; opacity: 0; pointer-events: none;
+}
+
+/* ---------- penalty showdown ---------- */
+.pk { position: absolute; inset: 0; pointer-events: none; visibility: hidden; z-index: 32; }
+.pk-bg { position: absolute; inset: 0; background: #0A0C10; }
+.pk-vig {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 32%, rgba(0,0,0,.92) 78%);
+}
+.pk-head {
+  position: absolute; top: 14px; left: 0; right: 0; text-align: center;
+  font-size: 11px; font-weight: 800; letter-spacing: .16em; color: var(--text-2);
+}
+.pk-stage { position: absolute; inset: 0; }
+.pk-row-cards {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px;
+}
+.pk-card { width: 106px; flex: 0 0 106px; }
+.pk-lane { position: absolute; left: 0; right: 0; top: 50%; height: 0; }
+.pk-ball {
+  position: absolute; left: 30%; top: 50%; margin-top: -6px;
+  width: 12px; height: 12px; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 12px rgba(255,255,255,.75);
+}
+.pk-net {
+  position: absolute; left: 70%; right: 2%; top: 50%; height: 108px; margin-top: -54px;
+  border: 1px solid rgba(255,255,255,.34); border-left: 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.10) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.10) 0 1px, transparent 1px 9px);
+  opacity: 0; transform-origin: left center;
+}
+.pk-board { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.pk-row { display: flex; align-items: center; gap: 5px; }
+.pk-side { font-size: 9px; font-weight: 800; width: 12px; text-align: center; }
+.pk-side.home { color: var(--home); } .pk-side.away { color: var(--away); }
+.pk-pip { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--text-3); }
+.pk-pip.goal { background: var(--cta); border-color: var(--cta); }
+.pk-pip.miss { background: transparent; border-color: var(--red); position: relative; }
+.pk-pip.miss::after {
+  content: ''; position: absolute; inset: 1px; border-radius: 50%;
+  background: linear-gradient(45deg, transparent 44%, var(--red) 44% 56%, transparent 56%);
+}
+.pk-stamp {
+  position: absolute; left: 0; right: 0; top: 50%; margin-top: -22px; text-align: center;
+  font-size: 40px; font-weight: 900; letter-spacing: .05em; color: var(--cta);
+  text-shadow: 0 3px 20px rgba(0,0,0,.8); opacity: 0;
 }
 
 .cutin { position: absolute; inset: 0; pointer-events: none; visibility: hidden; z-index: 30; }

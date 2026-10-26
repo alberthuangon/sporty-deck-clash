@@ -10,12 +10,29 @@
     <div class="pad ctrl">
       <div class="row">
         <button class="btn btn-cta play" :disabled="running" @click="play">
-          {{ running ? 'Playing…' : 'Play wave' }}
+          {{ running ? 'Playing…' : (mode === 'pk' ? 'Play PK' : 'Play wave') }}
         </button>
         <button class="btn stop" @click="stop">Reset</button>
       </div>
 
       <div class="seg">
+        <span class="lbl">What to play</span>
+        <div class="opts">
+          <button :class="{ on: mode === 'wave' }" @click="mode = 'wave'">Attack wave</button>
+          <button :class="{ on: mode === 'pk' }" @click="mode = 'pk'">PK decider</button>
+        </div>
+      </div>
+
+      <div class="seg" v-if="mode === 'pk'">
+        <span class="lbl">Story</span>
+        <div class="opts wrap">
+          <button v-for="st in PK_STORIES" :key="st.id" :class="{ on: story === st.id }" @click="story = st.id">
+            {{ st.label }}
+          </button>
+        </div>
+      </div>
+
+      <div class="seg" v-if="mode === 'wave'">
         <span class="lbl">Attacking side</span>
         <div class="opts">
           <button v-for="s in ['home','away']" :key="s" :class="{ on: side === s }" @click="side = s">
@@ -24,7 +41,7 @@
         </div>
       </div>
 
-      <div class="seg">
+      <div class="seg" v-if="mode === 'wave'">
         <span class="lbl">Outcome</span>
         <div class="opts wrap">
           <button v-for="o in OUTCOMES" :key="o.id" :class="{ on: outcome === o.id }" @click="outcome = o.id">
@@ -33,7 +50,7 @@
         </div>
       </div>
 
-      <div class="seg">
+      <div class="seg" v-if="mode === 'wave'">
         <span class="lbl">Finisher</span>
         <div class="opts">
           <button v-for="s in ['df','mf','fw']" :key="s" :class="{ on: actor === s }" @click="actor = s">
@@ -56,12 +73,13 @@
       </div>
 
       <div class="readout">
-        <div><span class="muted">Wave duration</span><b>{{ waveLen.toFixed(2) }}s</b></div>
+        <div><span class="muted">{{ mode === 'pk' ? 'Decider' : 'Wave' }} duration</span><b>{{ waveLen.toFixed(2) }}s</b></div>
+        <div><span class="muted">Shootout (3 rounds)</span><b>{{ pkDuration(6, beat).toFixed(2) }}s</b></div>
         <div><span class="muted">Timeline length</span><b>{{ lastLen.toFixed(2) }}s</b></div>
         <div class="budget" :class="budgetClass">
           <span class="muted">Projected match</span>
           <b>{{ projected.toFixed(0) }}s</b>
-          <span class="muted">target 45–60s</span>
+          <span class="muted">cap 30s</span>
         </div>
       </div>
 
@@ -85,8 +103,8 @@ import gsap from 'gsap'
 import Stage from '../match/Stage.vue'
 import { go, BY_ID } from '../game.js'
 import { buildTeam } from '../engine/model.js'
-import { buildWave, buildGoalCutIn, buildSaveCutIn, resetStage, startIdle, stopIdle, idleTimeline } from '../match/player.js'
-import { BEAT, waveDuration, matchDuration } from '../match/stageModel.js'
+import { buildWave, buildGoalCutIn, buildSaveCutIn, buildPkShowdown, resetStage, startIdle, stopIdle, idleTimeline } from '../match/player.js'
+import { BEAT, waveDuration, matchDuration, pkDuration } from '../match/stageModel.js'
 
 const OUTCOMES = [
   { id: 'GOAL', label: 'Goal' },
@@ -95,7 +113,8 @@ const OUTCOMES = [
   { id: 'SHOT_OFF', label: 'Wide' },
   { id: 'TACKLED', label: 'Tackled' }
 ]
-const BEAT_KEYS = ['buildUp', 'pass', 'carry', 'shot', 'goalHang', 'slowmo', 'cutIn', 'saveCutIn', 'rebound', 'reset', 'gap', 'clockRun', 'idle', 'press']
+const BEAT_KEYS = ['buildUp', 'pass', 'carry', 'shot', 'goalHang', 'slowmo', 'cutIn', 'saveCutIn',
+  'rebound', 'reset', 'gap', 'clockRun', 'pkKick', 'pkShowdown', 'pkStrike', 'pkReveal', 'idle', 'press']
 
 const home = buildTeam({
   gk: { def: BY_ID.G2, level: 3 }, fw: { def: BY_ID.F12, level: 4 },
@@ -106,7 +125,16 @@ const away = buildTeam({
   mf: { def: BY_ID.F11, level: 3 }, df: { def: BY_ID.F13, level: 3 }
 }, 'Away XI')
 
+const PK_STORIES = [
+  { id: 'wrongWay', label: 'Keeper goes the wrong way', outcome: 'GOAL', direction: 'RIGHT', dive: 'LEFT' },
+  { id: 'soClose', label: 'Right way, still in', outcome: 'GOAL', direction: 'LEFT', dive: 'LEFT' },
+  { id: 'saved', label: 'Saved', outcome: 'SAVED', direction: 'RIGHT', dive: 'RIGHT' },
+  { id: 'post', label: 'Off the post', outcome: 'POST', direction: 'LEFT', dive: 'RIGHT' }
+]
+
 const stageRef = ref(null)
+const mode = ref('wave')
+const story = ref('wrongWay')
 const side = ref('home')
 const outcome = ref('GOAL')
 const actor = ref('fw')
@@ -118,12 +146,12 @@ const beat = reactive({ ...BEAT })
 
 let tl = null
 
-const waveLen = computed(() => waveDuration(outcome.value, beat))
-/* a representative match: 2 goals, 2 saves, 4 misses, plus the clock running
-   between every event. This is the number PRD §15.1 wants inside 45-60s. */
-const projected = computed(() => matchDuration({ goals: 2, saves: 2, misses: 4 }, beat))
-const budgetClass = computed(() =>
-  projected.value >= 45 && projected.value <= 60 ? 'ok' : (projected.value < 45 ? 'low' : 'high'))
+const waveLen = computed(() =>
+  mode.value === 'pk' ? (beat.pkShowdown + beat.pkStrike + beat.pkReveal) : waveDuration(outcome.value, beat))
+/* a representative match that goes to penalties: 1-1, a few wasted attacks and
+   a 3-round shootout. Albert's cap is 30s for the WHOLE thing. */
+const projected = computed(() => matchDuration({ goals: 2, saves: 2, misses: 3, pkKicks: 6 }, beat))
+const budgetClass = computed(() => (projected.value <= 30 ? 'ok' : 'high'))
 
 function stageApi () { return stageRef.value && stageRef.value.api }
 
@@ -156,6 +184,23 @@ async function play (opts = {}) {
     if (opts.paused) return          // recorder drives the clock itself
     gsap.to(master, { timeScale: rate * speed.value, duration: .12, ease: 'power2.out' })
   }
+
+  if (mode.value === 'pk') {
+    const st = PK_STORIES.find(x => x.id === story.value)
+    master.add(buildPkShowdown(api, {
+      shooter: api.card('home', 'fw'),
+      keeper: api.card('away', 'gk'),
+      outcome: st.outcome, direction: st.direction, dive: st.dive,
+      label: 'ROUND 4 · SUDDEN DEATH',
+      board: { HOME: ['goal', 'goal', 'miss'], AWAY: ['goal', 'miss', 'goal'] }
+    }, beat, onSfx, onRate))
+    master.timeScale(speed.value)
+    lastLen.value = master.duration()
+    tl = master
+    if (opts.paused) { master.pause(0); running.value = false }
+    return master.duration()
+  }
+
   master.add(buildWave(api, {
     side: side.value, actorSlot: actor.value, outcome: outcome.value, variance: Math.random()
   }, beat, onSfx, onRate))
@@ -210,9 +255,11 @@ if (import.meta.env.DEV) {
   }
 }
 
+defineExpose({})
 function range (k) {
   if (k === 'slowmo' || k === 'press') return 1
   if (k === 'idle') return 8
+  if (k === 'pkShowdown' || k === 'pkStrike') return 2.5
   if (k === 'cutIn') return 3.5
   if (k === 'clockRun') return 6
   return 1.6

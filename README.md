@@ -66,10 +66,35 @@ exposes every beat length as a live slider, so the rhythm can be retuned
 without a reload. The readout shows the projected whole-match length against
 PRD §15.1's 45–60 second window.
 
-The script generator solves its wasted-attack count against the same budget
-(`planWaveCount`), so a 0–0 gets more waves and a 4–0 gets fewer, and every
-scoreline lands near the target. Measured over 4,000 generated scripts:
-median 53.2s, 84.5% inside 45–60s. Only 6+ goal matches (3% of draws) run long.
+### Match length
+
+The whole match, shootout included, is capped at **30 seconds**. (This
+overrides PRD §15.1's 45–60s — Albert's call; PRD v0.18 carries the change.)
+
+The script generator budgets against that cap rather than guessing: the
+shootout is compiled first, then `planWaveCount` picks the most wasted
+attacks regular time can still afford. A goal costs twice a miss and a
+shootout costs more again, so a 4–0 or a long shootout simply gets fewer
+waves, and later goals get shorter celebrations (`cutInLength`).
+
+Measured over 8,000 generated scripts: median **25.0s**, p95 28.4s, **98%
+under 30s**. The ~2% that cannot fit (high-scoring draws into long shootouts)
+need a median 1.04× timeline compression — the compiler applies a global
+`timeScale` backstop so the cap always holds.
+
+### The decisive penalty
+
+The kick that settles a shootout leaves the pitch and becomes shooter card vs
+keeper card (PRD §16.4), in three beats and no freeze: **hold** (cards close
+in, camera pushes, vignette breathes at ~75bpm, keeper shifts his weight),
+**strike** (slow motion, keeper commits), **reveal**.
+
+All of the tension sits *before* contact, which is what makes it honest — at
+the moment the crowd holds its breath the picture itself does not yet know the
+answer, so a goal and a save are pre-rolled identically and the performance
+leaks nothing about the result. The reveal tells one of three stories from the
+script's existing `direction`/`dive` fields: keeper goes the wrong way, keeper
+goes the right way and it still goes in, or the save.
 
 ## Demo hatch
 

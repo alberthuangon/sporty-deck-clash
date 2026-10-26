@@ -10,30 +10,47 @@ import { lambdas } from './model.js'
    retuning the motion automatically retunes the script's pacing. Kept as
    plain numbers here so engine/ stays free of any presentation import. */
 export const DEFAULT_PACING = {
-  goal: 5.30, save: 3.88, miss: 2.39, transition: 2.00,
-  target: 52,          // PRD §15.1 wants 45-60s; aim at the middle
+  goal: 3.52,          // first goal, cut-in included
+  cutIn: 1.00,         // the part of `goal` that is the celebration
+  cutInDecay: 0.15,    // each further goal gets a shorter one
+  cutInMin: 0.50,
+  save: 2.74, miss: 1.76, transition: 0.70,
+  cap: 28,             // whole match, shootout included, with headroom under 30
   saveShare: 0.45      // share of wasted attacks that end as a save
 }
 
-function estimateLength (goals, waves, p) {
-  return goals * p.goal +
-    waves * (p.saveShare * p.save + (1 - p.saveShare) * p.miss) +
-    (goals + waves + 1) * p.transition
+/* The fourth goal of a match does not need the same celebration as the first,
+   and in a 30-second match it cannot have it. */
+export function cutInLength (index, p = DEFAULT_PACING) {
+  return Math.max(p.cutInMin, p.cutIn - p.cutInDecay * index)
 }
 
-/* Pick the number of wasted attacks that lands the compiled timeline closest
-   to the target length. A goal costs more than twice a miss, so high-scoring
-   matches get fewer wasted waves and low-scoring ones get more — which is what
-   keeps every scoreline inside the window. */
-export function planWaveCount (goals, pacing = DEFAULT_PACING, rng = Math.random) {
-  let best = 3
-  let bestErr = Infinity
-  for (let n = 3; n <= 11; n++) {
-    const err = Math.abs(estimateLength(goals, n, pacing) - pacing.target)
-    if (err < bestErr) { bestErr = err; best = n }
+function goalsCost (goals, p) {
+  let t = 0
+  for (let i = 0; i < goals; i++) t += p.goal - p.cutIn + cutInLength(i, p)
+  return t
+}
+
+function estimateLength (goals, waves, p, pkSeconds) {
+  return goalsCost(goals, p) +
+    waves * (p.saveShare * p.save + (1 - p.saveShare) * p.miss) +
+    (goals + waves + 1) * p.transition +
+    pkSeconds
+}
+
+/* Choose how many wasted attacks the match can afford: the most that still
+   fits under the cap, given what the goals and the shootout already cost.
+   A goal costs twice a miss and a shootout costs more again, so a 4-0 or a
+   long shootout simply gets fewer wasted waves. */
+export function planWaveCount (goals, pacing = DEFAULT_PACING, rng = Math.random, pkSeconds = 0) {
+  let best = 1
+  for (let n = 1; n <= 11; n++) {
+    if (estimateLength(goals, n, pacing, pkSeconds) <= pacing.cap) best = n
+    else break
   }
-  const jitter = Math.floor(rng() * 3) - 1          // -1 / 0 / +1, keeps it alive
-  return Math.max(3, Math.min(11, best + jitter))
+  // keep it alive, but never by going over budget
+  if (best > 1 && rng() < 0.5) best -= 1
+  return best
 }
 
 function pick (rng, arr) { return arr[Math.floor(rng() * arr.length)] }
@@ -54,7 +71,7 @@ const MISS_TYPES = ['SHOT_OFF', 'SHOT_POST', 'TACKLED']
 
 /* ---------- regular time ---------- */
 
-export function buildMatchScript (result, rng = Math.random, pacing = DEFAULT_PACING) {
+export function buildMatchScript (result, rng = Math.random, pacing = DEFAULT_PACING, pkSeconds = 0) {
   const { home, away, homeScore, awayScore } = result
   const lam = lambdas(home, away)
 
@@ -92,8 +109,9 @@ export function buildMatchScript (result, rng = Math.random, pacing = DEFAULT_PA
     })
   })
 
-  /* Wasted attacks, budgeted against the target length (see planWaveCount). */
-  const waveCount = planWaveCount(total, pacing, rng)
+  /* Wasted attacks, budgeted against the target length (see planWaveCount).
+     A shootout is coming out of the same 30s, so regular time gets less. */
+  const waveCount = planWaveCount(total, pacing, rng, pkSeconds)
   const homeShare = lam.home / (lam.home + lam.away)
   const waveMinutes = []
   guard = 0
@@ -255,9 +273,25 @@ export function buildPenaltyScript (result, rng = Math.random) {
   }
 }
 
+/* Seconds a shootout of this many kicks will take. Mirrors stageModel's
+   pkDuration; kept as plain numbers so engine/ imports nothing from match/. */
+export const PK_COST = { kick: 0.55, suddenDeath: 0.42, showdown: 1.00, strike: 0.80, reveal: 0.60 }
+
+export function pkSecondsFor (kickCount, c = PK_COST) {
+  if (!kickCount) return 0
+  let t = 0
+  for (let i = 0; i < kickCount - 1; i++) t += i >= 5 ? c.suddenDeath : c.kick
+  return t + c.showdown + c.strike + c.reveal
+}
+
+/* The shootout is compiled FIRST, because regular time has to be budgeted
+   around however long it turns out to be — both come out of the same 30s. */
 export function buildScript (result, rng = Math.random, pacing = DEFAULT_PACING) {
+  const penalty = result.pk ? buildPenaltyScript(result, rng) : null
+  const pkSeconds = penalty ? pkSecondsFor(penalty.events.length) : 0
   return {
-    events: buildMatchScript(result, rng, pacing),
-    penalty: result.pk ? buildPenaltyScript(result, rng) : null
+    events: buildMatchScript(result, rng, pacing, pkSeconds),
+    penalty,
+    pkSeconds
   }
 }

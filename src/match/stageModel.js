@@ -22,18 +22,28 @@ export const GOAL = { home: [3, 50], away: [97, 50] }
 /* Beat lengths in seconds. The motion lab writes to this object live, so
    retuning the rhythm never needs a reload. */
 export const BEAT = {
-  buildUp: 0.55,       // tokens surge, defenders drop
-  pass: 0.30,          // one pass leg
-  carry: 0.38,         // ball carrier drives into the box
-  shot: 0.26,          // strike travelling to the target
-  goalHang: 0.30,      // slow-motion beat on the ball crossing the line
-  cutIn: 1.70,         // scorer card on screen
-  saveCutIn: 1.15,     // keeper card on screen
-  rebound: 0.34,
-  reset: 0.42,         // formation easing back
-  gap: 0.18,           // breath between waves
-  clockRun: 2.00,      // clock fast-forwarding between waves (step 5 uses this)
-  slowmo: 0.38,        // timeScale during the goal impact, not a duration
+  // Whole-match cap is 30s INCLUDING the shootout, so every beat is tight.
+  buildUp: 0.40,       // tokens surge, defenders drop
+  pass: 0.22,          // one pass leg
+  carry: 0.30,         // ball carrier drives into the box
+  shot: 0.22,          // strike travelling to the target
+  goalHang: 0.22,      // slow-motion beat on the ball crossing the line
+  cutIn: 1.00,         // scorer card on screen
+  saveCutIn: 0.70,     // keeper card on screen
+  rebound: 0.28,
+  reset: 0.30,         // formation easing back
+  gap: 0.10,           // breath between waves
+  clockRun: 0.70,      // clock fast-forwarding between waves
+  slowmo: 0.45,        // timeScale during the goal impact, not a duration
+
+  // Shootout. Ordinary kicks are brisk; the kick that settles it gets the
+  // three-beat showdown (PRD §16.4).
+  pkKick: 0.55,        // an ordinary kick, start to resolution
+  pkSuddenDeath: 0.42, // deep sudden death compresses further
+  pkShowdown: 1.00,    // shooter card vs keeper card, held
+  pkStrike: 0.80,      // the slow-motion strike
+  pkReveal: 0.60,      // the answer
+
   idle: 2.6,           // ambient off-ball drift amplitude, px (not a duration)
   press: 0.45          // how far defenders slide into the ball's lane, 0-1
 }
@@ -103,14 +113,30 @@ export function waveDuration (outcome, beat = BEAT) {
   return base + beat.shot
 }
 
-/* Wall-clock length of a whole match, given how many of each event it holds.
-   This is the number that has to land in PRD §15.1's 45-60 second window. */
+/* Wall-clock length of a shootout. The decisive kick carries the showdown;
+   everything before it is brisk, and deep sudden death is brisker still. */
+export function pkDuration (kickCount, beat = BEAT) {
+  if (!kickCount) return 0
+  let total = 0
+  for (let i = 0; i < kickCount - 1; i++) {
+    total += i >= 5 ? beat.pkSuddenDeath : beat.pkKick
+  }
+  return total + beat.pkShowdown + beat.pkStrike + beat.pkReveal
+}
+
+/* Wall-clock length of a whole match, shootout included. This is the number
+   that has to stay under the 30 second cap. */
 export function matchDuration (counts, beat = BEAT) {
-  const { goals = 0, saves = 0, misses = 0 } = counts
+  const { goals = 0, saves = 0, misses = 0, pkKicks = 0 } = counts
   const events = goals + saves + misses
-  const waves = goals * waveDuration('GOAL', beat) +
+  // later goals get shorter celebrations, mirroring scriptgen's cutInLength
+  let goalTime = 0
+  for (let i = 0; i < goals; i++) {
+    goalTime += waveDuration('GOAL', beat) - beat.cutIn + Math.max(0.50, beat.cutIn - 0.15 * i)
+  }
+  const waves = goalTime +
     saves * waveDuration('SHOT_SAVE', beat) +
     misses * waveDuration('SHOT_OFF', beat)
   const transitions = Math.max(0, events + 1) * beat.clockRun   // kick-off .. full time
-  return waves + transitions
+  return waves + transitions + pkDuration(pkKicks, beat)
 }
