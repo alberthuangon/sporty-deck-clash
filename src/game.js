@@ -17,7 +17,10 @@ export const BY_ID = Object.fromEntries(CATALOGUE.map(c => [c.id, c]))
 /* Non-reactive match context. aIsHome is drawn when the match is created and
    lives ONLY here until the toss reveals it — it must never reach matchView,
    which is what the screens render (PRD v0.21 §3.9). */
-export const ctx = { priced: null, result: null, script: null, opponent: null, playerTeam: null, aIsHome: null }
+export const ctx = {
+  priced: null, result: null, script: null, opponent: null, playerTeam: null,
+  aIsHome: null, replay: false
+}
 
 /* reactive, display-safe mirror of the current match */
 export const matchView = reactive({
@@ -273,8 +276,58 @@ export function runToss () {
   return result
 }
 
+export const HISTORY_CAP = 20
+
+function snapshotDeck (team) {
+  const out = {}
+  for (const slot of ['gk', 'df', 'mf', 'fw']) {
+    out[slot] = { id: team.cards[slot].id, level: team.cards[slot].level }
+  }
+  return out
+}
+
+/* Rebuild a team from a snapshot, so a replay shows the cards AS THEY WERE —
+   levelling one up afterwards must not retroactively change an old match. */
+export function teamFromSnapshot (snap, name) {
+  return buildTeam({
+    gk: { def: BY_ID[snap.gk.id], level: snap.gk.level },
+    df: { def: BY_ID[snap.df.id], level: snap.df.level },
+    mf: { def: BY_ID[snap.mf.id], level: snap.mf.level },
+    fw: { def: BY_ID[snap.fw.id], level: snap.fw.level }
+  }, name)
+}
+
+function recordMatch (settlement, delta, promotions) {
+  const r = ctx.result
+  const br = settlementBranch(ctx.priced, r.aIsHome)
+  store.history.unshift({
+    id: 'm' + Date.now().toString(36),
+    at: Date.now(),
+    tierFee: matchView.tierFee,
+    stake: matchView.stake,
+    opponent: { handle: ctx.opponent.handle, power: ctx.opponent.power },
+    oddsIfHome: ctx.priced.branches.aHome.oddsA,
+    oddsIfAway: ctx.priced.branches.bHome.oddsA,
+    odds: br.oddsA,
+    aIsHome: r.aIsHome,
+    decks: { you: snapshotDeck(ctx.playerTeam), them: snapshotDeck(ctx.opponent.team) },
+    homeScore: r.homeScore,
+    awayScore: r.awayScore,
+    wentToPk: r.wentToPk,
+    pk: ctx.script.penalty ? { home: ctx.script.penalty.homeGoals, away: ctx.script.penalty.awayGoals } : null,
+    won: r.winner === 'A',
+    payout: settlement.payoutA,
+    net: settlement.payoutA - matchView.stake,
+    rankDelta: delta,
+    promotions: promotions.map(p => ({ id: p.id, label: p.label, reward: p.reward })),
+    script: ctx.script
+  })
+  if (store.history.length > HISTORY_CAP) store.history.length = HISTORY_CAP
+}
+
 /* settlement + rank, applied once the match animation is over */
 export function finishMatch () {
+  if (ctx.replay) return null            // a replay settles nothing, ever
   if (!store.pendingBet) return null     // already settled: settlement is single-shot
   store.pendingBet = null
 
@@ -309,7 +362,53 @@ export function finishMatch () {
 
   matchView.rankDelta = delta
   matchView.promotions = claimed
+  recordMatch(s, delta, claimed)
   return { settle: s, delta, promotions: claimed }
+}
+
+/* ---------- replay (PRD v0.21 §3.1) ----------
+   Feeds a stored script back through the same player. It never touches
+   drawResult, never settles and never scores — the demo switches are
+   meaningless here because the script is already a fact. */
+export function startReplay (record) {
+  const you = teamFromSnapshot(record.decks.you, 'You')
+  const them = teamFromSnapshot(record.decks.them, record.opponent.handle)
+  ctx.playerTeam = you
+  ctx.opponent = { handle: record.opponent.handle, team: them, power: record.opponent.power }
+  ctx.priced = null
+  ctx.script = record.script
+  ctx.aIsHome = record.aIsHome
+  ctx.replay = true
+  ctx.result = {
+    home: record.aIsHome ? you : them,
+    away: record.aIsHome ? them : you,
+    homeScore: record.homeScore,
+    awayScore: record.awayScore,
+    wentToPk: record.wentToPk,
+    aIsHome: record.aIsHome,
+    winner: record.won ? 'A' : 'B'
+  }
+  Object.assign(matchView, {
+    active: true, tierFee: record.tierFee, stake: record.stake,
+    opponentName: record.opponent.handle, opponentPower: record.opponent.power,
+    oddsIfHome: record.oddsIfHome, oddsIfAway: record.oddsIfAway,
+    myOdds: record.odds, myQ: 0,
+    aIsHome: record.aIsHome,
+    homeScore: record.homeScore, awayScore: record.awayScore,
+    wentToPk: record.wentToPk,
+    pkHome: record.pk ? record.pk.home : 0,
+    pkAway: record.pk ? record.pk.away : 0,
+    won: record.won, payout: record.payout,
+    rankDelta: record.rankDelta, promotions: []
+  })
+  store.replayId = record.id
+  go('match')
+}
+
+export function endReplay () {
+  ctx.replay = false
+  abandonMatch()
+  go('history')
 }
 
 export function abandonMatch () {
@@ -320,6 +419,7 @@ export function abandonMatch () {
   }
   matchView.active = false
   ctx.priced = null; ctx.result = null; ctx.script = null; ctx.aIsHome = null
+  ctx.replay = false
 }
 
 export { go, store }

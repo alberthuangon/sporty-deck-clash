@@ -105,6 +105,24 @@ Result    payout, rank, promotion, jackpot tickets
 Rank      hex badge, reward road, ticket count
 ```
 
+## Betting history and replay
+
+Every settled match is recorded into `store.history` (newest first, capped at
+20) with its deck snapshots, both branch quotes, the realized side, the money,
+the rank move and **the whole script**.
+
+Replay is free because of how the match was built in the first place: decide,
+then perform. Replaying hands the stored script back to the same compiler, so
+there is no recording and no state playback. Decks are rebuilt from the
+snapshot, so levelling a card up afterwards does not retroactively change an
+old match.
+
+The replay path is isolated from settlement by construction — `finishMatch`
+returns immediately when `ctx.replay` is set, the path never touches
+`drawResult`, and the screen carries a REPLAY bar. Verified in the browser:
+cash, diamonds, tickets, rank, match count and history length are all
+byte-identical before and after a full replay.
+
 ## Motion lab
 
 Demo settings → **Motion lab**. Replays a single attack wave in isolation and

@@ -32,6 +32,21 @@
       </div>
     </div>
 
+    <div class="recent card" v-if="store.history.length">
+      <div class="rc-head">
+        <span class="sec-title" style="margin:0">Recent matches</span>
+        <button class="rc-all" @click="go('history')">All ›</button>
+      </div>
+      <div v-for="m in store.history.slice(0, 3)" :key="m.id" class="rc-row" @click="go('history')">
+        <i class="rc-dot" :class="m.won ? 'w' : 'l'"></i>
+        <span class="rc-sc">{{ m.homeScore }}:{{ m.awayScore }}</span>
+        <span class="rc-opp muted">{{ m.opponent.handle }}</span>
+        <span class="rc-net" :class="m.net >= 0 ? 'up' : 'down'">
+          {{ m.net >= 0 ? '+' : '' }}₦{{ Math.abs(m.net).toLocaleString() }}
+        </span>
+      </div>
+    </div>
+
     <div class="jp card">
       <div>
         <div class="muted lbl">Season Jackpot</div>
@@ -91,6 +106,16 @@ onUnmounted(() => clearInterval(timer))
 .tn { flex: 1; font-size: 12px; }
 .ok { color: var(--green); font-weight: 700; }
 .lock { font-size: 10px; text-align: right; }
+.recent { padding: 12px; }
+.rc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.rc-all { font-size: 11px; color: var(--green); font-weight: 700; }
+.rc-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 12px; cursor: pointer; }
+.rc-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 7px; }
+.rc-dot.w { background: var(--cta); } .rc-dot.l { background: var(--text-3); }
+.rc-sc { font-weight: 700; font-variant-numeric: tabular-nums; width: 30px; }
+.rc-opp { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc-net { font-weight: 700; font-variant-numeric: tabular-nums; }
+.rc-net.up { color: var(--green); } .rc-net.down { color: var(--red); }
 .jp { display: flex; justify-content: space-between; align-items: center; padding: 12px; }
 .jp-v { font-size: 19px; font-weight: 800; color: var(--r-l); font-variant-numeric: tabular-nums; }
 .jp-t { text-align: right; }

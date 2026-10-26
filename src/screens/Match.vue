@@ -1,5 +1,6 @@
 <template>
   <div class="mt">
+    <div v-if="ctx.replay" class="replay-bar">REPLAY — nothing is being settled</div>
     <Stage
       ref="stageRef"
       :home="teams.home" :away="teams.away"
@@ -16,7 +17,9 @@
 
     <div class="ctrl">
       <button class="btn" :disabled="finished" @click="skip">Skip</button>
-      <button class="btn btn-cta" :disabled="!finished" @click="toResult">Result</button>
+      <button class="btn btn-cta" :disabled="!finished" @click="toResult">
+        {{ ctx.replay ? 'Done' : 'Result' }}
+      </button>
     </div>
   </div>
 </template>
@@ -25,7 +28,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import gsap from 'gsap'
 import Stage from '../match/Stage.vue'
-import { store, go, ctx, matchView, finishMatch } from '../game.js'
+import { store, go, ctx, matchView, finishMatch, endReplay } from '../game.js'
 import { compileMatch, resetStage, startIdle, stopIdle } from '../match/player.js'
 import { BEAT } from '../match/stageModel.js'
 
@@ -117,11 +120,19 @@ function skip () {
   finished.value = true
 }
 
-function toResult () { finishMatch(); go('result') }
+function toResult () {
+  if (ctx.replay) { endReplay(); return }    // settles nothing, scores nothing
+  finishMatch()
+  go('result')
+}
 </script>
 
 <style scoped>
 .mt { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.replay-bar {
+  background: var(--r-l); color: #2A1C00; text-align: center;
+  font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 4px;
+}
 .feed { flex: 1; padding: 6px 12px 0; min-height: 0; }
 .ev { display: flex; gap: 8px; font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--divider); }
 .ev.goal { color: var(--green); font-weight: 700; }

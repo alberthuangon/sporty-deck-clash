@@ -33,11 +33,18 @@ function initialState () {
 
     stats: { played: 0, won: 0, pkWon: 0 },
 
+    /* Settled matches, newest first, capped at 20 for localStorage's sake.
+       Each row carries its own script and deck snapshots, which is what makes
+       replay free: the match was always "decide, then perform", so replaying
+       is just handing the same script back to the same player. */
+    history: [],
+
     // navigation
     currentScreen: 'home',
     overlay: null,
 
     // transient hand-off between screens
+    replayId: null,
     pendingPack: null,
     pendingTier: null,
     upgradeTarget: null,
@@ -93,7 +100,7 @@ watch(
     diamonds: store.diamonds, cash: store.cash, tickets: store.tickets,
     ownedCards: store.ownedCards, deck: store.deck, rank: store.rank,
     tasks: store.tasks, stats: store.stats, settings: store.settings, flags: store.flags,
-    pendingBet: store.pendingBet
+    pendingBet: store.pendingBet, history: store.history
   }),
   (v) => { try { localStorage.setItem(KEY, v) } catch (e) {} }
 )

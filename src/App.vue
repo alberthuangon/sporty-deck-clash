@@ -43,6 +43,7 @@ import Match from './screens/Match.vue'
 import Result from './screens/Result.vue'
 import Settings from './screens/Settings.vue'
 import MotionLab from './screens/MotionLab.vue'
+import History from './screens/History.vue'
 
 const SCREENS = {
   home: { c: Home, title: 'SportyKickDeck', back: null },
@@ -61,7 +62,8 @@ const SCREENS = {
   match: { c: Match, title: 'Live Match', back: null },
   result: { c: Result, title: 'Result', back: null },
   settings: { c: Settings, title: 'Demo Settings', back: 'home' },
-  motionlab: { c: MotionLab, title: 'Motion Lab', back: 'settings' }
+  motionlab: { c: MotionLab, title: 'Motion Lab', back: 'settings' },
+  history: { c: History, title: 'Betting History', back: 'home' }
 }
 
 const screenComponent = computed(() => (SCREENS[store.currentScreen] || SCREENS.home).c)
