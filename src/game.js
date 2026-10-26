@@ -223,9 +223,15 @@ export function startMatchmaking (tierFee) {
    toss rather than a cosmetic one. */
 export function branchOdds () {
   if (!ctx.priced) return null
-  const qHome = ctx.priced.branches.aHome.qHome
-  const qAway = 1 - ctx.priced.branches.bHome.qHome
-  return { home: displayOdds(qHome), away: displayOdds(qAway), qHome, qAway }
+  const qYouHome = ctx.priced.branches.aHome.qHome          // you at home
+  const qThemHome = ctx.priced.branches.bHome.qHome         // they at home
+  return {
+    youHome: displayOdds(qYouHome),
+    themAway: displayOdds(1 - qYouHome),
+    youAway: displayOdds(1 - qThemHome),
+    themHome: displayOdds(qThemHome),
+    qYouHome, qYouAway: 1 - qThemHome
+  }
 }
 
 export function confirmBet (stake) {

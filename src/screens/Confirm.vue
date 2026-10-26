@@ -50,12 +50,37 @@
       </div>
     </div>
 
+    <!-- the four branch prices. None of them is ever paid — both players are
+         settled at the blended price above whichever way the toss lands — so
+         they are deliberately plain: no green, no odds chip, nothing that
+         reads as an offer. What they tell you is what the toss is worth. -->
+    <div class="branches card" v-if="branches">
+      <div class="b-head">If the coin toss gives you…</div>
+      <table class="b-tab">
+        <tr><th></th><th>You</th><th>{{ matchView.opponentName }}</th></tr>
+        <tr>
+          <td class="b-case">home</td>
+          <td :class="{ good: branches.youHome < matchView.myOdds }">{{ branches.youHome.toFixed(2) }}</td>
+          <td>{{ branches.themAway.toFixed(2) }}</td>
+        </tr>
+        <tr>
+          <td class="b-case">away</td>
+          <td :class="{ good: branches.youAway < matchView.myOdds }">{{ branches.youAway.toFixed(2) }}</td>
+          <td>{{ branches.themHome.toFixed(2) }}</td>
+        </tr>
+      </table>
+      <div class="b-note muted">
+        Neither case is offered — you are both settled at the blended price
+        above whichever way it lands. A squad built for one venue is betting on
+        that difference.
+      </div>
+    </div>
+
     <div class="fineprint muted">
       Anything above the arena floor is covered by the platform — your opponent
-      does not have to match it, and their stake is not shown.
-      Home or away is decided by a coin toss after both players confirm, so the
-      price is neutral between the two. Both sides pay the same
-      <b>{{ (MARGIN * 100).toFixed(0) }}% margin</b>, whatever cards you hold.
+      does not have to match it, and their stake is not shown. Both sides pay
+      the same <b>{{ (MARGIN * 100).toFixed(0) }}% margin</b>, whatever cards
+      you hold.
     </div>
 
     <div class="btn-row">
@@ -75,13 +100,14 @@
 <script setup>
 import { ref, computed } from 'vue'
 import PowerStars from '../components/PowerStars.vue'
-import { store, go, matchView, ctx, cardOf, deckPower, confirmBet, stakeRange, abandonMatch } from '../game.js'
+import { store, go, matchView, ctx, cardOf, deckPower, confirmBet, stakeRange, abandonMatch, branchOdds } from '../game.js'
 import { MARGIN } from '../engine/model.js'
 
 const SLOTS = ['gk', 'df', 'mf', 'fw']
 const range = computed(() => stakeRange(matchView.tierFee))
 const stake = ref(matchView.tierFee)
 const myPower = computed(() => deckPower())
+const branches = computed(() => branchOdds())
 const potential = computed(() => Math.floor(stake.value * matchView.myOdds))
 function oppCard (s) { return ctx.opponent ? ctx.opponent.team.cards[s] : { name: '—' } }
 function accept () { if (confirmBet(stake.value)) go('toss') }
@@ -115,6 +141,18 @@ function cancel () { abandonMatch(); go('home') }
 .pay-cell { padding: 5px 10px; font-size: 17px; }
 .pay-win b { font-size: 24px; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; }
 .pay-sum { font-size: 10px; text-align: right; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.branches { padding: 10px 12px; }
+.b-head { font-size: 11px; font-weight: 700; color: var(--text-2); margin-bottom: 6px; }
+.b-tab { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.b-tab th {
+  font-size: 9px; font-weight: 700; color: var(--text-3); text-align: right;
+  padding-bottom: 3px; letter-spacing: .04em;
+}
+.b-tab th:first-child { width: 46px; }
+.b-tab td { font-size: 13px; text-align: right; padding: 3px 0; color: var(--text-2); }
+.b-tab td.b-case { text-align: left; font-size: 11px; color: var(--text-3); }
+.b-tab td.good { color: var(--text); font-weight: 700; }
+.b-note { font-size: 10px; line-height: 1.5; margin-top: 7px; }
 .fineprint { font-size: 10px; line-height: 1.55; margin: 0 2px; }
 .fineprint b { color: var(--text-2); }
 .fine { font-size: 10px; line-height: 1.45; text-align: center; }
