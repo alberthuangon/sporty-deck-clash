@@ -51,7 +51,7 @@ export const BEAT = {
 /* Penalty geometry, percentages of the goal-view box. The six placements and
    the three dive targets are what give `direction`/`height`/`dive` something
    to be read against — without them a dive is just a card tilting. */
-export const PK_SPOT = { x: 50, y: 60 }
+export const PK_SPOT = { x: 50, y: 56 }
 /* six placements inside a goal spanning y 17%-47% of the view */
 export const PK_PLACEMENT = {
   LEFT: { HIGH: { x: 24, y: 24 }, LOW: { x: 22, y: 41 } },

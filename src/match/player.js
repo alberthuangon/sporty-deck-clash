@@ -372,6 +372,7 @@ function pkCommon (stage, tl, opts, beat, onSfx, at) {
 
   // ---- the strike: ball to its placement, keeper to his guess, together ----
   tl.set(pk.ball, { left: PK_SPOT.x + '%', top: PK_SPOT.y + '%', scale: 1, opacity: 1 }, at)
+  if (pk.shooterName) tl.set(pk.shooterName, { opacity: 1 }, at)
   tl.set(pk.gk, { left: '50%', top: '40%', scaleX: 1, scaleY: 1, rotate: 0 }, at)
 
   tl.to(pk.ball, {
@@ -391,6 +392,8 @@ function pkCommon (stage, tl, opts, beat, onSfx, at) {
   // ---- the answer ----
   const r = at + strike
   if (boardAfter) tl.call(() => stage.setPk(shooter, keeper, label, boardAfter), null, r)
+  // the taker's name has done its job; the verdict takes that line
+  if (pk.shooterName) tl.to(pk.shooterName, { opacity: 0, duration: .14 }, r)
 
   if (scored) {
     // the ripple is a child of the frame, so overlay coordinates have to be

@@ -55,7 +55,9 @@
     <div class="pk" ref="pkEl">
       <div class="pk-bg"></div>
       <div class="pk-vig" ref="pkVigEl"></div>
-      <div class="pk-head" ref="pkHeadEl">{{ pkLabel }}</div>
+      <div class="pk-head" ref="pkHeadEl">
+        {{ pkLabel }}<span class="pk-reg"> · {{ scoreHome }}:{{ scoreAway }} after 90'</span>
+      </div>
 
       <!-- beat 1: the face-off, a tale of the tape -->
       <div class="pk-faceoff" ref="pkFaceEl">
@@ -81,9 +83,12 @@
       </div>
 
       <div class="pk-board">
-        <div v-for="side in ['HOME','AWAY']" :key="side" class="pk-row">
-          <span class="pk-side" :class="side.toLowerCase()">{{ side === 'HOME' ? 'H' : 'A' }}</span>
-          <i v-for="(k,i) in pkBoard[side]" :key="i" class="pk-pip" :class="k"></i>
+        <div v-for="side in ['HOME','AWAY']" :key="side" class="pk-row" :class="side.toLowerCase()">
+          <span class="pk-team">{{ side === 'HOME' ? homeName : awayName }}</span>
+          <span class="pk-pips">
+            <i v-for="(k,i) in pkBoard[side]" :key="i" class="pk-pip" :class="k"></i>
+          </span>
+          <b class="pk-count">{{ pkCount(side) }}</b>
         </div>
       </div>
       <div class="pk-stamp" ref="pkStampEl">{{ pkStamp }}</div>
@@ -132,6 +137,9 @@ const pkBoard = ref({ HOME: [], AWAY: [] })
 const pkShooterCard = computed(() => pkShooter.value || props.home.cards.fw)
 const pkKeeperCard = computed(() => pkKeeper.value || props.away.cards.gk)
 function initials (card) { return card ? card.name.slice(0, 2).toUpperCase() : '' }
+/* the running shootout score — counting green dots is not a thing anyone
+   should have to do at 0.55s a kick */
+function pkCount (side) { return (pkBoard.value[side] || []).filter(k => k === 'goal').length }
 
 const pitchEl = ref(null)
 const ballEl = ref(null)
@@ -200,6 +208,7 @@ const api = {
       shooter: root && root.querySelector('.pk-card.shooter'),
       keeper: root && root.querySelector('.pk-card.keeper'),
       gk: pkGkEl.value, ripple: pkRippleEl.value,
+      shooterName: root && root.querySelector('.pk-shooter-name'),
       ball: pkBallEl.value, stamp: pkStampEl.value
     }
   },
@@ -324,7 +333,7 @@ onMounted(() => { /* refs are live from here on */ })
   font-size: 10px; font-weight: 700; color: var(--away); letter-spacing: .06em;
 }
 .pk-shooter-name {
-  position: absolute; top: 66%; left: 0; right: 0; text-align: center;
+  position: absolute; top: 62%; left: 0; right: 0; text-align: center;
   font-size: 10px; font-weight: 700; color: #fff; letter-spacing: .04em;
 }
 .pk-frame { position: absolute; left: 12%; right: 12%; top: 17%; height: 30%; }
@@ -352,20 +361,33 @@ onMounted(() => { /* refs are live from here on */ })
   box-shadow: 0 2px 8px rgba(0,0,0,.5);
 }
 .pk-spot {
-  position: absolute; left: 50%; top: 60%; width: 5px; height: 5px; margin: -2px 0 0 -2px;
+  position: absolute; left: 50%; top: 56%; width: 5px; height: 5px; margin: -2px 0 0 -2px;
   border-radius: 50%; background: rgba(255,255,255,.4);
 }
 .pk-pball {
-  position: absolute; left: 50%; top: 60%; z-index: 3;
+  position: absolute; left: 50%; top: 56%; z-index: 3;
   transform: translate(-50%,-50%);
   width: 13px; height: 13px; border-radius: 50%; background: #fff;
   box-shadow: 0 0 14px rgba(255,255,255,.8);
 }
 
-.pk-board { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.pk-row { display: flex; align-items: center; gap: 5px; }
-.pk-side { font-size: 9px; font-weight: 800; width: 12px; text-align: center; }
-.pk-side.home { color: var(--home); } .pk-side.away { color: var(--away); }
+.pk-board {
+  position: absolute; left: 0; right: 0; bottom: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.pk-reg { color: var(--text-3); font-weight: 700; }
+.pk-row { display: flex; align-items: center; gap: 8px; width: 250px; }
+.pk-team {
+  font-size: 10px; font-weight: 700; width: 74px; flex: 0 0 74px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pk-row.home .pk-team { color: var(--home); }
+.pk-row.away .pk-team { color: var(--away); }
+.pk-pips { flex: 1; display: flex; gap: 4px; align-items: center; }
+.pk-count {
+  width: 18px; flex: 0 0 18px; text-align: right;
+  font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
 .pk-pip { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--text-3); }
 .pk-pip.goal { background: var(--cta); border-color: var(--cta); }
 .pk-pip.miss { background: transparent; border-color: var(--red); position: relative; }
@@ -374,8 +396,8 @@ onMounted(() => { /* refs are live from here on */ })
   background: linear-gradient(45deg, transparent 44%, var(--red) 44% 56%, transparent 56%);
 }
 .pk-stamp {
-  position: absolute; left: 0; right: 0; top: 73%; text-align: center;
-  font-size: 30px; font-weight: 900; letter-spacing: .05em; color: var(--cta);
+  position: absolute; left: 0; right: 0; top: 61%; text-align: center;
+  font-size: 26px; font-weight: 900; letter-spacing: .05em; color: var(--cta);
   text-shadow: 0 3px 20px rgba(0,0,0,.9); opacity: 0;
 }
 
