@@ -15,7 +15,7 @@ export const DEFAULT_PACING = {
   cutInDecay: 0.15,    // each further goal gets a shorter one
   cutInMin: 0.50,
   save: 2.74, miss: 1.76, transition: 0.70,
-  cap: 28,             // whole match, shootout included, with headroom under 30
+  cap: 27,             // whole match, shootout included, headroom under the 30s cap
   saveShare: 0.45      // share of wasted attacks that end as a save
 }
 

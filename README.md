@@ -77,10 +77,15 @@ attacks regular time can still afford. A goal costs twice a miss and a
 shootout costs more again, so a 4–0 or a long shootout simply gets fewer
 waves, and later goals get shorter celebrations (`cutInLength`).
 
-Measured over 8,000 generated scripts: median **25.0s**, p95 28.4s, **98%
+Measured over 10,000 generated scripts: median **24.1s**, p95 27.7s, **98%
 under 30s**. The ~2% that cannot fit (high-scoring draws into long shootouts)
-need a median 1.04× timeline compression — the compiler applies a global
-`timeScale` backstop so the cap always holds.
+get a global `timeScale` backstop from the compiler, so the cap always holds.
+
+One subtlety the compiler has to handle: slow motion is applied at runtime via
+`timeScale`, so it stretches wall-clock time without lengthening the timeline.
+The cap is therefore checked against `rawDuration + goals × slowmoExtra`, not
+`timeline.duration()`. Verified end to end in the browser — predicted 27.06s,
+measured 26.48s.
 
 ### The decisive penalty
 

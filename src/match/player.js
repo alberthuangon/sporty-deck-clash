@@ -347,7 +347,8 @@ export function resetStage (stage) {
  * opts: { shooter, keeper, outcome, direction, dive, label, board, decisive }
  * ---------------------------------------------------------------- */
 export function buildPkShowdown (stage, opts, beat = BEAT, onSfx = null, onRate = null) {
-  const { shooter, keeper, outcome = 'GOAL', direction = 'CENTRE', dive = 'LEFT', label = '', board } = opts
+  const { shooter, keeper, outcome = 'GOAL', direction = 'CENTRE', dive = 'LEFT', label = '',
+    board, boardAfter, standalone = true } = opts
   const pk = stage.pk()
   const tl = gsap.timeline()
   const scored = outcome === 'GOAL'
@@ -357,9 +358,12 @@ export function buildPkShowdown (stage, opts, beat = BEAT, onSfx = null, onRate 
   tl.set(pk.root, { visibility: 'visible' })
   tl.set(pk.stamp, { opacity: 0, scale: 1.8 })
   tl.set(pk.net, { opacity: 0 })
+  tl.set(pk.ball, { left: '30%', y: 0, scale: 1, opacity: 1 })
 
   /* ---- beat 1: the hold ---------------------------------------- */
-  tl.fromTo(pk.bg, { opacity: 0 }, { opacity: 1, duration: .20, ease: 'power2.out' }, 0)
+  if (standalone) {
+    tl.fromTo(pk.bg, { opacity: 0 }, { opacity: 1, duration: .20, ease: 'power2.out' }, 0)
+  }
   tl.fromTo(pk.head, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: .26 }, .06)
   // cards close in from both edges
   tl.fromTo(pk.shooter, { x: -150, opacity: 0 }, { x: 0, opacity: 1, duration: .34, ease: 'power3.out' }, .04)
@@ -395,6 +399,9 @@ export function buildPkShowdown (stage, opts, beat = BEAT, onSfx = null, onRate 
 
   /* ---- beat 3: the reveal -------------------------------------- */
   if (onRate) tl.call(() => onRate(1), null, t)
+  // the pip for THIS kick only lights once the ball has arrived — lighting it
+  // during the hold would give the answer away
+  if (boardAfter) tl.call(() => stage.setPk(shooter, keeper, label, boardAfter), null, t)
   if (scored) {
     tl.fromTo(pk.net, { opacity: 0, scaleX: .9 },
       { opacity: 1, scaleX: 1, duration: .18, ease: 'power2.out' }, t)
@@ -415,9 +422,234 @@ export function buildPkShowdown (stage, opts, beat = BEAT, onSfx = null, onRate 
   }
   t += beat.pkReveal
 
-  tl.to([pk.bg, pk.vig, pk.head, pk.stage, pk.stamp], { opacity: 0, duration: .24, ease: 'power2.in' }, t)
-  tl.set(pk.root, { visibility: 'hidden' })
-  tl.set([pk.bg, pk.vig, pk.head, pk.stage], { opacity: 1 })
-  tl.set([pk.shooter, pk.keeper, pk.ball], { clearProps: 'all' })
+  if (standalone) {
+    tl.to([pk.bg, pk.vig, pk.head, pk.stage, pk.stamp], { opacity: 0, duration: .24, ease: 'power2.in' }, t)
+    tl.set(pk.root, { visibility: 'hidden' })
+    tl.set([pk.bg, pk.vig, pk.head, pk.stage], { opacity: 1 })
+    tl.set([pk.shooter, pk.keeper, pk.ball], { clearProps: 'all' })
+  } else {
+    tl.to(pk.stamp, { opacity: 0, duration: .2 }, t)
+    tl.set([pk.shooter, pk.keeper], { x: 0, y: 0, rotate: 0, scale: 1 })
+  }
   return tl
+}
+
+/* An ordinary shootout kick: no hold, no camera move. The overlay is already
+   up, so this is just a card swap, a quick strike and a pip lighting up. */
+export function buildPkKick (stage, opts, beat = BEAT, onSfx = null) {
+  const { shooter, keeper, outcome = 'GOAL', direction = 'CENTRE', dive = 'LEFT', label,
+    board, boardAfter, duration = beat.pkKick } = opts
+  const pk = stage.pk()
+  const tl = gsap.timeline()
+  const scored = outcome === 'GOAL'
+  const guessedRight = dive === direction
+
+  tl.call(() => { stage.setPk(shooter, keeper, label, board); stage.setPkStamp('') })
+  tl.set(pk.ball, { left: '30%', y: 0, scale: 1, opacity: 1 })
+  tl.set(pk.net, { opacity: 0 })
+  tl.fromTo([pk.shooter, pk.keeper], { opacity: .25 }, { opacity: 1, duration: duration * .22 }, 0)
+
+  const strike = duration * .52
+  const diveX = dive === 'LEFT' ? -12 : dive === 'RIGHT' ? 12 : 0
+  tl.to(pk.keeper, { x: diveX, rotate: diveX * .3, duration: strike, ease: 'power2.out' }, duration * .22)
+  tl.to(pk.ball, {
+    left: guessedRight && !scored ? '74%' : '92%',
+    y: direction === 'LEFT' ? -30 : direction === 'RIGHT' ? 30 : 0,
+    duration: strike, ease: 'power2.in'
+  }, duration * .22)
+  sfx(tl, duration * .22, scored ? 'pk_goal' : 'pk_save', onSfx)
+
+  const at = duration * .22 + strike
+  if (boardAfter) tl.call(() => stage.setPk(shooter, keeper, label, boardAfter), null, at)
+  if (scored) {
+    tl.fromTo(pk.net, { opacity: 0 }, { opacity: 1, duration: .12 }, at)
+  } else {
+    tl.to(pk.keeper, { scale: 1.12, duration: .08, yoyo: true, repeat: 1 }, at)
+    tl.to(pk.ball, { left: '56%', y: -40, scale: .8, duration: .2, ease: 'power2.out' }, at)
+  }
+  tl.to(pk.keeper, { x: 0, rotate: 0, duration: duration * .2 }, at + .1)
+  return tl
+}
+
+/* ---------------------------------------------------------------- *
+ * The compiler (PRD §14.2).
+ *
+ * A whole decided script becomes ONE GSAP timeline, built before a single
+ * frame plays. That is what makes Skip safe: the result is already a fact, so
+ * jumping to the end cannot change anything.
+ * ---------------------------------------------------------------- */
+
+const MATCH_CAP = 30            // seconds, whole match including the shootout
+
+function slotOf (team, cardId) {
+  for (const slot of SLOTS) if (team.cards[slot].id === cardId) return slot
+  return 'fw'
+}
+
+function pkBoardUpTo (events, index) {
+  const board = { HOME: [], AWAY: [] }
+  for (let i = 0; i <= index; i++) {
+    const e = events[i]
+    board[e.side].push(e.outcome === 'GOAL' ? 'goal' : 'miss')
+  }
+  return board
+}
+
+/* Run the match clock from one minute to the next. */
+function clockRun (tl, stage, from, to, at, duration, label) {
+  const holder = { m: from }
+  tl.to(holder, {
+    m: to, duration, ease: 'none',
+    onUpdate: () => stage.setClock(Math.round(holder.m) + "'")
+  }, at)
+  if (label !== undefined) tl.call(() => stage.setPhase(label), null, at)
+}
+
+export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
+  const { onSfx = null, onRate = null, onEnd = null, onEvent = null } = cbs
+  const announce = (ev, at) => { if (onEvent) master.call(() => onEvent(ev), null, at) }
+  const home = result.home
+  const away = result.away
+  const master = gsap.timeline({ paused: true, onComplete: () => onEnd && onEnd() })
+
+  master.call(() => {
+    stage.setScore(0, 0)
+    stage.setClock("0'")
+    stage.setPhase('')
+  })
+
+  let t = 0
+  let prevMinute = 0
+  let h = 0
+  let a = 0
+  let goalIndex = 0
+  /* Slow motion is applied at RUNTIME via timeScale, so it stretches wall-clock
+     time without lengthening the timeline. The cap has to be checked against
+     wall time, not master.duration(), or every goal silently overruns it. */
+  const slowmoExtra = (beat.shot + beat.goalHang) * (1 / beat.slowmo - 1)
+
+  for (const ev of script.events) {
+    if (ev.type === 'KICK_OFF') {
+      master.call(() => stage.setPhase('KICK OFF'), null, t)
+      sfxAt(master, t, 'whistle', onSfx)
+      announce(ev, t)
+      t += beat.gap
+      continue
+    }
+    if (ev.type === 'HALF_TIME') {
+      clockRun(master, stage, prevMinute, 45, t, beat.clockRun, 'HALF TIME')
+      sfxAt(master, t, 'whistle', onSfx)
+      announce(ev, t)
+      prevMinute = 45
+      t += beat.clockRun
+      continue
+    }
+    if (ev.type === 'FULL_TIME') {
+      clockRun(master, stage, prevMinute, 90, t, beat.clockRun, 'FULL TIME')
+      sfxAt(master, t, 'whistle', onSfx)
+      announce(ev, t)
+      prevMinute = 90
+      t += beat.clockRun
+      continue
+    }
+
+    // run the clock up to this event, then play it
+    clockRun(master, stage, prevMinute, ev.minute, t, beat.clockRun, '')
+    prevMinute = ev.minute
+    t += beat.clockRun
+
+    const side = ev.side === 'HOME' ? 'home' : 'away'
+    const team = side === 'home' ? home : away
+    const actorSlot = slotOf(team, ev.actor)
+    const wave = buildWave(stage, {
+      side, actorSlot, outcome: ev.type, variance: (ev.minute % 7) / 7
+    }, beat, onSfx, onRate)
+    master.add(wave, t)
+
+    // the feed line lands with the moment, never before it
+    const resolveAt = t + wave.duration() - (beat.reset + beat.gap)
+
+    if (ev.type === 'GOAL') {
+      if (ev.side === 'HOME') h++; else a++
+      const cutLen = Math.max(0.50, beat.cutIn - 0.15 * goalIndex)
+      goalIndex++
+      announce(ev, resolveAt)
+      master.add(buildGoalCutIn(stage, {
+        card: team.cards[actorSlot], scoreSide: side,
+        scoreHome: h, scoreAway: a,
+        subtitle: `${ev.actorName} · ${ev.minute}'`
+      }, { ...beat, cutIn: cutLen }, onSfx), t + wave.duration() - (beat.reset + beat.gap))
+      t += wave.duration() + cutLen + 0.26 - (beat.reset + beat.gap)
+    } else if (ev.type === 'SHOT_SAVE') {
+      announce(ev, resolveAt)
+      const keeperTeam = side === 'home' ? away : home
+      master.add(buildSaveCutIn(stage, { card: keeperTeam.cards.gk }, beat, onSfx),
+        t + wave.duration() - (beat.reset + beat.gap))
+      t += wave.duration() + beat.saveCutIn + 0.22 - (beat.reset + beat.gap)
+    } else {
+      announce(ev, resolveAt)
+      t += wave.duration()
+    }
+  }
+
+  /* ---- the shootout -------------------------------------------- */
+  if (script.penalty) {
+    const pk = stage.pk()
+    const evs = script.penalty.events
+    master.call(() => stage.setPhase('PENALTIES'), null, t)
+    master.set(pk.root, { visibility: 'visible' }, t)
+    master.fromTo(pk.bg, { opacity: 0 }, { opacity: 1, duration: .28, ease: 'power2.out' }, t)
+    master.fromTo(pk.vig, { opacity: 0 }, { opacity: .8, duration: .28 }, t)
+    t += .28
+
+    evs.forEach((e, i) => {
+      const shootTeam = e.side === 'HOME' ? home : away
+      const keepTeam = e.side === 'HOME' ? away : home
+      const shooterSlot = slotOf(shootTeam, e.shooter)
+      const opts = {
+        shooter: shootTeam.cards[shooterSlot],
+        keeper: keepTeam.cards.gk,
+        outcome: e.outcome, direction: e.direction, dive: e.dive,
+        label: e.suddenDeath ? `ROUND ${e.round} · SUDDEN DEATH` : `ROUND ${e.round}`,
+        board: pkBoardUpTo(evs, i - 1),       // state BEFORE this kick
+        boardAfter: pkBoardUpTo(evs, i),       // lit when the ball arrives
+        standalone: false
+      }
+      if (e.decisive) {
+        const sd = buildPkShowdown(stage, opts, beat, onSfx, onRate)
+        master.add(sd, t)
+        announce(e, t + beat.pkShowdown + beat.pkStrike)
+        t += sd.duration()
+      } else {
+        const dur = i >= 5 ? beat.pkSuddenDeath : beat.pkKick
+        const k = buildPkKick(stage, { ...opts, duration: dur }, beat, onSfx)
+        master.add(k, t)
+        announce(e, t + dur * 0.74)
+        t += dur
+      }
+    })
+
+    master.to([pk.bg, pk.vig, pk.head, pk.stage], { opacity: 0, duration: .26 }, t)
+    master.set(pk.root, { visibility: 'hidden' }, t + .26)
+    t += .26
+  }
+
+  /* 30-second cap is hard. The script generator gets within it 98% of the
+     time; for the high-scoring draws that cannot fit, compress the whole
+     timeline rather than cutting a beat out of the drama. */
+  const raw = master.duration()
+  const expected = raw + goalIndex * slowmoExtra
+  if (expected > MATCH_CAP) master.timeScale(expected / MATCH_CAP)
+
+  return {
+    timeline: master,
+    rawDuration: raw,
+    expectedDuration: expected,            // what the clock on the wall will say
+    playedDuration: Math.min(expected, MATCH_CAP),
+    capScale: master.timeScale()
+  }
+}
+
+function sfxAt (tl, at, label, onSfx) {
+  if (onSfx) tl.call(() => onSfx(label), null, at)
 }

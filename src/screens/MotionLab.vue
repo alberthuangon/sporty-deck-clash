@@ -192,7 +192,8 @@ async function play (opts = {}) {
       keeper: api.card('away', 'gk'),
       outcome: st.outcome, direction: st.direction, dive: st.dive,
       label: 'ROUND 4 · SUDDEN DEATH',
-      board: { HOME: ['goal', 'goal', 'miss'], AWAY: ['goal', 'miss', 'goal'] }
+      board: { HOME: ['goal', 'goal', 'miss'], AWAY: ['goal', 'miss', 'goal'] },
+      boardAfter: { HOME: ['goal', 'goal', 'miss', st.outcome === 'GOAL' ? 'goal' : 'miss'], AWAY: ['goal', 'miss', 'goal'] }
     }, beat, onSfx, onRate))
     master.timeScale(speed.value)
     lastLen.value = master.duration()
