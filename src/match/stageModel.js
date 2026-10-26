@@ -38,11 +38,14 @@ export const BEAT = {
 
   // Shootout. Ordinary kicks are brisk; the kick that settles it gets the
   // three-beat showdown (PRD §16.4).
-  pkKick: 0.55,        // an ordinary kick, start to resolution
-  pkSuddenDeath: 0.42, // deep sudden death compresses further
-  pkShowdown: 1.00,    // shooter card vs keeper card, held
-  pkStrike: 0.80,      // the slow-motion strike
-  pkReveal: 0.60,      // the answer
+  // 1.3x the original pass — the shootout was reading as rushed. The script
+  // generator budgets regular time around whatever the shootout costs, so the
+  // 30s cap absorbs this on its own.
+  pkKick: 0.72,        // an ordinary kick, start to resolution
+  pkSuddenDeath: 0.55, // deep sudden death compresses further
+  pkShowdown: 1.30,    // shooter card vs keeper card, held
+  pkStrike: 1.04,      // the slow-motion strike
+  pkReveal: 0.78,      // the answer
 
   idle: 2.6,           // ambient off-ball drift amplitude, px (not a duration)
   press: 0.45          // how far defenders slide into the ball's lane, 0-1

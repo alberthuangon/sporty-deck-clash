@@ -32,8 +32,8 @@
         </div>
       </div>
 
-      <div class="seg" v-if="mode === 'wave'">
-        <span class="lbl">Attacking side</span>
+      <div class="seg">
+        <span class="lbl">{{ mode === 'pk' ? 'Taking the kick' : 'Attacking side' }}</span>
         <div class="opts">
           <button v-for="s in ['home','away']" :key="s" :class="{ on: side === s }" @click="side = s">
             {{ s }}
@@ -188,11 +188,14 @@ async function play (opts = {}) {
 
   if (mode.value === 'pk') {
     const st = PK_STORIES.find(x => x.id === story.value)
+    const sh = side.value                       // whoever is attacking takes it
+    const kp = sh === 'home' ? 'away' : 'home'
     master.add(buildPkShowdown(api, {
-      shooter: api.card('home', 'fw'),
-      keeper: api.card('away', 'gk'),
+      shooter: api.card(sh, 'fw'),
+      keeper: api.card(kp, 'gk'),
       outcome: st.outcome, direction: st.direction, height: st.height, dive: st.dive,
       label: 'ROUND 4 · SUDDEN DEATH',
+      side: sh,
       board: { HOME: ['goal', 'goal', 'miss'], AWAY: ['goal', 'miss', 'goal'] },
       boardAfter: { HOME: ['goal', 'goal', 'miss', st.outcome === 'GOAL' ? 'goal' : 'miss'], AWAY: ['goal', 'miss', 'goal'] }
     }, beat, onSfx, onRate))
@@ -213,11 +216,15 @@ async function play (opts = {}) {
     const a = side.value === 'away' ? 1 : 0
     master.add(buildGoalCutIn(api, {
       card, scoreSide: side.value, scoreHome: h, scoreAway: a,
-      subtitle: `${card.name} · ${side.value === 'home' ? 'Home XI' : 'Away XI'}`
+      team: side.value === 'home' ? 'Home XI' : 'Away XI',
+      subtitle: `${card.name} · 42'`
     }, beat, onSfx), `-=${beat.reset + beat.gap}`)
   } else if (outcome.value === 'SHOT_SAVE') {
     const keeper = api.card(side.value === 'home' ? 'away' : 'home', 'gk')
-    master.add(buildSaveCutIn(api, { card: keeper }, beat, onSfx), `-=${beat.reset + beat.gap}`)
+    const kSide = side.value === 'home' ? 'away' : 'home'
+    master.add(buildSaveCutIn(api, {
+      card: keeper, side: kSide, team: kSide === 'home' ? 'Home XI' : 'Away XI'
+    }, beat, onSfx), `-=${beat.reset + beat.gap}`)
   }
 
   master.timeScale(speed.value)

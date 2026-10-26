@@ -252,14 +252,17 @@ export function buildWave (stage, opts, beat = BEAT, onSfx = null, onRate = null
 /* ---------------------------------------------------------------- *
  * Goal cut-in — the scorer's named moment (PRD §2.8, §15.2)
  * ---------------------------------------------------------------- */
-export function buildGoalCutIn (stage, { card, scoreSide, scoreHome, scoreAway, subtitle },
+export function buildGoalCutIn (stage, { card, scoreSide, scoreHome, scoreAway, subtitle, team },
   beat = BEAT, onSfx = null) {
   const ci = stage.cutin()
   const tl = gsap.timeline()
 
-  tl.call(() => stage.setCutIn(card, 'GOAL!', subtitle || `${card.name} scores`))
+  tl.call(() => stage.setCutIn(card, 'GOAL!', subtitle || `${card.name} scores`, scoreSide, team))
   tl.set(ci.root, { visibility: 'visible' })
   tl.fromTo(ci.bg, { opacity: 0 }, { opacity: 1, duration: .16, ease: 'power2.out' }, 0)
+  // the colour wash arrives first — which side scored should land before any
+  // name is legible
+  tl.fromTo(ci.tint, { opacity: 0 }, { opacity: 1, duration: .13, ease: 'power2.out' }, 0)
   tl.fromTo(ci.streaks, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: .5, ease: 'power2.out' }, 0)
   tl.to(ci.streaks, { x: 40, duration: beat.cutIn, ease: 'none' }, .1)
 
@@ -281,25 +284,26 @@ export function buildGoalCutIn (stage, { card, scoreSide, scoreHome, scoreAway, 
       { scale: 1, color: '#ffffff', duration: .5, ease: 'back.out(2)' }, .36)
   }
 
-  tl.to([ci.bg, ci.body, ci.streaks], { opacity: 0, duration: .26, ease: 'power2.in' }, beat.cutIn)
+  tl.to([ci.bg, ci.body, ci.streaks, ci.tint], { opacity: 0, duration: .26, ease: 'power2.in' }, beat.cutIn)
   tl.set(ci.root, { visibility: 'hidden' })
   tl.set([ci.bg, ci.body, ci.streaks], { opacity: 1 })
   return tl
 }
 
 /* Keeper's named moment — shorter, cooler palette */
-export function buildSaveCutIn (stage, { card, subtitle }, beat = BEAT, onSfx = null) {
+export function buildSaveCutIn (stage, { card, subtitle, side, team }, beat = BEAT, onSfx = null) {
   const ci = stage.cutin()
   const tl = gsap.timeline()
-  tl.call(() => stage.setCutIn(card, 'SAVED', subtitle || `${card.name} keeps it out`))
+  tl.call(() => stage.setCutIn(card, 'SAVED', subtitle || `${card.name} keeps it out`, side, team))
   tl.set(ci.root, { visibility: 'visible' })
   tl.fromTo(ci.bg, { opacity: 0 }, { opacity: 1, duration: .14 }, 0)
+  tl.fromTo(ci.tint, { opacity: 0 }, { opacity: .85, duration: .12 }, 0)
   const cardEl = ci.body.querySelector('.ci-card')
   tl.fromTo(cardEl, { y: 70, opacity: 0, scale: .9 },
     { y: 0, opacity: 1, scale: 1, duration: .34, ease: 'back.out(1.4)' }, .03)
   tl.fromTo(ci.text, { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: .26, ease: 'back.out(2)' }, .14)
   sfx(tl, .14, 'save_shout', onSfx)
-  tl.to([ci.bg, ci.body], { opacity: 0, duration: .22, ease: 'power2.in' }, beat.saveCutIn)
+  tl.to([ci.bg, ci.body, ci.tint], { opacity: 0, duration: .22, ease: 'power2.in' }, beat.saveCutIn)
   tl.set(ci.root, { visibility: 'hidden' })
   tl.set([ci.bg, ci.body], { opacity: 1 })
   return tl
@@ -391,7 +395,7 @@ function pkCommon (stage, tl, opts, beat, onSfx, at) {
 
   // ---- the answer ----
   const r = at + strike
-  if (boardAfter) tl.call(() => stage.setPk(shooter, keeper, label, boardAfter), null, r)
+  if (boardAfter) tl.call(() => stage.setPk(shooter, keeper, label, boardAfter, side), null, r)
   // the taker's name has done its job; the verdict takes that line
   if (pk.shooterName) tl.to(pk.shooterName, { opacity: 0, duration: .14 }, r)
 
@@ -437,11 +441,11 @@ function pkCommon (stage, tl, opts, beat, onSfx, at) {
  * identically — the performance cannot leak the result.
  * ---------------------------------------------------------------- */
 export function buildPkShowdown (stage, opts, beat = BEAT, onSfx = null, onRate = null) {
-  const { shooter, keeper, label = '', board, standalone = true } = opts
+  const { shooter, keeper, label = '', board, standalone = true, side } = opts
   const pk = stage.pk()
   const tl = gsap.timeline()
 
-  tl.call(() => { stage.setPk(shooter, keeper, label, board); stage.setPkStamp('') })
+  tl.call(() => { stage.setPk(shooter, keeper, label, board, side); stage.setPkStamp('') })
   tl.set(pk.root, { visibility: 'visible' })
   tl.set(pk.stamp, { opacity: 0 })
   tl.set(pk.goal, { opacity: 0 })
@@ -488,11 +492,11 @@ export function buildPkShowdown (stage, opts, beat = BEAT, onSfx = null, onRate 
 /* An ordinary shootout kick: straight to the penalty camera, no face-off and
    no camera move. Same picture as the decider, just quick. */
 export function buildPkKick (stage, opts, beat = BEAT, onSfx = null) {
-  const { shooter, keeper, label, board, duration = beat.pkKick } = opts
+  const { shooter, keeper, label, board, side, duration = beat.pkKick } = opts
   const pk = stage.pk()
   const tl = gsap.timeline()
 
-  tl.call(() => { stage.setPk(shooter, keeper, label, board); stage.setPkStamp('') })
+  tl.call(() => { stage.setPk(shooter, keeper, label, board, side); stage.setPkStamp('') })
   tl.set(pk.faceoff, { opacity: 0 })
   tl.fromTo(pk.goal, { opacity: .35 }, { opacity: 1, duration: duration * .2 }, 0)
 
@@ -607,13 +611,18 @@ export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
       master.add(buildGoalCutIn(stage, {
         card: team.cards[actorSlot], scoreSide: side,
         scoreHome: h, scoreAway: a,
+        team: team.name,
         subtitle: `${ev.actorName} · ${ev.minute}'`
       }, { ...beat, cutIn: cutLen }, onSfx), t + wave.duration() - (beat.reset + beat.gap))
       t += wave.duration() + cutLen + 0.26 - (beat.reset + beat.gap)
     } else if (ev.type === 'SHOT_SAVE') {
       announce(ev, resolveAt)
       const keeperTeam = side === 'home' ? away : home
-      master.add(buildSaveCutIn(stage, { card: keeperTeam.cards.gk }, beat, onSfx),
+      master.add(buildSaveCutIn(stage, {
+        card: keeperTeam.cards.gk,
+        side: side === 'home' ? 'away' : 'home',
+        team: keeperTeam.name
+      }, beat, onSfx),
         t + wave.duration() - (beat.reset + beat.gap))
       t += wave.duration() + beat.saveCutIn + 0.22 - (beat.reset + beat.gap)
     } else {
@@ -641,6 +650,7 @@ export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
         keeper: keepTeam.cards.gk,
         outcome: e.outcome, direction: e.direction, height: e.height, dive: e.dive,
         label: e.suddenDeath ? `ROUND ${e.round} · SUDDEN DEATH` : `ROUND ${e.round}`,
+        side: e.side === 'HOME' ? 'home' : 'away',
         board: pkBoardUpTo(evs, i - 1),       // state BEFORE this kick
         boardAfter: pkBoardUpTo(evs, i),       // lit when the ball arrives
         standalone: false

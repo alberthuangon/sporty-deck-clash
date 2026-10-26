@@ -61,14 +61,22 @@
 
       <!-- beat 1: the face-off, a tale of the tape -->
       <div class="pk-faceoff" ref="pkFaceEl">
-        <CardFace :card="pkShooterCard" size="md" class="pk-card shooter" />
+        <div class="pk-slot" :class="pkSide">
+          <div class="pk-slot-tag">{{ pkSide === 'home' ? homeName : awayName }}</div>
+          <CardFace :card="pkShooterCard" size="md" class="pk-card shooter" />
+        </div>
         <div class="pk-vs">VS</div>
-        <CardFace :card="pkKeeperCard" size="md" class="pk-card keeper" />
+        <div class="pk-slot" :class="keepSide">
+          <div class="pk-slot-tag">{{ keepSide === 'home' ? homeName : awayName }}</div>
+          <CardFace :card="pkKeeperCard" size="md" class="pk-card keeper" />
+        </div>
       </div>
 
       <!-- beats 2-3: the penalty camera everyone can already read -->
       <div class="pk-goal" ref="pkGoalEl">
-        <div class="pk-keeper-name">{{ pkKeeperCard && pkKeeperCard.name }}</div>
+        <div class="pk-keeper-name" :class="keepSide">
+          <i class="pk-jersey"></i>{{ pkKeeperCard && pkKeeperCard.name }}
+        </div>
         <div class="pk-frame">
           <div class="pk-mesh"></div>
           <div class="pk-bar"></div>
@@ -76,10 +84,13 @@
           <div class="pk-post right"></div>
           <div class="pk-ripple" ref="pkRippleEl"></div>
         </div>
-        <div class="pk-gk" ref="pkGkEl">{{ initials(pkKeeperCard) }}</div>
+        <div class="pk-gk" :class="keepSide" ref="pkGkEl">{{ initials(pkKeeperCard) }}</div>
         <div class="pk-spot"></div>
         <div class="pk-pball" ref="pkBallEl"></div>
-        <div class="pk-shooter-name">{{ pkShooterCard && pkShooterCard.name }}</div>
+        <div class="pk-shooter-name" :class="pkSide">
+          <i class="pk-jersey"></i>{{ pkShooterCard && pkShooterCard.name }}
+          <span class="pk-team">{{ pkSide === 'home' ? homeName : awayName }}</span>
+        </div>
       </div>
 
       <div class="pk-board">
@@ -97,9 +108,13 @@
     <!-- cut-in overlay -->
     <div class="cutin" ref="cutinEl">
       <div class="ci-bg" ref="ciBgEl"></div>
+      <div class="ci-tint" :class="cutSide" ref="ciTintEl"></div>
       <div class="ci-streaks" ref="ciStreakEl"></div>
       <div class="ci-body" ref="ciBodyEl">
         <CardFace v-if="cutCard" :card="cutCard" size="lg" class="ci-card" />
+        <div class="ci-team" :class="cutSide" v-if="cutTeam">
+          <i class="ci-jersey"></i>{{ cutTeam }}
+        </div>
         <div class="ci-text" ref="ciTextEl">{{ cutText }}</div>
         <div class="ci-sub">{{ cutSub }}</div>
       </div>
@@ -127,11 +142,15 @@ const phaseLabel = ref('')
 const cutCard = ref(null)
 const cutText = ref('')
 const cutSub = ref('')
+const cutSide = ref('home')
+const cutTeam = ref('')
 const pkShooter = ref(null)
 const pkKeeper = ref(null)
 const pkLabel = ref('')
 const pkStamp = ref('')
 const pkBoard = ref({ HOME: [], AWAY: [] })
+const pkSide = ref('home')                                   // who is taking it
+const keepSide = computed(() => (pkSide.value === 'home' ? 'away' : 'home'))
 /* the showdown cards stay mounted so the timeline compiler always has real
    elements to animate; setPk only swaps which card they show */
 const pkShooterCard = computed(() => pkShooter.value || props.home.cards.fw)
@@ -151,6 +170,7 @@ const ciBgEl = ref(null)
 const ciBodyEl = ref(null)
 const ciTextEl = ref(null)
 const ciStreakEl = ref(null)
+const ciTintEl = ref(null)
 const scoreHomeEl = ref(null)
 const scoreAwayEl = ref(null)
 const pkEl = ref(null)
@@ -192,7 +212,7 @@ const api = {
   trail: () => trailEl.value,
   cutin: () => ({
     root: cutinEl.value, bg: ciBgEl.value, body: ciBodyEl.value,
-    text: ciTextEl.value, streaks: ciStreakEl.value
+    text: ciTextEl.value, streaks: ciStreakEl.value, tint: ciTintEl.value
   }),
   scoreEl: (side) => (side === 'home' ? scoreHomeEl.value : scoreAwayEl.value),
   /* query the card elements rather than unwrapping component refs — CardFace
@@ -212,21 +232,26 @@ const api = {
       ball: pkBallEl.value, stamp: pkStampEl.value
     }
   },
-  setPk: (shooter, keeper, label, board) => {
+  setPk: (shooter, keeper, label, board, side) => {
     pkShooter.value = shooter; pkKeeper.value = keeper
     pkLabel.value = label || ''
     if (board) pkBoard.value = board
+    if (side) pkSide.value = side
   },
   setPkStamp: (t) => { pkStamp.value = t || '' },
   card: (side, slot) => (side === 'home' ? props.home : props.away).cards[slot],
   setScore: (h, a) => { scoreHome.value = h; scoreAway.value = a },
   setClock: (t) => { clockLabel.value = t },
   setPhase: (t) => { phaseLabel.value = t },
-  setCutIn: (card, text, sub) => { cutCard.value = card; cutText.value = text || ''; cutSub.value = sub || '' },
+  setCutIn: (card, text, sub, side, team) => {
+    cutCard.value = card; cutText.value = text || ''; cutSub.value = sub || ''
+    if (side) cutSide.value = side
+    cutTeam.value = team || ''
+  },
   reset: () => {
     scoreHome.value = 0; scoreAway.value = 0
     clockLabel.value = "0'"; phaseLabel.value = ''
-    cutCard.value = null; cutText.value = ''; cutSub.value = ''
+    cutCard.value = null; cutText.value = ''; cutSub.value = ''; cutTeam.value = ''
     pkShooter.value = null; pkKeeper.value = null
     pkLabel.value = ''; pkStamp.value = ''
     pkBoard.value = { HOME: [], AWAY: [] }
@@ -323,19 +348,33 @@ onMounted(() => { /* refs are live from here on */ })
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between;
   padding: 0 18px;
 }
-.pk-card { width: 106px; flex: 0 0 106px; }
+.pk-slot { width: 106px; flex: 0 0 106px; display: flex; flex-direction: column; gap: 5px; }
+.pk-slot-tag {
+  font-size: 9px; font-weight: 800; letter-spacing: .06em; text-align: center;
+  padding: 2px 0; border-radius: 3px;
+}
+.pk-slot.home .pk-slot-tag { background: rgba(228,24,39,.25); color: #FF8A93; }
+.pk-slot.away .pk-slot-tag { background: rgba(47,123,232,.25); color: #8FC0FF; }
+.pk-card { width: 106px; }
 .pk-vs { font-size: 13px; font-weight: 900; color: var(--text-3); letter-spacing: .1em; }
 
 /* beats 2-3 — the penalty camera */
 .pk-goal { position: absolute; inset: 0; opacity: 0; }
 .pk-keeper-name {
   position: absolute; top: 24px; left: 0; right: 0; text-align: center;
-  font-size: 10px; font-weight: 700; color: var(--away); letter-spacing: .06em;
+  font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
 }
+.pk-keeper-name.home { color: #FF8A93; } .pk-keeper-name.away { color: #8FC0FF; }
+.pk-jersey { width: 7px; height: 9px; border-radius: 2px; display: inline-block; }
+.home > .pk-jersey { background: var(--home); } .away > .pk-jersey { background: var(--away); }
+.pk-team { font-weight: 800; opacity: .75; margin-left: 2px; }
 .pk-shooter-name {
-  position: absolute; top: 62%; left: 0; right: 0; text-align: center;
-  font-size: 10px; font-weight: 700; color: #fff; letter-spacing: .04em;
+  position: absolute; top: 62%; left: 0; right: 0;
+  font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
 }
+.pk-shooter-name.home { color: #FF8A93; } .pk-shooter-name.away { color: #8FC0FF; }
 .pk-frame { position: absolute; left: 12%; right: 12%; top: 17%; height: 30%; }
 .pk-mesh {
   position: absolute; inset: 0;
@@ -355,11 +394,12 @@ onMounted(() => { /* refs are live from here on */ })
   position: absolute; left: 50%; top: 35%;
   transform: translate(-50%,-50%);
   width: 30px; height: 30px; border-radius: 50%;
-  background: var(--away); color: #fff;
+  color: #fff;
   display: flex; align-items: center; justify-content: center;
   font-size: 9px; font-weight: 800;
   box-shadow: 0 2px 8px rgba(0,0,0,.5);
 }
+.pk-gk.home { background: var(--home); } .pk-gk.away { background: var(--away); }
 .pk-spot {
   position: absolute; left: 50%; top: 56%; width: 5px; height: 5px; margin: -2px 0 0 -2px;
   border-radius: 50%; background: rgba(255,255,255,.4);
@@ -403,6 +443,21 @@ onMounted(() => { /* refs are live from here on */ })
 
 .cutin { position: absolute; inset: 0; pointer-events: none; visibility: hidden; z-index: 30; }
 .ci-bg { position: absolute; inset: 0; background: rgba(10,12,16,.82); opacity: 0; }
+/* who scored has to be readable before the name is: the wash comes in from
+   the side that attacked, in that side's jersey colour */
+.ci-tint { position: absolute; inset: 0; opacity: 0; }
+.ci-tint.home { background: linear-gradient(90deg, rgba(228,24,39,.55), rgba(228,24,39,.10) 48%, transparent 72%); }
+.ci-tint.away { background: linear-gradient(270deg, rgba(47,123,232,.55), rgba(47,123,232,.10) 48%, transparent 72%); }
+.ci-team {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 800; letter-spacing: .1em;
+  padding: 3px 10px; border-radius: 999px;
+}
+.ci-team.home { background: rgba(228,24,39,.22); color: #FF8A93; }
+.ci-team.away { background: rgba(47,123,232,.22); color: #8FC0FF; }
+.ci-jersey { width: 8px; height: 10px; border-radius: 2px; }
+.ci-team.home .ci-jersey { background: var(--home); }
+.ci-team.away .ci-jersey { background: var(--away); }
 .ci-streaks {
   position: absolute; inset: -20% -40%;
   background: repeating-linear-gradient(104deg, rgba(255,255,255,.07) 0 3px, transparent 3px 26px);

@@ -277,7 +277,7 @@ export function buildPenaltyScript (result, rng = Math.random) {
 
 /* Seconds a shootout of this many kicks will take. Mirrors stageModel's
    pkDuration; kept as plain numbers so engine/ imports nothing from match/. */
-export const PK_COST = { kick: 0.55, suddenDeath: 0.42, showdown: 1.00, strike: 0.80, reveal: 0.60 }
+export const PK_COST = { kick: 0.72, suddenDeath: 0.55, showdown: 1.30, strike: 1.04, reveal: 0.78 }
 
 export function pkSecondsFor (kickCount, c = PK_COST) {
   if (!kickCount) return 0

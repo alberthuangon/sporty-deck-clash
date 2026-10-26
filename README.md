@@ -155,6 +155,13 @@ The cap is therefore checked against `rawDuration + goals × slowmoExtra`, not
 `timeline.duration()`. Verified end to end in the browser — predicted 27.06s,
 measured 26.48s.
 
+Team colour does the identifying work in both cut-ins and the shootout: a goal
+washes the screen in the scoring side's jersey colour, arriving from the
+direction they attacked, before any name is legible. The keeper token and the
+taker's name take their side's colour too — before this the keeper was
+hardcoded blue, so in a shootout every kick looked like the same team taking
+it.
+
 ### Penalties
 
 Every kick is shown through the penalty camera everyone can already read:
