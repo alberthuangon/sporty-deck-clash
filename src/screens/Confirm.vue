@@ -25,6 +25,22 @@
       <OddsCell :label="matchView.opponentName" :odds="matchView.theirOdds" big />
     </div>
 
+    <div class="venue card" v-if="branches">
+      <div class="v-head">
+        <span class="v-t">Home or away</span>
+        <span class="v-tbd">decided by coin toss</span>
+      </div>
+      <div class="v-split">
+        <div class="v-leg"><span class="muted">if you're HOME</span><b>{{ branches.home.toFixed(2) }}</b></div>
+        <div class="v-leg"><span class="muted">if you're AWAY</span><b>{{ branches.away.toFixed(2) }}</b></div>
+      </div>
+      <div class="v-note muted">
+        The toss happens after both players confirm, so your price
+        <b class="green">{{ matchView.myOdds.toFixed(2) }}</b> averages the two.
+        A squad built for one venue is betting on the toss; a balanced one is not.
+      </div>
+    </div>
+
     <div class="stake card">
       <div class="st-head">
         <span class="muted">Your stake</span>
@@ -55,8 +71,7 @@
       </button>
     </div>
     <div class="fine muted">
-      Stakes lock at the coin toss. Odds were priced before the toss, so the
-      toss is expectation-neutral for both sides.
+      Stakes lock at the coin toss.
     </div>
   </div>
   <div v-else class="scroll pad">
@@ -69,12 +84,13 @@
 import { ref, computed } from 'vue'
 import PowerStars from '../components/PowerStars.vue'
 import OddsCell from '../components/OddsCell.vue'
-import { store, go, matchView, ctx, cardOf, deckPower, confirmBet, stakeRange, abandonMatch } from '../game.js'
+import { store, go, matchView, ctx, cardOf, deckPower, confirmBet, stakeRange, abandonMatch, branchOdds } from '../game.js'
 
 const SLOTS = ['gk', 'df', 'mf', 'fw']
 const range = computed(() => stakeRange(matchView.tierFee))
 const stake = ref(matchView.tierFee)
 const myPower = computed(() => deckPower())
+const branches = computed(() => branchOdds())
 const potential = computed(() => Math.floor(stake.value * matchView.myOdds))
 function oppCard (s) { return ctx.opponent ? ctx.opponent.team.cards[s] : { name: '—' } }
 function accept () { if (confirmBet(stake.value)) go('toss') }
@@ -95,6 +111,18 @@ function cancel () { abandonMatch(); go('home') }
 .ln.right { text-align: right; }
 .lp { width: 34px; text-align: center; font-size: 10px; font-weight: 700; }
 .odds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.venue { padding: 10px 12px; }
+.v-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.v-t { font-size: 12px; font-weight: 700; }
+.v-tbd { font-size: 10px; color: var(--r-l); font-weight: 700; letter-spacing: .04em; }
+.v-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.v-leg {
+  background: var(--surface-hi); border-radius: var(--r-sm); padding: 7px 9px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.v-leg span { font-size: 9px; letter-spacing: .04em; }
+.v-leg b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.v-note { font-size: 10px; line-height: 1.5; margin-top: 8px; }
 .stake { padding: 12px; }
 .st-head { display: flex; justify-content: space-between; align-items: baseline; }
 .st-v { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }

@@ -6,7 +6,7 @@ import { reactive } from 'vue'
 import cardData from './data/cards.json' with { type: 'json' }
 import { store, go } from './store.js'
 import { buildCard, RARITY, MAX_LEVEL } from './engine/cards.js'
-import { buildTeam, priceMatch, drawResult, settle, powerOf, powerStars, powerScore } from './engine/model.js'
+import { buildTeam, priceMatch, drawResult, settle, powerOf, powerStars, powerScore, displayOdds } from './engine/model.js'
 import { findOpponent } from './engine/opponents.js'
 import { buildScript } from './engine/scriptgen.js'
 import { shardCost, TIERS, stakeRange, applyRankDelta, rankWin, RANK_LOSS, REWARD_ROAD, ladderIndex, rankLabel, rollPack } from './engine/economy.js'
@@ -214,6 +214,18 @@ export function startMatchmaking (tierFee) {
     payout: 0, rankDelta: 0, promotions: []
   })
   return { ...found, candidates: found.walked }
+}
+
+/* What the odds would be in each branch of the toss. Showing these is safe —
+   the toss has not happened, so nobody holds information the other does not —
+   and it is the only way the player can see that the price they are offered
+   averages the two, and that a home-leaning squad is making a real bet on the
+   toss rather than a cosmetic one. */
+export function branchOdds () {
+  if (!ctx.priced) return null
+  const qHome = ctx.priced.branches.aHome.qHome
+  const qAway = 1 - ctx.priced.branches.bHome.qHome
+  return { home: displayOdds(qHome), away: displayOdds(qAway), qHome, qAway }
 }
 
 export function confirmBet (stake) {
