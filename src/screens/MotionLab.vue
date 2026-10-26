@@ -126,10 +126,11 @@ const away = buildTeam({
 }, 'Away XI')
 
 const PK_STORIES = [
-  { id: 'wrongWay', label: 'Keeper goes the wrong way', outcome: 'GOAL', direction: 'RIGHT', dive: 'LEFT' },
-  { id: 'soClose', label: 'Right way, still in', outcome: 'GOAL', direction: 'LEFT', dive: 'LEFT' },
-  { id: 'saved', label: 'Saved', outcome: 'SAVED', direction: 'RIGHT', dive: 'RIGHT' },
-  { id: 'post', label: 'Off the post', outcome: 'POST', direction: 'LEFT', dive: 'RIGHT' }
+  { id: 'wrongWay', label: 'Keeper goes the wrong way', outcome: 'GOAL', direction: 'RIGHT', height: 'LOW', dive: 'LEFT' },
+  { id: 'soClose', label: 'Right way, still in', outcome: 'GOAL', direction: 'LEFT', height: 'HIGH', dive: 'LEFT' },
+  { id: 'saved', label: 'Saved', outcome: 'SAVED', direction: 'RIGHT', height: 'LOW', dive: 'RIGHT' },
+  { id: 'post', label: 'Off the post', outcome: 'POST', direction: 'LEFT', height: 'HIGH', dive: 'RIGHT' },
+  { id: 'missed', label: 'Ballooned over', outcome: 'MISS', direction: 'CENTRE', height: 'HIGH', dive: 'RIGHT' }
 ]
 
 const stageRef = ref(null)
@@ -190,7 +191,7 @@ async function play (opts = {}) {
     master.add(buildPkShowdown(api, {
       shooter: api.card('home', 'fw'),
       keeper: api.card('away', 'gk'),
-      outcome: st.outcome, direction: st.direction, dive: st.dive,
+      outcome: st.outcome, direction: st.direction, height: st.height, dive: st.dive,
       label: 'ROUND 4 · SUDDEN DEATH',
       board: { HOME: ['goal', 'goal', 'miss'], AWAY: ['goal', 'miss', 'goal'] },
       boardAfter: { HOME: ['goal', 'goal', 'miss', st.outcome === 'GOAL' ? 'goal' : 'miss'], AWAY: ['goal', 'miss', 'goal'] }

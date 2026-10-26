@@ -7,7 +7,10 @@
    maps labels to files without touching the choreography. */
 
 import gsap from 'gsap'
-import { SLOTS, basePos, wavePos, reactedPos, slotStagger, passChain, shotTarget, BEAT } from './stageModel.js'
+import {
+  SLOTS, basePos, wavePos, reactedPos, slotStagger, passChain, shotTarget, BEAT,
+  PK_SPOT, PK_PLACEMENT, PK_DIVE, PK_OFF, PK_POST
+} from './stageModel.js'
 
 function pos (el) { return { left: el[0] + '%', top: el[1] + '%' } }
 
@@ -346,128 +349,152 @@ export function resetStage (stage) {
  *
  * opts: { shooter, keeper, outcome, direction, dive, label, board, decisive }
  * ---------------------------------------------------------------- */
+/* Where the ball ends up, and where the keeper goes. Both are read off the
+   script fields that already existed — this is the whole reason the goal view
+   is here: `direction`, `height` and `dive` have nothing to mean without a
+   goal to measure them against. */
+const FRAME = { x: 12, y: 17, w: 76, h: 30 }    // .pk-frame, percent of the goal view
+
+function pkTargets (outcome, direction, height, dive) {
+  const place = (PK_PLACEMENT[direction] || PK_PLACEMENT.CENTRE)[height === 'LOW' ? 'LOW' : 'HIGH']
+  const dived = PK_DIVE[dive] || PK_DIVE.CENTRE
+  if (outcome === 'MISS') return { ball: (PK_OFF[direction] || PK_OFF.CENTRE)[height === 'LOW' ? 'LOW' : 'HIGH'], dived, onTarget: false }
+  if (outcome === 'POST') return { ball: PK_POST[direction] || PK_POST.CENTRE, dived, onTarget: false }
+  return { ball: place, dived, onTarget: true }
+}
+
+function pkCommon (stage, tl, opts, beat, onSfx, at) {
+  const { outcome = 'GOAL', direction = 'CENTRE', height = 'HIGH', dive = 'LEFT',
+    strike, reveal, shooter, keeper, label, boardAfter } = opts
+  const pk = stage.pk()
+  const scored = outcome === 'GOAL'
+  const { ball, dived, onTarget } = pkTargets(outcome, direction, height, dive)
+
+  // ---- the strike: ball to its placement, keeper to his guess, together ----
+  tl.set(pk.ball, { left: PK_SPOT.x + '%', top: PK_SPOT.y + '%', scale: 1, opacity: 1 }, at)
+  tl.set(pk.gk, { left: '50%', top: '40%', scaleX: 1, scaleY: 1, rotate: 0 }, at)
+
+  tl.to(pk.ball, {
+    left: ball.x + '%', top: ball.y + '%',
+    duration: strike, ease: 'power2.in'
+  }, at)
+  tl.to(pk.ball, { scale: 1.45, duration: strike * .45, yoyo: true, repeat: 1 }, at)
+
+  const lean = dive === 'LEFT' ? -14 : dive === 'RIGHT' ? 14 : 0
+  tl.to(pk.gk, {
+    left: dived.x + '%', top: dived.y + '%',
+    scaleX: lean ? 1.45 : 1.1, scaleY: lean ? 0.8 : 1.3, rotate: lean,
+    duration: strike * .92, ease: 'power3.out'
+  }, at + strike * .06)
+  sfx(tl, at, 'pk_strike', onSfx)
+
+  // ---- the answer ----
+  const r = at + strike
+  if (boardAfter) tl.call(() => stage.setPk(shooter, keeper, label, boardAfter), null, r)
+
+  if (scored) {
+    // the ripple is a child of the frame, so overlay coordinates have to be
+    // remapped into frame-relative ones or it lands off to one side
+    tl.set(pk.ripple, {
+      left: ((ball.x - FRAME.x) / FRAME.w * 100) + '%',
+      top: ((ball.y - FRAME.y) / FRAME.h * 100) + '%'
+    }, r)
+    tl.fromTo(pk.ripple, { opacity: .95, scale: .3 },
+      { opacity: 0, scale: 2.2, duration: .46, ease: 'power2.out' }, r)
+    tl.call(() => stage.setPkStamp('GOAL'), null, r)
+    sfx(tl, r, 'pk_goal', onSfx)
+  } else if (outcome === 'SAVED') {
+    // the keeper gets a hand to it and it flies away from him
+    tl.to(pk.gk, { scale: 1.2, duration: .09, yoyo: true, repeat: 1 }, r)
+    tl.to(pk.ball, {
+      left: (ball.x + (dive === 'RIGHT' ? 16 : -16)) + '%', top: (ball.y - 16) + '%',
+      scale: .85, duration: reveal * .7, ease: 'power2.out'
+    }, r)
+    tl.call(() => stage.setPkStamp('SAVED'), null, r)
+    sfx(tl, r, 'pk_save', onSfx)
+  } else {
+    tl.to(pk.ball, {
+      left: (ball.x + (direction === 'RIGHT' ? 10 : direction === 'LEFT' ? -10 : 0)) + '%',
+      top: Math.max(2, ball.y - 14) + '%',
+      scale: .8, opacity: .5, duration: reveal * .8, ease: 'power1.out'
+    }, r)
+    tl.call(() => stage.setPkStamp(outcome === 'POST' ? 'OFF THE POST' : 'MISSED'), null, r)
+    sfx(tl, r, 'pk_miss', onSfx)
+  }
+  tl.fromTo(pk.stamp, { opacity: 0, scale: scored ? 1.9 : 1.6, color: scored ? '#33EA6A' : '#9CA0AB' },
+    { opacity: 1, scale: 1, duration: .28, ease: 'back.out(2.1)' }, r + .04)
+  return r + reveal
+}
+
+/* ---------------------------------------------------------------- *
+ * The kick that settles it (PRD §16.4). Three beats: a face-off hold,
+ * then a CUT to the penalty camera for the strike and the answer.
+ *
+ * All of the tension sits before contact, so a goal and a save are pre-rolled
+ * identically — the performance cannot leak the result.
+ * ---------------------------------------------------------------- */
 export function buildPkShowdown (stage, opts, beat = BEAT, onSfx = null, onRate = null) {
-  const { shooter, keeper, outcome = 'GOAL', direction = 'CENTRE', dive = 'LEFT', label = '',
-    board, boardAfter, standalone = true } = opts
+  const { shooter, keeper, label = '', board, standalone = true } = opts
   const pk = stage.pk()
   const tl = gsap.timeline()
-  const scored = outcome === 'GOAL'
-  const guessedRight = dive === direction
 
   tl.call(() => { stage.setPk(shooter, keeper, label, board); stage.setPkStamp('') })
   tl.set(pk.root, { visibility: 'visible' })
-  tl.set(pk.stamp, { opacity: 0, scale: 1.8 })
-  tl.set(pk.net, { opacity: 0 })
-  tl.set(pk.ball, { left: '30%', y: 0, scale: 1, opacity: 1 })
+  tl.set(pk.stamp, { opacity: 0 })
+  tl.set(pk.goal, { opacity: 0 })
+  tl.set(pk.faceoff, { opacity: 1 })
 
-  /* ---- beat 1: the hold ---------------------------------------- */
-  if (standalone) {
-    tl.fromTo(pk.bg, { opacity: 0 }, { opacity: 1, duration: .20, ease: 'power2.out' }, 0)
-  }
+  /* ---- beat 1: the face-off -------------------------------------- */
+  if (standalone) tl.fromTo(pk.bg, { opacity: 0 }, { opacity: 1, duration: .20, ease: 'power2.out' }, 0)
   tl.fromTo(pk.head, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: .26 }, .06)
-  // cards close in from both edges
   tl.fromTo(pk.shooter, { x: -150, opacity: 0 }, { x: 0, opacity: 1, duration: .34, ease: 'power3.out' }, .04)
   tl.fromTo(pk.keeper, { x: 150, opacity: 0 }, { x: 0, opacity: 1, duration: .34, ease: 'power3.out' }, .04)
-  tl.fromTo(pk.ball, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: .24, ease: 'back.out(2)' }, .22)
-  // camera pushes in
-  tl.fromTo(pk.stage, { scale: 1 }, { scale: 1.06, duration: beat.pkShowdown, ease: 'power1.inOut' }, .1)
-  // vignette breathes at roughly 75bpm — two beats before the kick
   tl.fromTo(pk.vig, { opacity: .55 },
     { opacity: 1, duration: beat.pkShowdown / 2.4, ease: 'sine.inOut', yoyo: true, repeat: 1 }, .12)
-  // the keeper shifts his weight: he is guessing, and you can see him guess
-  tl.to(pk.keeper, { x: 7, duration: beat.pkShowdown / 3, ease: 'sine.inOut' }, .38)
-  tl.to(pk.keeper, { x: -6, duration: beat.pkShowdown / 3, ease: 'sine.inOut' }, .38 + beat.pkShowdown / 3)
+  // he is guessing, and you can see him guess
+  tl.to(pk.keeper, { x: 7, duration: beat.pkShowdown / 3, ease: 'sine.inOut' }, .34)
+  tl.to(pk.keeper, { x: -6, duration: beat.pkShowdown / 3, ease: 'sine.inOut' }, .34 + beat.pkShowdown / 3)
   sfx(tl, .12, 'pk_heartbeat', onSfx)
 
+  /* ---- cut to the penalty camera ---------------------------------- */
   let t = beat.pkShowdown
+  const cut = .16
+  tl.to(pk.faceoff, { opacity: 0, scale: 1.08, duration: cut, ease: 'power2.in' }, t)
+  tl.fromTo(pk.goal, { opacity: 0, scale: 1.1 },
+    { opacity: 1, scale: 1, duration: cut * 1.6, ease: 'power2.out' }, t + cut * .6)
+  tl.to(pk.vig, { opacity: .7, duration: cut }, t)
+  t += cut
 
-  /* ---- beat 2: the strike -------------------------------------- */
+  /* ---- beats 2-3: strike and answer -------------------------------- */
   if (onRate) tl.call(() => onRate(0.55), null, t)
-  tl.to(pk.shooter, { x: 14, duration: .10, yoyo: true, repeat: 1, ease: 'power2.out' }, t)
-  sfx(tl, t, 'pk_strike', onSfx)
-  // the keeper commits — same movement whether he is right or wrong
-  const diveX = dive === 'LEFT' ? -16 : dive === 'RIGHT' ? 16 : 0
-  tl.to(pk.keeper, { x: diveX, y: diveX === 0 ? -6 : 0, rotate: diveX * 0.35, duration: beat.pkStrike * .8, ease: 'power2.out' }, t + .04)
-  // ball travels, stretched
-  tl.to(pk.ball, {
-    left: guessedRight && !scored ? '74%' : '92%',
-    y: direction === 'LEFT' ? -34 : direction === 'RIGHT' ? 34 : 0,
-    duration: beat.pkStrike, ease: 'power2.in'
-  }, t)
-  tl.to(pk.ball, { scale: 1.5, duration: beat.pkStrike * .5, yoyo: true, repeat: 1 }, t)
-  t += beat.pkStrike
-
-  /* ---- beat 3: the reveal -------------------------------------- */
-  if (onRate) tl.call(() => onRate(1), null, t)
-  // the pip for THIS kick only lights once the ball has arrived — lighting it
-  // during the hold would give the answer away
-  if (boardAfter) tl.call(() => stage.setPk(shooter, keeper, label, boardAfter), null, t)
-  if (scored) {
-    tl.fromTo(pk.net, { opacity: 0, scaleX: .9 },
-      { opacity: 1, scaleX: 1, duration: .18, ease: 'power2.out' }, t)
-    tl.to(pk.net, { scaleY: 1.1, duration: .14, yoyo: true, repeat: 1, ease: 'power2.out' }, t + .1)
-    tl.to(pk.vig, { opacity: .25, duration: .22 }, t)
-    tl.call(() => stage.setPkStamp(guessedRight ? 'GOAL' : 'GOAL'), null, t)
-    tl.fromTo(pk.stamp, { opacity: 0, scale: 1.9 },
-      { opacity: 1, scale: 1, duration: .30, ease: 'back.out(2.2)' }, t + .04)
-    sfx(tl, t, 'pk_goal', onSfx)
-  } else {
-    // keeper gets there: he punches, the ball ricochets away
-    tl.to(pk.keeper, { scale: 1.16, duration: .10, yoyo: true, repeat: 1, ease: 'power2.out' }, t)
-    tl.to(pk.ball, { left: '56%', y: -58, scale: .8, duration: .34, ease: 'power2.out' }, t + .04)
-    tl.call(() => stage.setPkStamp(outcome === 'SAVED' ? 'SAVED' : outcome === 'POST' ? 'POST!' : 'MISSED'), null, t)
-    tl.fromTo(pk.stamp, { opacity: 0, scale: 1.7, color: '#9CA0AB' },
-      { opacity: 1, scale: 1, duration: .28, ease: 'back.out(2)' }, t + .04)
-    sfx(tl, t, 'pk_save', onSfx)
-  }
-  t += beat.pkReveal
+  const endAt = pkCommon(stage, tl, { ...opts, strike: beat.pkStrike, reveal: beat.pkReveal }, beat, onSfx, t)
+  if (onRate) tl.call(() => onRate(1), null, endAt - beat.pkReveal * .5)
 
   if (standalone) {
-    tl.to([pk.bg, pk.vig, pk.head, pk.stage, pk.stamp], { opacity: 0, duration: .24, ease: 'power2.in' }, t)
+    tl.to([pk.bg, pk.vig, pk.head, pk.goal, pk.stamp], { opacity: 0, duration: .24, ease: 'power2.in' }, endAt)
     tl.set(pk.root, { visibility: 'hidden' })
-    tl.set([pk.bg, pk.vig, pk.head, pk.stage], { opacity: 1 })
-    tl.set([pk.shooter, pk.keeper, pk.ball], { clearProps: 'all' })
+    tl.set([pk.bg, pk.vig, pk.head], { opacity: 1 })
+    tl.set([pk.shooter, pk.keeper, pk.faceoff], { clearProps: 'all' })
   } else {
-    tl.to(pk.stamp, { opacity: 0, duration: .2 }, t)
+    tl.to(pk.stamp, { opacity: 0, duration: .2 }, endAt)
     tl.set([pk.shooter, pk.keeper], { x: 0, y: 0, rotate: 0, scale: 1 })
   }
   return tl
 }
 
-/* An ordinary shootout kick: no hold, no camera move. The overlay is already
-   up, so this is just a card swap, a quick strike and a pip lighting up. */
+/* An ordinary shootout kick: straight to the penalty camera, no face-off and
+   no camera move. Same picture as the decider, just quick. */
 export function buildPkKick (stage, opts, beat = BEAT, onSfx = null) {
-  const { shooter, keeper, outcome = 'GOAL', direction = 'CENTRE', dive = 'LEFT', label,
-    board, boardAfter, duration = beat.pkKick } = opts
+  const { shooter, keeper, label, board, duration = beat.pkKick } = opts
   const pk = stage.pk()
   const tl = gsap.timeline()
-  const scored = outcome === 'GOAL'
-  const guessedRight = dive === direction
 
   tl.call(() => { stage.setPk(shooter, keeper, label, board); stage.setPkStamp('') })
-  tl.set(pk.ball, { left: '30%', y: 0, scale: 1, opacity: 1 })
-  tl.set(pk.net, { opacity: 0 })
-  tl.fromTo([pk.shooter, pk.keeper], { opacity: .25 }, { opacity: 1, duration: duration * .22 }, 0)
+  tl.set(pk.faceoff, { opacity: 0 })
+  tl.fromTo(pk.goal, { opacity: .35 }, { opacity: 1, duration: duration * .2 }, 0)
 
-  const strike = duration * .52
-  const diveX = dive === 'LEFT' ? -12 : dive === 'RIGHT' ? 12 : 0
-  tl.to(pk.keeper, { x: diveX, rotate: diveX * .3, duration: strike, ease: 'power2.out' }, duration * .22)
-  tl.to(pk.ball, {
-    left: guessedRight && !scored ? '74%' : '92%',
-    y: direction === 'LEFT' ? -30 : direction === 'RIGHT' ? 30 : 0,
-    duration: strike, ease: 'power2.in'
-  }, duration * .22)
-  sfx(tl, duration * .22, scored ? 'pk_goal' : 'pk_save', onSfx)
-
-  const at = duration * .22 + strike
-  if (boardAfter) tl.call(() => stage.setPk(shooter, keeper, label, boardAfter), null, at)
-  if (scored) {
-    tl.fromTo(pk.net, { opacity: 0 }, { opacity: 1, duration: .12 }, at)
-  } else {
-    tl.to(pk.keeper, { scale: 1.12, duration: .08, yoyo: true, repeat: 1 }, at)
-    tl.to(pk.ball, { left: '56%', y: -40, scale: .8, duration: .2, ease: 'power2.out' }, at)
-  }
-  tl.to(pk.keeper, { x: 0, rotate: 0, duration: duration * .2 }, at + .1)
+  const lead = duration * .2
+  pkCommon(stage, tl, { ...opts, strike: duration * .5, reveal: duration * .3 }, beat, onSfx, lead)
   return tl
 }
 
@@ -609,7 +636,7 @@ export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
       const opts = {
         shooter: shootTeam.cards[shooterSlot],
         keeper: keepTeam.cards.gk,
-        outcome: e.outcome, direction: e.direction, dive: e.dive,
+        outcome: e.outcome, direction: e.direction, height: e.height, dive: e.dive,
         label: e.suddenDeath ? `ROUND ${e.round} · SUDDEN DEATH` : `ROUND ${e.round}`,
         board: pkBoardUpTo(evs, i - 1),       // state BEFORE this kick
         boardAfter: pkBoardUpTo(evs, i),       // lit when the ball arrives

@@ -87,12 +87,18 @@ The cap is therefore checked against `rawDuration + goals × slowmoExtra`, not
 `timeline.duration()`. Verified end to end in the browser — predicted 27.06s,
 measured 26.48s.
 
-### The decisive penalty
+### Penalties
 
-The kick that settles a shootout leaves the pitch and becomes shooter card vs
-keeper card (PRD §16.4), in three beats and no freeze: **hold** (cards close
-in, camera pushes, vignette breathes at ~75bpm, keeper shifts his weight),
-**strike** (slow motion, keeper commits), **reveal**.
+Every kick is shown through the penalty camera everyone can already read:
+goal frame and net, keeper inside it, ball on the spot, ball to one of six
+placements, keeper to one of three dives. That picture is what gives the
+script's `direction` / `height` / `dive` fields something to be measured
+against — in an abstract layout a dive is just a card tilting.
+
+The kick that settles the shootout gets a face-off hold first (PRD §16.4,
+shooter card vs keeper card, vignette breathing at ~75bpm, keeper visibly
+shifting his weight), then **cuts** to the same camera for the strike and the
+reveal. Ordinary kicks skip the hold and go straight to the camera.
 
 All of the tension sits *before* contact, which is what makes it honest — at
 the moment the crowd holds its breath the picture itself does not yet know the

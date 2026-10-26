@@ -232,6 +232,7 @@ export function buildPenaltyScript (result, rng = Math.random) {
 
   const order = ['fw', 'mf', 'df']
   const dirs = ['LEFT', 'CENTRE', 'RIGHT']
+  const heights = ['HIGH', 'LOW']
   const events = seq.kicks.map((k, i) => {
     const shootingTeam = k.side === 'HOME' ? home : away
     const keepingTeam = k.side === 'HOME' ? away : home
@@ -241,6 +242,7 @@ export function buildPenaltyScript (result, rng = Math.random) {
       k.side === winner && k.scored && k.round === seq.rounds
     const shooter = keeperTakesIt ? shootingTeam.cards.gk : shootingTeam.cards[slot]
     const dir = pick(rng, dirs)
+    const height = pick(rng, heights)
     let dive = pick(rng, dirs)
     let outcome
     if (k.scored) {
@@ -257,7 +259,7 @@ export function buildPenaltyScript (result, rng = Math.random) {
       index: i, round: k.round, side: k.side, suddenDeath,
       shooter: shooter.id, shooterName: shooter.name,
       keeper: keepingTeam.cards.gk.id, keeperName: keepingTeam.cards.gk.name,
-      direction: dir, dive, outcome,
+      direction: dir, height, dive, outcome,
       decisive: i === seq.kicks.length - 1,
       sfx: outcome === 'GOAL' ? 'pk_goal' : 'pk_save'
     }

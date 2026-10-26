@@ -56,18 +56,30 @@
       <div class="pk-bg"></div>
       <div class="pk-vig" ref="pkVigEl"></div>
       <div class="pk-head" ref="pkHeadEl">{{ pkLabel }}</div>
-      <div class="pk-stage" ref="pkStageEl">
-        <!-- goal mouth sits BEHIND the keeper, which is where it is -->
-        <div class="pk-net" ref="pkNetEl"></div>
-        <div class="pk-row-cards">
-          <CardFace :card="pkShooterCard" size="md" class="pk-card shooter" />
-          <CardFace :card="pkKeeperCard" size="md" class="pk-card keeper" />
-        </div>
-        <!-- the ball lives across the whole stage so the strike has room to read -->
-        <div class="pk-lane">
-          <div class="pk-ball" ref="pkBallEl"></div>
-        </div>
+
+      <!-- beat 1: the face-off, a tale of the tape -->
+      <div class="pk-faceoff" ref="pkFaceEl">
+        <CardFace :card="pkShooterCard" size="md" class="pk-card shooter" />
+        <div class="pk-vs">VS</div>
+        <CardFace :card="pkKeeperCard" size="md" class="pk-card keeper" />
       </div>
+
+      <!-- beats 2-3: the penalty camera everyone can already read -->
+      <div class="pk-goal" ref="pkGoalEl">
+        <div class="pk-keeper-name">{{ pkKeeperCard && pkKeeperCard.name }}</div>
+        <div class="pk-frame">
+          <div class="pk-mesh"></div>
+          <div class="pk-bar"></div>
+          <div class="pk-post left"></div>
+          <div class="pk-post right"></div>
+          <div class="pk-ripple" ref="pkRippleEl"></div>
+        </div>
+        <div class="pk-gk" ref="pkGkEl">{{ initials(pkKeeperCard) }}</div>
+        <div class="pk-spot"></div>
+        <div class="pk-pball" ref="pkBallEl"></div>
+        <div class="pk-shooter-name">{{ pkShooterCard && pkShooterCard.name }}</div>
+      </div>
+
       <div class="pk-board">
         <div v-for="side in ['HOME','AWAY']" :key="side" class="pk-row">
           <span class="pk-side" :class="side.toLowerCase()">{{ side === 'HOME' ? 'H' : 'A' }}</span>
@@ -119,6 +131,7 @@ const pkBoard = ref({ HOME: [], AWAY: [] })
    elements to animate; setPk only swaps which card they show */
 const pkShooterCard = computed(() => pkShooter.value || props.home.cards.fw)
 const pkKeeperCard = computed(() => pkKeeper.value || props.away.cards.gk)
+function initials (card) { return card ? card.name.slice(0, 2).toUpperCase() : '' }
 
 const pitchEl = ref(null)
 const ballEl = ref(null)
@@ -135,9 +148,11 @@ const scoreAwayEl = ref(null)
 const pkEl = ref(null)
 const pkVigEl = ref(null)
 const pkHeadEl = ref(null)
-const pkStageEl = ref(null)
+const pkFaceEl = ref(null)
+const pkGoalEl = ref(null)
+const pkGkEl = ref(null)
+const pkRippleEl = ref(null)
 const pkBallEl = ref(null)
-const pkNetEl = ref(null)
 const pkStampEl = ref(null)
 
 const tokenEls = reactive({})
@@ -180,10 +195,12 @@ const api = {
     return {
       root,
       bg: root && root.querySelector('.pk-bg'),
-      vig: pkVigEl.value, head: pkHeadEl.value, stage: pkStageEl.value,
+      vig: pkVigEl.value, head: pkHeadEl.value,
+      faceoff: pkFaceEl.value, goal: pkGoalEl.value,
       shooter: root && root.querySelector('.pk-card.shooter'),
       keeper: root && root.querySelector('.pk-card.keeper'),
-      ball: pkBallEl.value, net: pkNetEl.value, stamp: pkStampEl.value
+      gk: pkGkEl.value, ripple: pkRippleEl.value,
+      ball: pkBallEl.value, stamp: pkStampEl.value
     }
   },
   setPk: (shooter, keeper, label, board) => {
@@ -280,38 +297,72 @@ onMounted(() => { /* refs are live from here on */ })
   border-radius: 50%; border: 2px solid #fff; opacity: 0; pointer-events: none;
 }
 
-/* ---------- penalty showdown ---------- */
+/* ---------- penalty ---------- */
 .pk { position: absolute; inset: 0; pointer-events: none; visibility: hidden; z-index: 32; }
 .pk-bg { position: absolute; inset: 0; background: #0A0C10; }
 .pk-vig {
   position: absolute; inset: 0;
-  background: radial-gradient(ellipse at center, transparent 32%, rgba(0,0,0,.92) 78%);
+  background: radial-gradient(ellipse at center, transparent 34%, rgba(0,0,0,.92) 80%);
 }
 .pk-head {
-  position: absolute; top: 14px; left: 0; right: 0; text-align: center;
-  font-size: 11px; font-weight: 800; letter-spacing: .16em; color: var(--text-2);
+  position: absolute; top: 8px; left: 0; right: 0; text-align: center;
+  font-size: 10px; font-weight: 800; letter-spacing: .16em; color: var(--text-2);
 }
-.pk-stage { position: absolute; inset: 0; }
-.pk-row-cards {
+
+/* beat 1 — face-off */
+.pk-faceoff {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between;
   padding: 0 18px;
 }
 .pk-card { width: 106px; flex: 0 0 106px; }
-.pk-lane { position: absolute; left: 0; right: 0; top: 50%; height: 0; }
-.pk-ball {
-  position: absolute; left: 30%; top: 50%; margin-top: -6px;
-  width: 12px; height: 12px; border-radius: 50%; background: #fff;
-  box-shadow: 0 0 12px rgba(255,255,255,.75);
+.pk-vs { font-size: 13px; font-weight: 900; color: var(--text-3); letter-spacing: .1em; }
+
+/* beats 2-3 — the penalty camera */
+.pk-goal { position: absolute; inset: 0; opacity: 0; }
+.pk-keeper-name {
+  position: absolute; top: 24px; left: 0; right: 0; text-align: center;
+  font-size: 10px; font-weight: 700; color: var(--away); letter-spacing: .06em;
 }
-.pk-net {
-  position: absolute; left: 70%; right: 2%; top: 50%; height: 108px; margin-top: -54px;
-  border: 1px solid rgba(255,255,255,.34); border-left: 0;
+.pk-shooter-name {
+  position: absolute; top: 66%; left: 0; right: 0; text-align: center;
+  font-size: 10px; font-weight: 700; color: #fff; letter-spacing: .04em;
+}
+.pk-frame { position: absolute; left: 12%; right: 12%; top: 17%; height: 30%; }
+.pk-mesh {
+  position: absolute; inset: 0;
   background:
-    repeating-linear-gradient(90deg, rgba(255,255,255,.10) 0 1px, transparent 1px 9px),
-    repeating-linear-gradient(0deg, rgba(255,255,255,.10) 0 1px, transparent 1px 9px);
-  opacity: 0; transform-origin: left center;
+    repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 1px, transparent 1px 11px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.13) 0 1px, transparent 1px 11px),
+    linear-gradient(180deg, rgba(255,255,255,.05), transparent);
 }
-.pk-board { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.pk-bar { position: absolute; left: -5px; right: -5px; top: -5px; height: 5px; background: #EDEFF3; border-radius: 2px; }
+.pk-post { position: absolute; top: -5px; bottom: 0; width: 5px; background: #EDEFF3; border-radius: 2px; }
+.pk-post.left { left: -5px; } .pk-post.right { right: -5px; }
+.pk-ripple {
+  position: absolute; width: 32px; height: 32px; margin: -16px 0 0 -16px;
+  border-radius: 50%; border: 2px solid rgba(255,255,255,.75); opacity: 0;
+}
+.pk-gk {
+  position: absolute; left: 50%; top: 35%;
+  transform: translate(-50%,-50%);
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--away); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0,0,0,.5);
+}
+.pk-spot {
+  position: absolute; left: 50%; top: 60%; width: 5px; height: 5px; margin: -2px 0 0 -2px;
+  border-radius: 50%; background: rgba(255,255,255,.4);
+}
+.pk-pball {
+  position: absolute; left: 50%; top: 60%; z-index: 3;
+  transform: translate(-50%,-50%);
+  width: 13px; height: 13px; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 14px rgba(255,255,255,.8);
+}
+
+.pk-board { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
 .pk-row { display: flex; align-items: center; gap: 5px; }
 .pk-side { font-size: 9px; font-weight: 800; width: 12px; text-align: center; }
 .pk-side.home { color: var(--home); } .pk-side.away { color: var(--away); }
@@ -323,9 +374,9 @@ onMounted(() => { /* refs are live from here on */ })
   background: linear-gradient(45deg, transparent 44%, var(--red) 44% 56%, transparent 56%);
 }
 .pk-stamp {
-  position: absolute; left: 0; right: 0; top: 50%; margin-top: -22px; text-align: center;
-  font-size: 40px; font-weight: 900; letter-spacing: .05em; color: var(--cta);
-  text-shadow: 0 3px 20px rgba(0,0,0,.8); opacity: 0;
+  position: absolute; left: 0; right: 0; top: 73%; text-align: center;
+  font-size: 30px; font-weight: 900; letter-spacing: .05em; color: var(--cta);
+  text-shadow: 0 3px 20px rgba(0,0,0,.9); opacity: 0;
 }
 
 .cutin { position: absolute; inset: 0; pointer-events: none; visibility: hidden; z-index: 30; }

@@ -48,6 +48,25 @@ export const BEAT = {
   press: 0.45          // how far defenders slide into the ball's lane, 0-1
 }
 
+/* Penalty geometry, percentages of the goal-view box. The six placements and
+   the three dive targets are what give `direction`/`height`/`dive` something
+   to be read against — without them a dive is just a card tilting. */
+export const PK_SPOT = { x: 50, y: 60 }
+/* six placements inside a goal spanning y 17%-47% of the view */
+export const PK_PLACEMENT = {
+  LEFT: { HIGH: { x: 24, y: 24 }, LOW: { x: 22, y: 41 } },
+  CENTRE: { HIGH: { x: 50, y: 22 }, LOW: { x: 50, y: 42 } },
+  RIGHT: { HIGH: { x: 76, y: 24 }, LOW: { x: 78, y: 41 } }
+}
+export const PK_DIVE = { LEFT: { x: 25, y: 37 }, CENTRE: { x: 50, y: 35 }, RIGHT: { x: 75, y: 37 } }
+export const PK_OFF = {
+  LEFT: { HIGH: { x: 7, y: 8 }, LOW: { x: 5, y: 44 } },
+  CENTRE: { HIGH: { x: 50, y: 4 }, LOW: { x: 50, y: 4 } },
+  RIGHT: { HIGH: { x: 93, y: 8 }, LOW: { x: 95, y: 44 } }
+}
+/* the posts a ball can rattle, same coordinate space */
+export const PK_POST = { LEFT: { x: 13, y: 33 }, CENTRE: { x: 50, y: 16 }, RIGHT: { x: 87, y: 33 } }
+
 export function basePos (side, slot) {
   return FORMATION[side][slot]
 }
