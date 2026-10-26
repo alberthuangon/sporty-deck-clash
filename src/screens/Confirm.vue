@@ -24,6 +24,10 @@
       <OddsCell label="You win" :odds="matchView.myOdds" big />
       <OddsCell :label="matchView.opponentName" :odds="matchView.theirOdds" big />
     </div>
+    <div class="margin muted">
+      Both prices carry the same <b>{{ (MARGIN * 100).toFixed(0) }}% margin</b> —
+      your expected cost is the same whatever cards you hold.
+    </div>
 
     <div class="venue card" v-if="branches">
       <div class="v-head">
@@ -88,6 +92,7 @@ import { ref, computed } from 'vue'
 import PowerStars from '../components/PowerStars.vue'
 import OddsCell from '../components/OddsCell.vue'
 import { store, go, matchView, ctx, cardOf, deckPower, confirmBet, stakeRange, abandonMatch, branchOdds } from '../game.js'
+import { MARGIN } from '../engine/model.js'
 
 const SLOTS = ['gk', 'df', 'mf', 'fw']
 const range = computed(() => stakeRange(matchView.tierFee))
@@ -114,6 +119,9 @@ function cancel () { abandonMatch(); go('home') }
 .ln.right { text-align: right; }
 .lp { width: 34px; text-align: center; font-size: 10px; font-weight: 700; }
 .odds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* the house edge is stated, not left to be reverse-engineered from the book */
+.margin { font-size: 10px; line-height: 1.5; text-align: center; margin: -2px 2px 0; }
+.margin b { color: var(--text-2); }
 .venue { padding: 10px 12px; }
 .v-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
 .v-t { font-size: 12px; font-weight: 700; }

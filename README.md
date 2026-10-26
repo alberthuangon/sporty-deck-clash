@@ -33,6 +33,22 @@ src/
   data/cards.json 20-card catalogue (stats derived, never hand-written)
 ```
 
+## The margin is stated, not hidden
+
+The confirm screen says "both prices carry the same 5% margin" out loud. The
+overround is computable from any two-way book anyway, and this product's whole
+position is that the maths is honest (PRD §13's compliance argument is exactly
+"every player's expected cost equals the margin, whatever cards they hold") —
+so leaving players to reverse-engineer it would have been a strange thing to be
+coy about, next to published pack rates and a published jackpot draw.
+
+One precision note for the pitch: 5% is the **pricing rule**. Displayed odds
+are floored to two decimals (PRD §12.3, after the GH HALF_UP incident), and
+flooring always favours the house, so a sharp player computing the book off the
+displayed prices will find ~105.5%, i.e. a realised edge nearer 5.25%. Payouts
+are floored to ₦1 on top of that. `npm run sim` reports both: 94.77% RTP at a
+stake large enough to isolate the model, 94.49% at a realistic ₦50.
+
 ## Non-negotiables (guide §11)
 
 1. **Pricing and sampling share one distribution.** The odds and the drawn result
