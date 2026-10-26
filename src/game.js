@@ -216,21 +216,19 @@ export function startMatchmaking (tierFee) {
   return { ...found, candidates: found.walked }
 }
 
-/* What the odds would be in each branch of the toss. Showing these is safe —
-   the toss has not happened, so nobody holds information the other does not —
-   and it is the only way the player can see that the price they are offered
-   averages the two, and that a home-leaning squad is making a real bet on the
-   toss rather than a cosmetic one. */
-export function branchOdds () {
+/* Your chance of winning in each outcome of the toss (PRD v0.20 §3.7).
+   Deliberately probabilities, not prices: the price is locked at confirm
+   whatever the toss does, so a second set of odds on this screen would be
+   numbers dressed as offers that are never offered.
+
+   NOTE these two do not sum to 100 — they are two separate branches, not a
+   split. Measured across 38,703 matched pairings the sum runs 75.7%-124.3%,
+   so the UI must not invite adding them. */
+export function tossChances () {
   if (!ctx.priced) return null
-  const qYouHome = ctx.priced.branches.aHome.qHome          // you at home
-  const qThemHome = ctx.priced.branches.bHome.qHome         // they at home
   return {
-    youHome: displayOdds(qYouHome),
-    themAway: displayOdds(1 - qYouHome),
-    youAway: displayOdds(1 - qThemHome),
-    themHome: displayOdds(qThemHome),
-    qYouHome, qYouAway: 1 - qThemHome
+    home: ctx.priced.branches.aHome.qHome,
+    away: 1 - ctx.priced.branches.bHome.qHome
   }
 }
 
