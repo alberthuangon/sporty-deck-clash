@@ -30,14 +30,17 @@
         <span class="v-t">Home or away</span>
         <span class="v-tbd">decided by coin toss</span>
       </div>
-      <div class="v-split">
-        <div class="v-leg"><span class="muted">if you're HOME</span><b>{{ branches.home.toFixed(2) }}</b></div>
-        <div class="v-leg"><span class="muted">if you're AWAY</span><b>{{ branches.away.toFixed(2) }}</b></div>
+      <div class="v-legs">
+        <span class="v-leg">home <b>{{ branches.home.toFixed(2) }}</b></span>
+        <i class="v-dot"></i>
+        <span class="v-leg">away <b>{{ branches.away.toFixed(2) }}</b></span>
+        <span class="v-arrow">→</span>
+        <span class="v-leg">you pay <b class="green">{{ matchView.myOdds.toFixed(2) }}</b></span>
       </div>
       <div class="v-note muted">
-        The toss happens after both players confirm, so your price
-        <b class="green">{{ matchView.myOdds.toFixed(2) }}</b> averages the two.
-        A squad built for one venue is betting on the toss; a balanced one is not.
+        The toss happens after both players confirm, so your price averages the
+        two. A squad built for one venue is betting on the toss; a balanced one
+        is not.
       </div>
     </div>
 
@@ -112,17 +115,16 @@ function cancel () { abandonMatch(); go('home') }
 .lp { width: 34px; text-align: center; font-size: 10px; font-weight: 700; }
 .odds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .venue { padding: 10px 12px; }
-.v-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.v-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
 .v-t { font-size: 12px; font-weight: 700; }
 .v-tbd { font-size: 10px; color: var(--r-l); font-weight: 700; letter-spacing: .04em; }
-.v-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.v-leg {
-  background: var(--surface-hi); border-radius: var(--r-sm); padding: 7px 9px;
-  display: flex; flex-direction: column; gap: 2px;
-}
-.v-leg span { font-size: 9px; letter-spacing: .04em; }
-.v-leg b { font-size: 16px; font-variant-numeric: tabular-nums; }
-.v-note { font-size: 10px; line-height: 1.5; margin-top: 8px; }
+/* one compact line: the branch prices are context for the headline odds, not
+   a second set of offers competing with them */
+.v-legs { display: flex; align-items: baseline; gap: 7px; font-size: 11px; color: var(--text-2); }
+.v-leg b { font-size: 13px; color: var(--text); margin-left: 3px; font-variant-numeric: tabular-nums; }
+.v-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-3); align-self: center; }
+.v-arrow { color: var(--text-3); margin: 0 1px; }
+.v-note { font-size: 10px; line-height: 1.5; margin-top: 7px; }
 .stake { padding: 12px; }
 .st-head { display: flex; justify-content: space-between; align-items: baseline; }
 .st-v { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
