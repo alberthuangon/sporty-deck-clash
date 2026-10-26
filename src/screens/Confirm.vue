@@ -20,29 +20,10 @@
       </div>
     </div>
 
-    <!-- one price card: what you pay, what the toss does to it, what the
-         house takes. The opponent's price used to sit here too, but once the
-         margin is stated it carries nothing a player can act on — relative
-         strength is already in the Power row above. -->
-    <div class="price card">
-      <div class="p-head">
-        <span class="p-t">Your price</span>
-        <span class="p-tbd">home or away decided by coin toss</span>
-      </div>
-      <div class="odds-cell p-cell">{{ matchView.myOdds.toFixed(2) }}</div>
-      <div class="p-legs" v-if="branches">
-        <span class="p-leg">home <b>{{ branches.home.toFixed(2) }}</b></span>
-        <i class="p-dot"></i>
-        <span class="p-leg">away <b>{{ branches.away.toFixed(2) }}</b></span>
-      </div>
-      <div class="p-note muted">
-        The toss happens after both players confirm, so your price averages the
-        two — a squad built for one venue is betting on the toss. Both sides
-        pay the same <b>{{ (MARGIN * 100).toFixed(0) }}% margin</b>, whatever
-        cards you hold.
-      </div>
-    </div>
-
+    <!-- stake, rate and payout in one card. The price used to sit in its own
+         block above the branch prices, which made the number that actually
+         pays look notional and the two that never pay look real. Putting it
+         between the stake and the payout makes its job unmissable. -->
     <div class="stake card">
       <div class="st-head">
         <span class="muted">Your stake</span>
@@ -52,18 +33,29 @@
       <div class="st-ends muted">
         <span>₦{{ range.min }}</span><span>₦{{ range.max }}</span>
       </div>
-      <div class="st-note muted">
-        Base stake is the arena floor. Anything above it is covered by the platform —
-        your opponent does not have to match it, and their stake is not shown.
+
+      <div class="pay">
+        <div class="pay-rate">
+          <span class="muted">Price</span>
+          <span class="odds-cell pay-cell">{{ matchView.myOdds.toFixed(2) }}</span>
+        </div>
+        <div class="pay-win">
+          <span class="muted">If you win</span>
+          <b>₦{{ potential.toLocaleString() }}</b>
+        </div>
       </div>
-      <div class="win">
-        <span class="muted">If you win</span>
-        <span class="win-v">₦{{ potential.toLocaleString() }}</span>
+      <div class="pay-sum muted">
+        ₦{{ stake }} × {{ matchView.myOdds.toFixed(2) }} = ₦{{ potential.toLocaleString() }}
+        · profit ₦{{ (potential - stake).toLocaleString() }}
       </div>
-      <div class="win sub">
-        <span class="muted">Profit</span>
-        <span>₦{{ (potential - stake).toLocaleString() }}</span>
-      </div>
+    </div>
+
+    <div class="fineprint muted">
+      Anything above the arena floor is covered by the platform — your opponent
+      does not have to match it, and their stake is not shown.
+      Home or away is decided by a coin toss after both players confirm, so the
+      price is neutral between the two. Both sides pay the same
+      <b>{{ (MARGIN * 100).toFixed(0) }}% margin</b>, whatever cards you hold.
     </div>
 
     <div class="btn-row">
@@ -72,9 +64,7 @@
         Confirm ₦{{ stake }}
       </button>
     </div>
-    <div class="fine muted">
-      Stakes lock at the coin toss.
-    </div>
+    <div class="fine muted">Stakes lock at the coin toss.</div>
   </div>
   <div v-else class="scroll pad">
     <div class="locked-note">No active match.</div>
@@ -85,14 +75,13 @@
 <script setup>
 import { ref, computed } from 'vue'
 import PowerStars from '../components/PowerStars.vue'
-import { store, go, matchView, ctx, cardOf, deckPower, confirmBet, stakeRange, abandonMatch, branchOdds } from '../game.js'
+import { store, go, matchView, ctx, cardOf, deckPower, confirmBet, stakeRange, abandonMatch } from '../game.js'
 import { MARGIN } from '../engine/model.js'
 
 const SLOTS = ['gk', 'df', 'mf', 'fw']
 const range = computed(() => stakeRange(matchView.tierFee))
 const stake = ref(matchView.tierFee)
 const myPower = computed(() => deckPower())
-const branches = computed(() => branchOdds())
 const potential = computed(() => Math.floor(stake.value * matchView.myOdds))
 function oppCard (s) { return ctx.opponent ? ctx.opponent.team.cards[s] : { name: '—' } }
 function accept () { if (confirmBet(stake.value)) go('toss') }
@@ -112,24 +101,21 @@ function cancel () { abandonMatch(); go('home') }
 .ln { flex: 1; }
 .ln.right { text-align: right; }
 .lp { width: 34px; text-align: center; font-size: 10px; font-weight: 700; }
-.price { padding: 10px 12px; }
-.p-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
-.p-t { font-size: 12px; font-weight: 700; }
-.p-tbd { font-size: 10px; color: var(--r-l); font-weight: 700; text-align: right; }
-.p-cell { height: 52px; font-size: 28px; }
-.p-legs { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-2); margin-top: 8px; }
-.p-leg b { font-size: 13px; color: var(--text); margin-left: 3px; font-variant-numeric: tabular-nums; }
-.p-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-3); }
-.p-note { font-size: 10px; line-height: 1.5; margin-top: 8px; }
-.p-note b { color: var(--text-2); }
 .stake { padding: 12px; }
 .st-head { display: flex; justify-content: space-between; align-items: baseline; }
 .st-v { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .slider { width: 100%; margin: 10px 0 2px; accent-color: var(--cta); }
 .st-ends { display: flex; justify-content: space-between; font-size: 10px; }
-.st-note { font-size: 10px; line-height: 1.45; margin: 8px 0 10px; }
-.win { display: flex; justify-content: space-between; align-items: baseline; padding-top: 8px; border-top: 1px solid var(--divider); }
-.win-v { font-size: 22px; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; }
-.win.sub { border-top: 0; padding-top: 2px; font-size: 12px; }
+.pay {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--divider);
+}
+.pay-rate, .pay-win { display: flex; align-items: center; gap: 8px; }
+.pay-rate span.muted, .pay-win span.muted { font-size: 11px; }
+.pay-cell { padding: 5px 10px; font-size: 17px; }
+.pay-win b { font-size: 24px; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; }
+.pay-sum { font-size: 10px; text-align: right; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.fineprint { font-size: 10px; line-height: 1.55; margin: 0 2px; }
+.fineprint b { color: var(--text-2); }
 .fine { font-size: 10px; line-height: 1.45; text-align: center; }
 </style>
