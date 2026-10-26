@@ -18,7 +18,12 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { store, go, startMatchmaking, deckPower, powerScore, abandonMatch } from '../game.js'
-import { ODDS_CAP } from '../engine/model.js'
+import { ODDS_CAP, MARGIN } from '../engine/model.js'
+
+/* the 2.50 odds cap expressed as what it actually constrains: how lopsided a
+   pairing is allowed to be */
+const LOW = (1 - MARGIN) / ODDS_CAP
+const BAND = (LOW * 100).toFixed(0) + '–' + ((1 - LOW) * 100).toFixed(0) + '%'
 import { opponentPool } from '../engine/opponents.js'
 
 const log = ref([])
@@ -36,13 +41,19 @@ onMounted(() => {
     { d: 400, fn: () => { statusText.value = 'Searching the ₦' + fee + ' queue…'; push('Your Power (q_ref)', myScore.value) } },
     { d: 900, fn: () => { statusText.value = 'Stage 1 — closest Power'; push('Candidates in queue', opponentPool().length) } },
     { d: 1500, fn: () => {
-      if (found.candidates.length) push('Rejected over odds cap', found.candidates.length)
+      if (found.candidates.length) push('Too far apart, skipped', found.candidates.length)
       push('Closest Power: ' + found.opponent.handle, powerScore(found.opponent.power))
     } },
-    { d: 2100, fn: () => { statusText.value = 'Stage 2 — verifying odds'; push('Your odds', found.priced.oddsA.toFixed(2)) } },
-    { d: 2500, fn: () => { push('Their odds', found.priced.oddsB.toFixed(2)) } },
+    /* Stage 2 checks whether the two squads are close enough to pair, so it
+       reads out win chance, not price. Odds are a quote and belong on the
+       confirm screen, where they are one. */
+    { d: 2100, fn: () => {
+      statusText.value = 'Stage 2 — checking the match is fair'
+      push('Win chance — you', pct(found.priced.qA))
+    } },
+    { d: 2500, fn: () => { push('Win chance — ' + found.opponent.handle, pct(found.priced.qB)) } },
     { d: 2900, fn: () => {
-      push('Both ≤ ' + ODDS_CAP.toFixed(2) + ' — match accepted', '✓', 'ok')
+      push('Both inside ' + BAND + ' — accepted', '✓', 'ok')
       statusText.value = 'Opponent found'
       ready.value = true
     } }
@@ -51,6 +62,7 @@ onMounted(() => {
 })
 onUnmounted(() => timers.forEach(clearTimeout))
 
+function pct (q) { return (q * 100).toFixed(1) + '%' }
 function push (text, value, kind = '') { log.value.push({ text, value, kind }) }
 function cancel () { abandonMatch(); go('tierselect') }
 </script>
