@@ -119,7 +119,7 @@
           <span class="fi-team away" :class="{ dim: winSide !== 'away' }">{{ awayName }}</span>
         </div>
         <div v-if="pkScore" class="fi-pk">after penalties {{ pkScore }}</div>
-        <div class="fi-win" :class="winSide" ref="finalWinEl">{{ winText }}</div>
+        <div class="fi-win" :class="[winSide, winFit]" ref="finalWinEl">{{ winText }}</div>
       </div>
     </div>
 
@@ -170,6 +170,7 @@ const pkBoard = ref({ HOME: [], AWAY: [] })
 const pkScore = ref('')
 const winSide = ref('home')
 const winText = ref('')
+const winFit = computed(() => winText.value.length > 18 ? 'xlong' : winText.value.length > 13 ? 'long' : '')
 const pkSide = ref('home')                                   // who is taking it
 const keepSide = computed(() => (pkSide.value === 'home' ? 'away' : 'home'))
 /* the showdown cards stay mounted so the timeline compiler always has real
@@ -368,9 +369,18 @@ onMounted(() => { /* refs are live from here on */ })
 
 /* ---------- full time ---------- */
 .final { position: absolute; inset: 0; visibility: hidden; pointer-events: none; z-index: 34; }
-.fi-bg { position: absolute; inset: 0; background: #0A0C10; }
-.fi-bg.home { background: radial-gradient(ellipse at 50% 45%, rgba(228,24,39,.38), #0A0C10 68%); }
-.fi-bg.away { background: radial-gradient(ellipse at 50% 45%, rgba(47,123,232,.38), #0A0C10 68%); }
+/* fully opaque: full time owns the screen, nothing behind it should read */
+.fi-bg { position: absolute; inset: 0; background: #07090D; }
+.fi-bg.home {
+  background:
+    radial-gradient(ellipse at 50% 44%, rgba(228,24,39,.52), rgba(228,24,39,0) 66%),
+    linear-gradient(180deg, #16080B 0%, #07090D 62%);
+}
+.fi-bg.away {
+  background:
+    radial-gradient(ellipse at 50% 44%, rgba(47,123,232,.48), rgba(47,123,232,0) 66%),
+    linear-gradient(180deg, #080E1A 0%, #07090D 62%);
+}
 .fi-body { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 0 14px; }
 .fi-tag { font-size: 10px; font-weight: 800; letter-spacing: .22em; color: var(--text-2); }
 .fi-score { display: flex; align-items: center; gap: 12px; }
@@ -382,8 +392,11 @@ onMounted(() => { /* refs are live from here on */ })
 .fi-pk { font-size: 12px; font-weight: 700; color: var(--r-l); }
 .fi-win {
   font-size: 30px; font-weight: 900; letter-spacing: .04em; margin-top: 4px;
-  text-shadow: 0 4px 24px rgba(0,0,0,.8);
+  white-space: nowrap; text-shadow: 0 4px 24px rgba(0,0,0,.8);
 }
+/* long club names ran edge to edge at 30px */
+.fi-win.long { font-size: 23px; }
+.fi-win.xlong { font-size: 19px; }
 .fi-win.home { color: #FF6B76; } .fi-win.away { color: #6FB0FF; }
 
 /* ---------- penalty ---------- */
