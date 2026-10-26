@@ -51,6 +51,7 @@ const SCREENS = {
   shop: { c: Shop, title: 'Card Packs', back: null },
   cards: { c: Cards, title: 'My Collection', back: null },
   rank: { c: Rank, title: 'Rank', back: null },
+  history: { c: History, title: 'Betting History', back: null },
 
   packopen: { c: PackOpen, title: 'Opening Pack', back: 'shop' },
   upgrade: { c: Upgrade, title: 'Upgrade Card', back: 'cards' },
@@ -62,8 +63,8 @@ const SCREENS = {
   match: { c: Match, title: 'Live Match', back: null },
   result: { c: Result, title: 'Result', back: null },
   settings: { c: Settings, title: 'Demo Settings', back: 'home' },
-  motionlab: { c: MotionLab, title: 'Motion Lab', back: 'settings' },
-  history: { c: History, title: 'Betting History', back: 'home' }
+  motionlab: { c: MotionLab, title: 'Motion Lab', back: 'settings' }
+
 }
 
 const screenComponent = computed(() => (SCREENS[store.currentScreen] || SCREENS.home).c)
@@ -76,6 +77,7 @@ const tabs = computed(() => [
   { id: 'shop', label: 'Shop', icon: '&#128717;', dot: store.diamonds >= 100 },
   { id: 'home', label: 'Play', icon: '&#9917;', dot: false },
   { id: 'tasks', label: 'Missions', icon: '&#128203;', dot: store.tasks.some(t => t.done && !t.claimed) },
+  { id: 'history', label: 'History', icon: '&#129534;', dot: false },
   { id: 'rank', label: 'Rank', icon: '&#127942;', dot: false }
 ])
 

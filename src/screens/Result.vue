@@ -57,7 +57,6 @@
       </div>
     </div>
 
-    <button class="btn" @click="toHistory">View in betting history</button>
     <div class="btn-row">
       <button class="btn" @click="home">Back home</button>
       <button class="btn btn-cta" @click="again">Play again</button>
@@ -77,7 +76,6 @@ const step = computed(() => RANK_TIERS[store.rank.tierIndex].step || 100)
 const rankPct = computed(() => Math.min(100, (store.rank.score / step.value) * 100))
 const goals = computed(() => ctx.script ? ctx.script.events.filter(e => e.type === 'GOAL') : [])
 function home () { abandonMatch(); go('home') }
-function toHistory () { abandonMatch(); go('history') }
 function again () { abandonMatch(); go('tierselect') }
 </script>
 

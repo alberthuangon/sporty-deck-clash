@@ -44,7 +44,6 @@ function initialState () {
     overlay: null,
 
     // transient hand-off between screens
-    replayId: null,
     pendingPack: null,
     pendingTier: null,
     upgradeTarget: null,
@@ -113,7 +112,7 @@ export function resetStore () {
 }
 
 /* ---------- navigation ---------- */
-export const TABS = ['cards', 'shop', 'home', 'tasks', 'rank']
+export const TABS = ['cards', 'shop', 'home', 'tasks', 'history', 'rank']
 
 export function go (screen) {
   store.currentScreen = screen

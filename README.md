@@ -117,6 +117,10 @@ there is no recording and no state playback. Decks are rebuilt from the
 snapshot, so levelling a card up afterwards does not retroactively change an
 old match.
 
+History is a bottom-nav tab of its own (🧾, between Missions and Rank), with a
+three-row preview on Home for a glance. That gives the demo its "show me that
+again" beat from anywhere, rather than only off the back of a result.
+
 The replay path is isolated from settlement by construction — `finishMatch`
 returns immediately when `ctx.replay` is set, the path never touches
 `drawResult`, and the screen carries a REPLAY bar. Verified in the browser:

@@ -401,7 +401,6 @@ export function startReplay (record) {
     won: record.won, payout: record.payout,
     rankDelta: record.rankDelta, promotions: []
   })
-  store.replayId = record.id
   go('match')
 }
 
