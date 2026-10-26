@@ -6,8 +6,11 @@
         <i class="jersey home"></i>
         <span class="nm">{{ homeName }}</span>
       </div>
-      <div class="sc">
-        <b ref="scoreHomeEl">{{ scoreHome }}</b><span>:</span><b ref="scoreAwayEl">{{ scoreAway }}</b>
+      <div class="sc-wrap">
+        <div class="sc">
+          <b ref="scoreHomeEl">{{ scoreHome }}</b><span>:</span><b ref="scoreAwayEl">{{ scoreAway }}</b>
+        </div>
+        <div v-if="pkScore" class="sc-pk">pens {{ pkScore }}</div>
       </div>
       <div class="side right" :class="{ me: !homeIsMe }">
         <span class="nm">{{ awayName }}</span>
@@ -105,6 +108,21 @@
       <div class="pk-stamp" ref="pkStampEl">{{ pkStamp }}</div>
     </div>
 
+    <!-- full time: the one place the whole result is stated, shootout included -->
+    <div class="final" ref="finalEl">
+      <div class="fi-bg" :class="winSide" ref="finalBgEl"></div>
+      <div class="fi-body" ref="finalBodyEl">
+        <div class="fi-tag">FULL TIME</div>
+        <div class="fi-score">
+          <span class="fi-team home" :class="{ dim: winSide !== 'home' }">{{ homeName }}</span>
+          <b ref="finalScoreEl">{{ scoreHome }} : {{ scoreAway }}</b>
+          <span class="fi-team away" :class="{ dim: winSide !== 'away' }">{{ awayName }}</span>
+        </div>
+        <div v-if="pkScore" class="fi-pk">after penalties {{ pkScore }}</div>
+        <div class="fi-win" :class="winSide" ref="finalWinEl">{{ winText }}</div>
+      </div>
+    </div>
+
     <!-- cut-in overlay -->
     <div class="cutin" ref="cutinEl">
       <div class="ci-bg" ref="ciBgEl"></div>
@@ -149,6 +167,9 @@ const pkKeeper = ref(null)
 const pkLabel = ref('')
 const pkStamp = ref('')
 const pkBoard = ref({ HOME: [], AWAY: [] })
+const pkScore = ref('')
+const winSide = ref('home')
+const winText = ref('')
 const pkSide = ref('home')                                   // who is taking it
 const keepSide = computed(() => (pkSide.value === 'home' ? 'away' : 'home'))
 /* the showdown cards stay mounted so the timeline compiler always has real
@@ -179,6 +200,11 @@ const pkHeadEl = ref(null)
 const pkFaceEl = ref(null)
 const pkGoalEl = ref(null)
 const pkGkEl = ref(null)
+const finalEl = ref(null)
+const finalBgEl = ref(null)
+const finalBodyEl = ref(null)
+const finalScoreEl = ref(null)
+const finalWinEl = ref(null)
 const pkRippleEl = ref(null)
 const pkBallEl = ref(null)
 const pkStampEl = ref(null)
@@ -241,6 +267,12 @@ const api = {
   setPkStamp: (t) => { pkStamp.value = t || '' },
   card: (side, slot) => (side === 'home' ? props.home : props.away).cards[slot],
   setScore: (h, a) => { scoreHome.value = h; scoreAway.value = a },
+  setPkScore: (h, a) => { pkScore.value = (h === null ? '' : h + ':' + a) },
+  final: () => ({
+    root: finalEl.value, bg: finalBgEl.value, body: finalBodyEl.value,
+    score: finalScoreEl.value, win: finalWinEl.value
+  }),
+  setFinal: (side, text) => { winSide.value = side; winText.value = text },
   setClock: (t) => { clockLabel.value = t },
   setPhase: (t) => { phaseLabel.value = t },
   setCutIn: (card, text, sub, side, team) => {
@@ -252,6 +284,7 @@ const api = {
     scoreHome.value = 0; scoreAway.value = 0
     clockLabel.value = "0'"; phaseLabel.value = ''
     cutCard.value = null; cutText.value = ''; cutSub.value = ''; cutTeam.value = ''
+    pkScore.value = ''; winText.value = ''
     pkShooter.value = null; pkKeeper.value = null
     pkLabel.value = ''; pkStamp.value = ''
     pkBoard.value = { HOME: [], AWAY: [] }
@@ -276,8 +309,10 @@ onMounted(() => { /* refs are live from here on */ })
 .jersey { width: 12px; height: 14px; border-radius: 2px; flex: 0 0 12px; }
 .jersey.home { background: var(--home); }
 .jersey.away { background: var(--away); }
+.sc-wrap { display: flex; flex-direction: column; align-items: center; }
 .sc { display: flex; align-items: baseline; gap: 5px; font-size: 25px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .sc span { font-size: 17px; color: var(--text-2); }
+.sc-pk { font-size: 9px; font-weight: 700; color: var(--r-l); letter-spacing: .06em; margin-top: -1px; }
 
 .clockbar { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--surface-lo); padding: 4px; }
 .clk { font-size: 12px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
@@ -330,6 +365,26 @@ onMounted(() => { /* refs are live from here on */ })
   position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px;
   border-radius: 50%; border: 2px solid #fff; opacity: 0; pointer-events: none;
 }
+
+/* ---------- full time ---------- */
+.final { position: absolute; inset: 0; visibility: hidden; pointer-events: none; z-index: 34; }
+.fi-bg { position: absolute; inset: 0; background: #0A0C10; }
+.fi-bg.home { background: radial-gradient(ellipse at 50% 45%, rgba(228,24,39,.38), #0A0C10 68%); }
+.fi-bg.away { background: radial-gradient(ellipse at 50% 45%, rgba(47,123,232,.38), #0A0C10 68%); }
+.fi-body { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 0 14px; }
+.fi-tag { font-size: 10px; font-weight: 800; letter-spacing: .22em; color: var(--text-2); }
+.fi-score { display: flex; align-items: center; gap: 12px; }
+.fi-score b { font-size: 36px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.fi-team { font-size: 12px; font-weight: 700; width: 78px; }
+.fi-team.home { text-align: right; color: #FF8A93; }
+.fi-team.away { text-align: left; color: #8FC0FF; }
+.fi-team.dim { opacity: .4; }
+.fi-pk { font-size: 12px; font-weight: 700; color: var(--r-l); }
+.fi-win {
+  font-size: 30px; font-weight: 900; letter-spacing: .04em; margin-top: 4px;
+  text-shadow: 0 4px 24px rgba(0,0,0,.8);
+}
+.fi-win.home { color: #FF6B76; } .fi-win.away { color: #6FB0FF; }
 
 /* ---------- penalty ---------- */
 .pk { position: absolute; inset: 0; pointer-events: none; visibility: hidden; z-index: 32; }

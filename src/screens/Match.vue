@@ -100,6 +100,7 @@ onMounted(async () => {
   compiled.timeline.play()
   if (import.meta.env.DEV) {
     window.__match = compiled
+    window.__ctx = ctx
     console.log('[skd] compiled match: timeline %ss, expected wall %ss, played %ss, cap scale %s',
       compiled.rawDuration.toFixed(2), compiled.expectedDuration.toFixed(2),
       compiled.playedDuration.toFixed(2), capScale.value.toFixed(3))
@@ -116,7 +117,13 @@ onUnmounted(() => {
 
 function skip () {
   if (!compiled) return
-  compiled.timeline.progress(1)
+  compiled.timeline.progress(1, false)
+  // rebuild the feed from the script rather than relying on which callbacks
+  // the jump happened to pass, and set the terminal state from data
+  feed.value = []
+  ctx.script.events.forEach(push)
+  if (ctx.script.penalty) ctx.script.penalty.events.forEach(push)
+  compiled.applyEnd()
   finished.value = true
 }
 

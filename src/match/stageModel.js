@@ -47,6 +47,8 @@ export const BEAT = {
   pkStrike: 1.04,      // the slow-motion strike
   pkReveal: 0.78,      // the answer
 
+  final: 1.60,         // the full-time card: result, shootout score, winner
+
   idle: 2.6,           // ambient off-ball drift amplitude, px (not a duration)
   press: 0.45          // how far defenders slide into the ball's lane, 0-1
 }
@@ -160,5 +162,5 @@ export function matchDuration (counts, beat = BEAT) {
     saves * waveDuration('SHOT_SAVE', beat) +
     misses * waveDuration('SHOT_OFF', beat)
   const transitions = Math.max(0, events + 1) * beat.clockRun   // kick-off .. full time
-  return waves + transitions + pkDuration(pkKicks, beat)
+  return waves + transitions + pkDuration(pkKicks, beat) + beat.final
 }

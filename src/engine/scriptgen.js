@@ -15,6 +15,7 @@ export const DEFAULT_PACING = {
   cutInDecay: 0.15,    // each further goal gets a shorter one
   cutInMin: 0.50,
   save: 2.74, miss: 1.76, transition: 0.70,
+  final: 1.60,         // the full-time card, paid once per match
   cap: 27,             // whole match, shootout included, headroom under the 30s cap
   saveShare: 0.45      // share of wasted attacks that end as a save
 }
@@ -35,7 +36,7 @@ function estimateLength (goals, waves, p, pkSeconds) {
   return goalsCost(goals, p) +
     waves * (p.saveShare * p.save + (1 - p.saveShare) * p.miss) +
     (goals + waves + 1) * p.transition +
-    pkSeconds
+    pkSeconds + p.final
 }
 
 /* Choose how many wasted attacks the match can afford: the most that still

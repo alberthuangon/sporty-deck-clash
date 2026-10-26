@@ -13,6 +13,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildTeam, priceMatch, drawResult, settle, powerOf, settlementBranch, LEAGUE, MARGIN, ODDS_CAP } from './model.js'
 import { PACKS, rollPack, packRates, RARITY_ORDER } from './economy.js'
+import { buildScript } from './scriptgen.js'
+import { compileMatch } from '../match/player.js'
+import { createFakeStage } from '../match/fakeStage.js'
 import { systemOpponent } from './opponents.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -255,6 +258,41 @@ function gate () {
     line(pack.name + ' guarantee violations', gFail, gFail === 0)
   }
 
+  /* Compile real matches against a stage made of plain objects and jump to
+     the end. A throw inside a GSAP callback aborts the render silently — the
+     animation just stops part-way and everything downstream never applies —
+     and nothing else in this gate can see that. */
+  console.log('\nMatch compiles and reaches its end state (headless stage)')
+  const rndC = rngFactory(8080)
+  let compiled = 0; let announceFails = 0; let endFails = 0; let threw = 0
+  const warn = console.warn; console.warn = () => {}        // gsap css-prop noise
+  for (let i = 0; i < 300; i++) {
+    const pair = matchedPair(rndC, LEAGUE)
+    if (!pair) continue
+    const forcePk = i % 2 === 0
+    const res = drawResult(pair.priced, rndC() < 0.5, rndC,
+      forcePk ? { forceDraw: true, minTieGoals: 1 } : {})
+    const script = buildScript(res, rndC)
+    const stage = createFakeStage(res.home, res.away)
+    const want = script.events.length + (script.penalty ? script.penalty.events.length : 0)
+    const seen = []
+    try {
+      const c = compileMatch(stage, script, res, undefined, { onEvent: e => seen.push(e) })
+      c.timeline.progress(1, false)
+      compiled++
+      if (seen.length !== want) announceFails++
+      if (!stage.state.final || !stage.state.final.text) endFails++
+      if (script.penalty && !stage.state.pkScore) endFails++
+      if (stage.parts.final.root.visibility !== 'visible') endFails++
+      if (stage.parts.pk.root.visibility !== 'hidden') endFails++
+    } catch (e) { threw++ }
+  }
+  console.warn = warn
+  line('matches compiled', compiled)
+  line('runtime throws during playback', threw, threw === 0)
+  line('events not announced', announceFails, announceFails === 0)
+  line('end state not applied', endFails, endFails === 0)
+
   console.log('\nMatchmaking can never dead-end (PRD §11.3 liquidity backstop)')
   const rnd3 = rngFactory(606)
   let sysFail = 0
@@ -263,7 +301,9 @@ function gate () {
   }
   line('system-team failures over 400 squads', sysFail, sysFail === 0)
 
-  const pass = rtpOk && drawOk && r.oddsOverCap === 0 && worst < 1e-9 && packsOk && sysFail === 0 && evOk
+  const compileOk = threw === 0 && announceFails === 0 && endFails === 0
+  const pass = rtpOk && drawOk && r.oddsOverCap === 0 && worst < 1e-9 && packsOk &&
+    sysFail === 0 && evOk && compileOk
   console.log('\n' + (pass ? 'GATE PASSED' : 'GATE FAILED') + '\n')
   process.exitCode = pass ? 0 : 1
 }

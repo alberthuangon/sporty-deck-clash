@@ -79,6 +79,16 @@ displayed prices will find ~105.5%, i.e. a realised edge nearer 5.25%. Payouts
 are floored to ₦1 on top of that. `npm run sim` reports both: 94.77% RTP at a
 stake large enough to isolate the model, 94.49% at a realistic ₦50.
 
+## Full time
+
+The match ends on a card that states the whole result — score, shootout score,
+and who won, washed in the winner's colour. Before it, a shootout result could
+only be recovered by counting the feed.
+
+The terminal state is defined once as data (`compiled.applyEnd`) and applied by
+both the played-through path and Skip, rather than depending on which callbacks
+a jumped playhead happens to fire.
+
 ## Non-negotiables (guide §11)
 
 1. **Pricing and sampling share one distribution.** The odds and the drawn result

@@ -309,6 +309,42 @@ export function buildSaveCutIn (stage, { card, subtitle, side, team }, beat = BE
   return tl
 }
 
+/* ---------------------------------------------------------------- *
+ * Full time. The one moment that states the whole result — including the
+ * shootout, which until now you could only recover by counting the feed.
+ * Deliberately has no exit: the match ends here and stays here, so Skip
+ * lands on it too.
+ * ---------------------------------------------------------------- */
+export function buildFinalWhistle (stage, { winSide, winText, pk }, beat = BEAT, onSfx = null) {
+  const fi = stage.final()
+  const tl = gsap.timeline()
+
+  tl.call(() => {
+    stage.setFinal(winSide, winText)
+    if (pk) stage.setPkScore(pk.home, pk.away)
+  })
+  // full time owns the screen: whatever else was up comes down
+  const pkOv = stage.pk && stage.pk()
+  const ciOv = stage.cutin && stage.cutin()
+  if (pkOv && pkOv.root) tl.set(pkOv.root, { visibility: 'hidden' })
+  if (ciOv && ciOv.root) tl.set(ciOv.root, { visibility: 'hidden' })
+  tl.set(fi.root, { visibility: 'visible' })
+  tl.fromTo(fi.bg, { opacity: 0 }, { opacity: 1, duration: .3, ease: 'power2.out' }, 0)
+  tl.fromTo(fi.body, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .34, ease: 'power2.out' }, .08)
+  tl.fromTo(fi.score, { scale: 1.5 }, { scale: 1, duration: .4, ease: 'back.out(2)' }, .18)
+  sfxAt(tl, 0, 'whistle_full', onSfx)
+
+  // the winner lands last and hardest
+  tl.fromTo(fi.win,
+    { scale: 2.2, opacity: 0, letterSpacing: '0.34em' },
+    { scale: 1, opacity: 1, letterSpacing: '0.04em', duration: .42, ease: 'back.out(2.4)' },
+    beat.final * 0.42)
+  sfxAt(tl, beat.final * 0.42, 'winner', onSfx)
+  tl.to(fi.win, { scale: 1.05, duration: .5, yoyo: true, repeat: 1, ease: 'sine.inOut' }, beat.final * 0.42 + .42)
+  tl.to({ hold: 0 }, { hold: 1, duration: 0.01 }, beat.final)   // pad to length
+  return tl
+}
+
 /* Put every element back where it started, for replays. */
 export function resetStage (stage) {
   for (const side of ['home', 'away']) {
@@ -329,6 +365,11 @@ export function resetStage (stage) {
   for (const side of ['home', 'away']) {
     const d = stage.scoreEl(side)
     if (d) gsap.set(d, { clearProps: 'all' })
+  }
+  const fi = stage.final && stage.final()
+  if (fi && fi.root) {
+    gsap.set(fi.root, { visibility: 'hidden' })
+    gsap.set([fi.bg, fi.body, fi.score, fi.win].filter(Boolean), { clearProps: 'all' })
   }
   const pk = stage.pk && stage.pk()
   if (pk && pk.root) {
@@ -369,7 +410,7 @@ function pkTargets (outcome, direction, height, dive) {
 
 function pkCommon (stage, tl, opts, beat, onSfx, at) {
   const { outcome = 'GOAL', direction = 'CENTRE', height = 'HIGH', dive = 'LEFT',
-    strike, reveal, shooter, keeper, label, boardAfter } = opts
+    strike, reveal, shooter, keeper, label, boardAfter, side } = opts
   const pk = stage.pk()
   const scored = outcome === 'GOAL'
   const { ball, dived, onTarget } = pkTargets(outcome, direction, height, dive)
@@ -674,6 +715,30 @@ export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
     t += .26
   }
 
+  /* ---- full time ------------------------------------------------- */
+  const youWon = result.winner === 'A'
+  const winIsHome = (result.aIsHome && youWon) || (!result.aIsHome && !youWon)
+  const winnerName = winIsHome ? home.name : away.name
+  const winSide = winIsHome ? 'home' : 'away'
+  const winText = winnerName === 'You' ? 'YOU WIN' : winnerName.toUpperCase() + ' WIN'
+  const pkScore = script.penalty
+    ? { home: script.penalty.homeGoals, away: script.penalty.awayGoals }
+    : null
+  master.add(buildFinalWhistle(stage, { winSide, winText, pk: pkScore }, beat, onSfx), t)
+  t += beat.final
+
+  /* Skip jumps the playhead, and GSAP does not reliably fire the .call()s it
+     passes on a jump — so the end state is defined here as data and applied
+     directly, rather than hoping the callbacks replay. One definition, used
+     by both the played-through path and Skip. */
+  const applyEnd = () => {
+    stage.setScore(h, a)
+    stage.setClock("90'")
+    stage.setPhase(script.penalty ? 'PENALTIES' : 'FULL TIME')
+    stage.setPkScore(pkScore ? pkScore.home : null, pkScore ? pkScore.away : null)
+    stage.setFinal(winSide, winText)
+  }
+
   /* 30-second cap is hard. The script generator gets within it 98% of the
      time; for the high-scoring draws that cannot fit, compress the whole
      timeline rather than cutting a beat out of the drama. */
@@ -683,6 +748,7 @@ export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
 
   return {
     timeline: master,
+    applyEnd,
     rawDuration: raw,
     expectedDuration: expected,            // what the clock on the wall will say
     playedDuration: Math.min(expected, MATCH_CAP),
