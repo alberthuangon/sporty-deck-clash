@@ -8,6 +8,19 @@
     <div class="cf-art">
       <RadarChart v-if="radar" :axis-keys="card.axisKeys" :values="card.axes" :size="artSize" />
       <div v-else class="cf-mono">{{ initials }}</div>
+      <!-- The foil lives INSIDE the art box, and that is the whole reason no
+           gate exemption is needed. getBoundingClientRect ignores masks and
+           clipping alike, so a layer masked to a player's silhouette still
+           reports its full rectangle — what decides whether the gate sees it
+           covering the card's name is which parent it hangs from, not what it
+           paints. Hung here, its box IS .cf-art, and .cf-art touches no text.
+           Both layers render for every rarity, varying only in what they
+           paint: a conditional element would change the anchor indices of a
+           Common against a Legendary and walk the rarity-ladder group. -->
+      <template v-if="foil">
+        <i class="cf-foil" aria-hidden="true"></i>
+        <i class="cf-gloss" aria-hidden="true"></i>
+      </template>
     </div>
     <div class="cf-name">{{ card.name }}</div>
     <!-- the venue span is ALWAYS rendered, empty for a neutral card. Measured:
@@ -37,6 +50,9 @@ const props = defineProps({
   card: { type: Object, required: true },
   size: { type: String, default: 'md' },       // sm | md | lg
   radar: { type: Boolean, default: true },
+  /* the laminated finish. Off in the 44px grid on purpose: twenty cards
+     shimmering at once is noise, and that screen's job is finding a card */
+  foil: { type: Boolean, default: false },
   selected: Boolean,
   dim: Boolean
 })
@@ -122,7 +138,31 @@ const venueMark = computed(() =>
 .cf-lv { color: #D4D8E0; }
 /* flex: 1 so a card stretched by its grid cell grows around the art rather
    than leaving a gap under the role line */
-.cf-art { display: flex; flex: 1; align-items: center; justify-content: center; margin: 2px 0; }
+.cf-art { position: relative; display: flex; flex: 1; align-items: center; justify-content: center; margin: 2px 0; }
+.cf-foil, .cf-gloss {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  border-radius: var(--r-sm);
+  opacity: var(--holo-on, 0);
+}
+/* The foil travels WITH the light. */
+.cf-foil {
+  background: var(--holo-foil, none);
+  background-size: 240% 240%;
+  background-position: var(--holo-x, 50%) var(--holo-y, 50%);
+  mix-blend-mode: color-dodge;
+}
+/* The gloss travels AGAINST it. A highlight that follows the pointer reads as
+   a sticker on the card; a reflection moves the other way as the card turns,
+   which is why the position is inverted rather than shared. */
+.cf-gloss {
+  background: var(--holo-back, none), var(--holo-gloss);
+  background-size: 240% 240%, 240% 240%;
+  background-position:
+    calc(100% - var(--holo-x, 50%)) calc(100% - var(--holo-y, 50%)),
+    calc(100% - var(--holo-x, 50%)) calc(100% - var(--holo-y, 50%));
+  mix-blend-mode: overlay;
+}
 /* only the lg detail card still shows initials; it reads as a rarity-coloured
    monogram rather than the grey repeat of the name directly under it */
 .cf-mono { font-size: 22px; font-weight: 800; color: var(--rc); opacity: .9; }

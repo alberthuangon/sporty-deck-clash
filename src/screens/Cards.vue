@@ -17,8 +17,8 @@
 
     <div v-else class="detail">
       <button class="back muted" @click="detail = null">‹ All cards</button>
-      <HoloCard class="hero" :intensity="HOLO[BY_ID[detail].rarity]">
-        <CardFace :card="cardOf(detail)" size="lg" :radar="false" />
+      <HoloCard class="hero">
+        <CardFace :card="cardOf(detail)" size="lg" :radar="false" foil />
       </HoloCard>
       <RadarChart :axis-keys="cardOf(detail).axisKeys" :values="cardOf(detail).axes"
                   :size="260" labels class="rad" :class="'r-' + BY_ID[detail].rarity" />
@@ -56,10 +56,6 @@ import RadarChart from '../components/RadarChart.vue'
 import { store, go, CATALOGUE, BY_ID, cardOf, entry, owned as isOwned, canUpgrade, upgradeCost, RARITY } from '../game.js'
 import { screenBack } from '../store.js'
 import { SHARD_COST } from '../engine/economy.js'
-
-/* The finish is the rarity ladder's fourth channel, after saturation, glow
-   and texture: a Common is matte, a Legendary is fully foiled. */
-const HOLO = { C: 0, R: 0.45, E: 0.75, L: 1 }
 
 const detail = ref(store.cardTarget || null)
 store.cardTarget = null

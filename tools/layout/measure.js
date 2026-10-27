@@ -43,7 +43,7 @@ const CHROME_OVERLAYS = ['.sheet', '.toast', '[data-skip]', '.fly', ...TAKEOVERS
    because of its SIZE, and nothing anywhere asks whether you can still see
    through it. Raise a colour stop to .95 and the card vanishes with the gate
    still green. So the foil is bounded directly instead (see run.mjs). */
-const HOLO = ['.holo-foil', '.holo-glare']
+const HOLO = ['.cf-foil', '.cf-gloss']
 
 const DECORATIONS = ['.ci-streaks', '.ci-bg', '.ci-tint', '.pk-bg', '.pk-vig', '.fi-bg', '.turf', '.sweep']
 const decorative = el => DECORATIONS.some(sel => el.matches(sel))
@@ -286,11 +286,32 @@ export function measure (scope) {
   for (const sel of HOLO) {
     for (const el of phone.querySelectorAll(sel)) {
       const cs = getComputedStyle(el)
+      /* Per LAYER, not per colour stop, and specks do not count.
+
+         The first version took the loudest alpha anywhere in the shorthand
+         and immediately failed Legendary — whose sparkle is five 1.5px dots
+         at .9. A 1.5px dot does not hide a card; a gradient stretched across
+         the whole box at .9 does. The question is whether you can still see
+         the art, and the answer depends on AREA as well as alpha, so a
+         radial-gradient sized in single-figure pixels is read as a speck of
+         light and skipped. Everything else is measured on its worst stop. */
+      const layers = []
+      let depth = 0, buf = ''
+      for (const ch of (cs.backgroundImage || '')) {
+        if (ch === '(') depth++
+        if (ch === ')') depth--
+        if (ch === ',' && depth === 0) { layers.push(buf); buf = '' } else buf += ch
+      }
+      if (buf.trim()) layers.push(buf)
+
       let maxA = 0
-      const img = cs.backgroundImage || ''
-      for (const m of img.matchAll(/rgba?\(([^)]*)\)/g)) {
-        const parts = m[1].split(',').map(v => parseFloat(v))
-        maxA = Math.max(maxA, parts.length > 3 ? parts[3] : 1)
+      for (const layer of layers) {
+        const size = layer.match(/radial-gradient\(\s*([\d.]+)px/)
+        if (size && parseFloat(size[1]) < 8) continue      // a speck, not a veil
+        for (const m of layer.matchAll(/rgba?\(([^)]*)\)/g)) {
+          const parts = m[1].split(',').map(v => parseFloat(v))
+          maxA = Math.max(maxA, parts.length > 3 ? parts[3] : 1)
+        }
       }
       out.holoLayers.push({
         key: label(el),

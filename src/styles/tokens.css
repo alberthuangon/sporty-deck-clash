@@ -116,6 +116,60 @@
   --r-lg: 12px;
 }
 
+/* ---------- the holo finish ----------
+
+   The fourth channel of the rarity ladder, after saturation, glow and
+   texture. Every card is a laminated piece of plastic — it tilts, it catches
+   a white gloss — but only some are FOILED. Common still reacts, because
+   seventy per cent of what a pack pays out is Common and a card that does
+   nothing reads as broken; what Common does not get is a rainbow. Rare's foil
+   is locked to its own blue, so the finish reinforces the rarity rather than
+   washing over it, and the rainbow itself becomes a threshold crossed at
+   Epic. Epic and Legendary are both rainbows and are told apart by coverage
+   and layer count rather than hue — the same refusal to lean on one channel
+   that the rest of the ladder makes.
+
+   112deg is the same diagonal family as the card body's 118 and its hatch's
+   135. It is not a free parameter. */
+:root {
+  --holo-tilt-max: 9deg;
+  --holo-gloss: linear-gradient(112deg,
+    transparent 38%, rgba(255,255,255,.16) 47%,
+    rgba(255,255,255,.26) 50%, rgba(255,255,255,.16) 53%, transparent 62%);
+  --holo-sparkle:
+    radial-gradient(1.5px 1.5px at 18% 24%, rgba(255,255,255,.9), transparent 100%),
+    radial-gradient(1.2px 1.2px at 62% 16%, rgba(255,255,255,.75), transparent 100%),
+    radial-gradient(1.8px 1.8px at 78% 58%, rgba(255,255,255,.85), transparent 100%),
+    radial-gradient(1.2px 1.2px at 34% 72%, rgba(255,255,255,.7), transparent 100%),
+    radial-gradient(1.5px 1.5px at 88% 34%, rgba(255,255,255,.8), transparent 100%);
+}
+/* no foil for Common — a gloss, and that is the point of the step */
+.r-C { --holo-foil: none; --holo-back: none; }
+.r-R {
+  --holo-foil: linear-gradient(112deg,
+    transparent 30%, rgba(76,155,255,.30) 44%,
+    rgba(150,200,255,.45) 50%, rgba(76,155,255,.30) 56%, transparent 70%);
+  --holo-back: none;
+}
+.r-E {
+  --holo-foil: linear-gradient(112deg,
+    transparent 28%, rgba(255,90,120,.28) 36%, rgba(255,200,80,.30) 42%,
+    rgba(120,255,170,.30) 48%, rgba(90,190,255,.30) 54%,
+    rgba(180,120,255,.28) 60%, transparent 70%);
+  --holo-back: none;
+}
+.r-L {
+  --holo-foil:
+    var(--holo-sparkle),
+    linear-gradient(112deg,
+      rgba(255,90,120,.30) 0%, rgba(255,200,80,.32) 18%, rgba(120,255,170,.32) 36%,
+      rgba(90,190,255,.32) 54%, rgba(180,120,255,.30) 72%, rgba(255,90,120,.30) 100%);
+  /* the counter-reflection rides the gloss layer, which already travels the
+     other way — a second sweep against the first is what it physically is */
+  --holo-back: linear-gradient(-68deg,
+    transparent 40%, rgba(255,255,255,.18) 50%, transparent 60%);
+}
+
 /* ---------- the rarity ladder ----------
 
    Lives here rather than inside CardFace because more than the card face reads
