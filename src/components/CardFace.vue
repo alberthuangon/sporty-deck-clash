@@ -6,7 +6,9 @@
       <span class="cf-lv">Lv.{{ card.level }}</span>
     </div>
     <div class="cf-art">
-      <RadarChart v-if="radar" :axis-keys="card.axisKeys" :values="card.axes" :size="artSize" />
+      <PlayerArt v-if="radar" :card-id="card.id" kind="portrait" :tier="size" :rarity="card.rarity" />
+      <PlayerArt v-else-if="size === 'lg'" :card-id="card.id" kind="figure" tier="lg"
+                 :rarity="card.rarity" :number="shirtNo" />
       <div v-else class="cf-mono">{{ initials }}</div>
       <!-- The foil lives INSIDE the art box, and that is the whole reason no
            gate exemption is needed. getBoundingClientRect ignores masks and
@@ -34,7 +36,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import RadarChart from './RadarChart.vue'
+import PlayerArt from './PlayerArt.vue'
 import { ROLE_LABEL } from '../engine/cards.js'
 
 /* Two-letter stamp per role. Lives here rather than beside ROLE_LABEL in
@@ -60,6 +62,7 @@ const props = defineProps({
    the card's own content 109, growing every row in the grid. */
 const artSize = computed(() => ({ sm: 44, md: 74, lg: 116 }[props.size]))
 const initials = computed(() => props.card.name.slice(0, 2).toUpperCase())
+const shirtNo = computed(() => (props.card.seed % 29) + 1)
 const roleLabel = computed(() => ROLE_LABEL[props.card.role])
 const roleCode = computed(() => ROLE_CODE[props.card.role] || '')
 const venueMark = computed(() =>

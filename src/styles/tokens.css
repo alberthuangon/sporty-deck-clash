@@ -111,6 +111,17 @@
   /* type */
   --font: Roboto, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
 
+  /* player art */
+  --fig-dark: #1E222A;        /* boots */
+  --fig-short: #DCE2EC;       /* LIGHT, not dark: measured against --surface
+                                 #2C3039, a dark short differs by ~4% luminance
+                                 and the legs stop existing */
+  --fig-ball: #F2F5FA;
+  --fig-rim: rgba(255,255,255,.62);  /* the pale outline. Same argument as the
+                                 pitch token's rim: a channel that does not
+                                 depend on telling red from blue, and the only
+                                 reason a charcoal kit survives on a dark card */
+
   --r-sm: 4px;
   --r-md: 8px;
   --r-lg: 12px;

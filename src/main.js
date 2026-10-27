@@ -1,3 +1,6 @@
+import { setRoles } from './ui/figures.js'
+import CARDS from './data/cards.json'
+setRoles(CARDS.cards)
 import { createApp } from 'vue'
 import './styles/tokens.css'
 import './styles/base.css'
