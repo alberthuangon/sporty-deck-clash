@@ -88,6 +88,15 @@ Four things about headless Chrome that each produced a confident lie first:
   the size asked for (430×932, 320×700), in both old and new headless. So
   screenshots are fine and only the live viewport is stuck, which is why the
   430×932 frame is pinned from the page instead.
+
+  To capture a screen by hand, pass the size — without it both headless modes
+  render at 756×469 and crop the phone in half:
+
+  ```bash
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+    --headless --disable-gpu --hide-scrollbars --window-size=430,932 \
+    --virtual-time-budget=4000 --screenshot=out.png http://localhost:5173/
+  ```
 * `mode="out-in"` leaves the **outgoing** screen as the only `.screen` in the
   DOM, settled and opaque. Waiting for "a screen that looks ready" measured
   the previous one, and reported 20 identical copies of Home as a pass.
