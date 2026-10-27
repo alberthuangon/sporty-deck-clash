@@ -78,10 +78,22 @@ const bounce = () => { go('__bounce__'); return settle('__bounce__', 0) }
 
 window.__screens = async () => {
   const results = []
+  const q = new URLSearchParams(location.search)
   /* ?only=<substring> runs one slice: the whole sweep costs virtual-time
-     budget, so debugging a single case needs a way in */
-  const only = new URLSearchParams(location.search).get('only')
+     budget, so debugging a single case needs a way in.
+     ?shot=<id> goes further — it runs one case and leaves it standing, with
+     the harness's own output hidden, so `chrome --screenshot` can photograph
+     exactly the state the gate measured. A gate that can show its work is
+     worth more than one that can only report a number. */
+  const shot = q.get('shot')
+  const only = shot || q.get('only')
   const cases = only ? CASES.filter(c => c.id.includes(only)) : CASES
+  if (shot) {
+    for (const id of ['out', 'progress']) {
+      const el = document.getElementById(id)
+      if (el) el.style.display = 'none'
+    }
+  }
 
   for (const c of cases) {
     errors.length = 0
@@ -107,6 +119,7 @@ window.__screens = async () => {
     }
     rec.errors = [...errors, ...new Set(window.__warns || [])]
     results.push(rec)
+    if (shot) return { shot: rec.id }        // leave the screen up to be photographed
     trace(`done  ${String(rec.id).padEnd(26)} rendered=${rec.rendered} nodes=${String(rec.nodes).padStart(4)} ` +
       `settle=${rec.settle} bounce=${rec.bounce} err=${rec.errors.length}`)
   }

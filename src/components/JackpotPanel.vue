@@ -23,7 +23,6 @@
         <button class="jp-link" @click="$emit('last-season')">
           {{ lastLabel }}
         </button>
-        <button class="jp-link" @click="$emit('earn-more')">Earn more ›</button>
       </div>
     </div>
   </div>
@@ -38,7 +37,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import CountUp from './CountUp.vue'
 import { store, grandPrizeOdds, timeToDraw } from '../game.js'
 
-defineEmits(['earn-more', 'last-season'])
+defineEmits(['last-season'])
 
 const total = computed(() => store.jackpot.totalTickets.toLocaleString())
 const odds = computed(() => grandPrizeOdds())
@@ -78,6 +77,6 @@ onUnmounted(() => { clearInterval(pulse); clearInterval(clock) })
 .jp-n { font-weight: 800; font-variant-numeric: tabular-nums; }
 .of { font-weight: 400; font-size: 12px; }
 .jp-minor { font-size: 10px; margin-top: 2px; }
-.jp-cta { display: flex; justify-content: space-between; align-items: center; margin: 0 -12px -12px; }
+.jp-cta { display: flex; align-items: center; margin: 0 -12px -12px; }
 .jp-link { padding: 15px 12px; color: var(--green); font-size: 12px; font-weight: 700; }
 </style>

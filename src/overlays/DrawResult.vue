@@ -23,28 +23,22 @@
           <span class="muted">Your odds were</span>
           <span class="dr-v">{{ odds === null ? '—' : `1 in ${odds.toLocaleString()}` }}</span>
         </div>
-        <div class="dr-row">
+        <div class="dr-row last">
           <span class="muted">Winning ticket</span>
           <span class="dr-v">#{{ draw.winningTicket.toLocaleString() }}</span>
         </div>
-        <div class="dr-row seed">
-          <span class="muted">Seed</span>
-          <span class="dr-seed">{{ draw.seed }}</span>
-        </div>
-        <button class="dr-verify" @click="copySeed">{{ copied ? 'Seed copied' : 'Verify this draw' }}</button>
-        <div class="muted dr-fine">
-          This seed was published before the draw. The live product recomputes
-          the result from it; this demo shows it so it can be checked against
-          the published value.
-        </div>
+
       </div>
 
-      <!-- the CTA points at tickets the player already has, never at a purchase -->
       <div class="dr-next">
         Season {{ draw.season + 1 }} starts now.
         {{ waiting }} tickets waiting on the reward road.
       </div>
-      <button class="btn btn-cta dr-go" @click="goRank">Go to Rank</button>
+      <!-- A takeover still has to be leaveable. Neutral rather than a CTA:
+           with no button pointing anywhere, nothing is being sold on the way
+           out, which is the most conservative reading of §6.7.2's rule that
+           the exit may not push a purchase. -->
+      <button class="btn dr-go" @click="dismiss">Close</button>
     </div>
 
     <div v-if="draw.won" class="dr-burst" ref="burstEl" aria-hidden="true">
@@ -62,28 +56,19 @@
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import gsap from 'gsap'
 import CountUp from '../components/CountUp.vue'
-import { store, go, ticketsWaiting } from '../game.js'
+import { store, ticketsWaiting } from '../game.js'
 
 const props = defineProps({ animate: { type: Boolean, default: true } })
 
 const draw = computed(() => store.jackpot.lastDraw)
 const odds = computed(() => (draw.value.myTickets ? Math.round(draw.value.totalTickets / draw.value.myTickets) : null))
 const waiting = computed(() => ticketsWaiting())
-const copied = ref(false)
 const burstEl = ref(null)
 let tl = null
 
-function copySeed () {
-  /* clipboard is unavailable in plenty of contexts; a failed copy must not
-     take the screen down with it */
-  try { navigator.clipboard && navigator.clipboard.writeText(draw.value.seed) } catch (e) {}
-  copied.value = true
-}
-
-function goRank () {
-  store.flags.seenDraw = draw.value.season
+function dismiss () {
+  store.flags.seenDraw = draw.value.season   // seen: it does not take the screen again
   store.overlay = null
-  go('rank')
 }
 
 /* Stands in for the rank-up burst until step 6 builds the real one; it plays
@@ -149,20 +134,13 @@ onUnmounted(() => { if (tl) tl.kill() })
   min-height: 42px; font-size: 32px; font-weight: 800; color: var(--r-l);
   text-align: center; line-height: 42px;
 }
-.dr-rows { padding: 4px 14px 12px; margin-top: 14px; }
+.dr-rows { padding: 4px 14px; margin-top: 14px; }
 .dr-row {
   display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
   font-size: 13px; padding: 9px 0; border-bottom: 1px solid var(--divider);
 }
-.dr-row.seed { border-bottom: 0; }
+.dr-row.last { border-bottom: 0; }
 .dr-v { font-weight: 700; font-variant-numeric: tabular-nums; }
-.dr-seed { font-size: 11px; font-weight: 700; word-break: break-all; text-align: right; }
-.dr-verify {
-  display: block; width: 100%; min-height: 44px;
-  border: 1px solid var(--divider); border-radius: var(--r-sm);
-  color: var(--green); font-size: 12px; font-weight: 700;
-}
-.dr-fine { font-size: 10px; line-height: 1.5; margin-top: 10px; }
 .dr-next { font-size: 12px; line-height: 1.5; text-align: center; margin: 18px 4px 12px; color: var(--text-2); }
 .dr-go { margin-top: 22px; flex: 0 0 auto; }
 

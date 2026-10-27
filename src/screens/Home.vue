@@ -47,7 +47,7 @@
       </div>
     </div>
 
-    <JackpotPanel @earn-more="go('rank')" @last-season="showLastSeason" />
+    <JackpotPanel @last-season="showLastSeason" />
   </div>
 </template>
 
