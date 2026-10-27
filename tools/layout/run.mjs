@@ -242,6 +242,46 @@ const still = (morphMid && morphEnd && (morphMid.shapePoints || []).length && (m
       ? [{ what: 'radar', mid: morphMid.shapePoints[0].slice(0, 40) }] : [])
   : [{ what: 'radar', mid: '(state missing)' }]
 
+/* ---------- the chrome ----------
+
+   The TopBar and the TabBar are the only two boxes in the frame that nothing
+   above was checking: the invariance anchors are scoped to .screen, so a bar
+   that grew taller on one screen, or that stopped matching the token every
+   screen's usable height is carved out of, passed everything. Proven rather
+   than assumed — a TabBar forced to 64px while --tabbar-h still read 58px
+   cleared all 27 of the assertions above it.
+
+   Two claims. Wherever a bar appears it is the SAME bar — same height, same
+   distance from its edge — because the player walks between these screens
+   without the tabs under their thumb moving. And its measured height matches
+   the token that declares it, so the number in tokens.css keeps describing
+   the thing it names. */
+const chromeShifts = []
+const chromeDrift = []
+const barStates = new Map()
+for (const r of screens.results) {
+  if (!r.rendered || !r.chrome) continue
+  for (const name of Object.keys(r.chrome)) {
+    if (!barStates.has(name)) barStates.set(name, [])
+    barStates.get(name).push({ id: r.id, ...r.chrome[name], token: (r.chromeTokens || {})[name] })
+  }
+}
+for (const [name, states] of barStates) {
+  const edge = name === 'TopBar' ? 'fromTop' : 'fromBottom'
+  for (const key of ['h', edge]) {
+    const seen = [...new Set(states.map(st => st[key]))]
+    if (seen.length > 1) {
+      const worst = states.filter(st => st[key] !== states[0][key]).slice(0, 3)
+      chromeShifts.push({ bar: name, key, seen: seen.join(', '),
+        detail: worst.map(st => `${st.id}=${st[key]}`).join('  ') })
+    }
+  }
+  const declared = parseFloat(states[0].token)
+  if (Number.isFinite(declared) && Math.abs(states[0].h - declared) > 0.5) {
+    chromeDrift.push({ bar: name, measured: states[0].h, declared })
+  }
+}
+
 const early = screens.results.filter(r => r.tooEarly).map(r => ({ state: r.id }))
 
 console.log(`\nUI animations stay inside the budget  (${motion.length} play(s) across the sweep)\n`)
@@ -256,6 +296,8 @@ check('flying tokens left behind', flyLeaks.length, !flyLeaks.length)
 check('flying tokens that could eat a tap', flyTappable.length, !flyTappable.length)
 check('shapes that animate without moving', still.length, !still.length)
 check('content revealed before its animation finished', early.length, !early.length)
+check('chrome that changes between screens', chromeShifts.length, !chromeShifts.length && barStates.size === 2)
+check('chrome that does not match its token', chromeDrift.length, !chromeDrift.length)
 
 if (ellipsised.length) {
   console.log(`\n  note: ${ellipsised.length} label(s) ellipsised — truncated, but visibly so:`)
@@ -296,6 +338,9 @@ if (fail.length) {
   flyTappable.forEach(f => console.log(`  flying token takes taps: ${f.state}  pointer-events: ${f.pointer}`))
   still.forEach(d => console.log(`  did not move: the ${d.what} measures the same mid-animation as at rest — ${d.mid}`))
   early.forEach(e => console.log(`  revealed early: ${e.state} is already showing what the animation was hiding`))
+  if (barStates.size !== 2) console.log(`  chrome never measured: saw ${[...barStates.keys()].join(', ') || 'no bars'} — expected TopBar and TabBar`)
+  chromeShifts.forEach(c => console.log(`  chrome moved: ${c.bar} ${c.key} takes values ${c.seen} — ${c.detail}`))
+  chromeDrift.forEach(c => console.log(`  chrome drifted: ${c.bar} measures ${c.measured}px against a token that says ${c.declared}px`))
   console.log('')
   process.exit(1)
 }

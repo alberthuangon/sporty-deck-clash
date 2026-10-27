@@ -163,6 +163,26 @@ window.__screens = async () => {
          sealed pack you can already read is not sealed — so "the card has
          not appeared" is the thing worth asserting about it. */
       rec.tooEarly = c.expectAbsent ? !!document.querySelector(c.expectAbsent) : false
+      /* The chrome's own geometry. Nothing else measures it: `anchors` only
+         covers what is inside .screen, so the TopBar and the TabBar are the
+         two boxes on this phone that no assertion was looking at — and they
+         are the two that every screen's usable height is carved out of. */
+      rec.chrome = {}
+      for (const [name, sel] of [['TopBar', '.topbar'], ['TabBar', '.tabbar']]) {
+        const el = document.querySelector(sel)
+        if (!el) continue
+        const r = el.getBoundingClientRect()
+        const f = document.querySelector('.phone').getBoundingClientRect()
+        rec.chrome[name] = {
+          h: +r.height.toFixed(1),
+          fromTop: +(r.top - f.top).toFixed(1),
+          fromBottom: +(f.bottom - r.bottom).toFixed(1)
+        }
+      }
+      rec.chromeTokens = {
+        TopBar: getComputedStyle(document.documentElement).getPropertyValue('--topbar-h').trim(),
+        TabBar: getComputedStyle(document.documentElement).getPropertyValue('--tabbar-h').trim()
+      }
       /* The MORPHING radar, named rather than taken by document order. This
          used to be every .shape on the screen, with run.mjs comparing the
          first — and the first is whichever radar happens to be earliest in
