@@ -106,8 +106,15 @@ watch(() => draw.value && draw.value.won, playBurst, { flush: 'post' })
     radial-gradient(150% 72% at 50% 6%, rgba(51,234,106,.30), transparent 62%),
     radial-gradient(120% 60% at 50% 12%, var(--good-glow), var(--bg) 70%);
 }
+/* Losing gets texture too, but not the win's texture. The beam is 96deg and
+   reads as light with a direction; this is horizontal, a layer of haze with
+   no source. Both states are worked on, in different ways — which was the
+   whole point, and the first pass gave the loss its mood and forgot its
+   grain, leaving the hardest state to make look deliberate as the only flat
+   one on screen. */
 .dr.lost {
   background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.055) 0 1px, transparent 1px 26px),
     radial-gradient(140% 70% at 50% 100%, rgba(110,115,128,.16), transparent 60%),
     linear-gradient(180deg, #171A21 0%, var(--bg) 46%);
 }

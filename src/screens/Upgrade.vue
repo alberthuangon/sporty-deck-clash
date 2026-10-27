@@ -15,7 +15,7 @@
         </div>
       </div>
 
-      <div class="radwrap">
+      <div class="radwrap" :class="'r-' + BY_ID[target].rarity">
         <RadarChart ref="radarRef" :axis-keys="now.axisKeys" :values="now.axes"
                     :ghost="next ? next.axes : null" :size="280" labels />
         <div class="legend">
@@ -112,7 +112,11 @@ function doUpgrade () {
 .hc { font-size: 11px; }
 .radwrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-2); }
-.sw { display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--green); margin-right: 5px; vertical-align: middle; }
+/* The swatch has to come from the same source as the line it describes, so
+   the rarity class sits on .radwrap rather than on the chart — the chart reads
+   an inherited variable either way, and this way the legend inherits it too.
+   Without that the key would be a different colour from its own chart. */
+.sw { display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--radar-c, var(--green)); margin-right: 5px; vertical-align: middle; }
 .sw.dash { border-top: 2px dashed var(--cta); }
 .deltas { background: var(--surface); border-radius: var(--r-md); padding: 4px 12px; }
 .drow { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--divider); }
