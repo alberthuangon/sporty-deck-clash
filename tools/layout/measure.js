@@ -91,9 +91,26 @@ function paintedRect (el, rect) {
   return r
 }
 
+function classesOf (el) {
+  return typeof el.className === 'string'
+    ? el.className.trim().split(/\s+/).filter(c => c && !c.startsWith('data-v'))
+    : []
+}
+
+/* Reporting name: as specific as possible, so a failure line is readable. */
 function label (el) {
-  const cls = typeof el.className === 'string' ? el.className.trim().split(/\s+/).filter(c => !c.startsWith('data-v')) : []
+  const cls = classesOf(el)
   return el.tagName.toLowerCase() + (cls.length ? '.' + cls.slice(0, 3).join('.') : '')
+}
+
+/* Matching name, for lining the same element up across two states. Only the
+   FIRST class, because the rest are state: .mission becomes .mission.ready the
+   moment a task is claimable, .coin becomes .coin.done, .btn becomes
+   .btn.btn-cta. Keying on all of them silently stops comparing the elements
+   that changed — which is the one case the comparison exists for. */
+function anchorKey (el) {
+  const cls = classesOf(el)
+  return el.tagName.toLowerCase() + (cls.length ? '.' + cls[0] : '')
 }
 
 function textOf (el) {
@@ -136,7 +153,7 @@ function truncation (el, cs) {
   return { over, ellipsis: cs.textOverflow === 'ellipsis' }
 }
 
-export function measure () {
+export function measure (scope) {
   const phone = document.querySelector('.phone')
   const screen = document.querySelector('.screen')
   const topbar = document.querySelector('.topbar')
@@ -158,6 +175,7 @@ export function measure () {
   ].filter(Boolean)
 
   const seen = new Map()
+  const anchorSeen = new Map()
   for (const el of phone.querySelectorAll('*')) {
     if (invisible(el)) continue
     const rect = el.getBoundingClientRect()
@@ -165,12 +183,20 @@ export function measure () {
     const cs = getComputedStyle(el)
     const name = label(el)
 
-    /* structural key: same tag+classes at the same position among its siblings
-       of that shape. Stable across states as long as the markup is. */
     const n = (seen.get(name) || 0) + 1
     seen.set(name, n)
     const key = n === 1 ? name : `${name}#${n}`
-    if (el.closest('.screen')) out.anchors[key] = +rect.top.toFixed(1)
+
+    /* Anchors: nth box of its shape, in document order. SVG internals are left
+       out — a radar polygon's vertices are the card's STATS, so comparing them
+       across two different cards compares data, not layout. */
+    const inScope = scope ? (el.matches(scope) || !!el.closest(scope)) : !!el.closest('.screen')
+    if (inScope && !el.closest('svg')) {
+      const an = anchorKey(el)
+      const i = (anchorSeen.get(an) || 0) + 1
+      anchorSeen.set(an, i)
+      out.anchors[i === 1 ? an : `${an}#${i}`] = +rect.top.toFixed(1)
+    }
 
     if (!decorative(el)) {
       const cx = clippedBy(el, rect, 'x')

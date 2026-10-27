@@ -93,7 +93,7 @@ async function render (page, { size, budget, wall }) {
 let match, screens
 try {
   match = await render('index.html', { size: '430,460', budget: 30000, wall: 60000 })
-  screens = await render('screens.html', { size: '430,932', budget: 90000, wall: 75000 })
+  screens = await render('screens.html', { size: '430,932', budget: 200000, wall: 300000 })
 } catch (e) {
   server.close()
   console.log(`\nLAYOUT CHECK FAILED — the harness could not finish\n\n  ${e.message}\n`)
@@ -108,7 +108,7 @@ check('stage clips its overlays', match.stageClips, match.stageClips === 'hidden
 check('on-screen things parked by compiling', match.parkedByCompile.length, !match.parkedByCompile.length)
 
 /* ---------- every screen, every state ---------- */
-console.log(`\nEvery screen renders  (${screens.results.length} states in a ${screens.frame.w}x${screens.frame.h} frame)\n`)
+console.log(`\nEvery screen, every state  (${screens.results.length} states in a ${screens.frame.w}x${screens.frame.h} frame)\n`)
 
 const broken = screens.results.filter(r => !r.rendered)
 const noisy = screens.results.filter(r => r.errors.length)
@@ -129,6 +129,42 @@ check('elements laid out past the 430px frame', offFrame.length, !offFrame.lengt
 check('text cut off with nothing to show for it', truncated.length, !truncated.length)
 check('things painting over the TopBar / TabBar', overChrome.length, !overChrome.length)
 
+/* The main event. Within a group, every element the states have in common has
+   to sit at the same height — a group is a set of states a player can watch
+   one turn into another without navigating, so anything that moves between
+   them moves out from under a thumb. */
+const groups = new Map()
+for (const r of screens.results) {
+  if (!r.group || !r.rendered) continue
+  if (!groups.has(r.group)) groups.set(r.group, [])
+  groups.get(r.group).push(r)
+}
+const shifts = []
+const emptyGroups = []
+for (const [name, states] of groups) {
+  if (states.length < 2) { emptyGroups.push(`${name} (only ${states.length} state rendered)`); continue }
+  const shared = Object.keys(states[0].anchors).filter(k => states.every(st => k in st.anchors))
+  /* A group that lines up almost nothing passes for free, which is exactly
+     the kind of green this gate exists to stop. Coverage is measured against
+     the smallest state, so a deliberately narrow `scope` still counts as full
+     coverage of what it scoped. */
+  const smallest = Math.min(...states.map(st => Object.keys(st.anchors).length))
+  if (!shared.length || shared.length < smallest * 0.5) {
+    emptyGroups.push(`${name} (${shared.length} of ${smallest} elements line up)`)
+    continue
+  }
+  for (const k of shared) {
+    const tops = states.map(st => st.anchors[k])
+    if (new Set(tops).size > 1) {
+      shifts.push({ group: name, key: k, spread: +(Math.max(...tops) - Math.min(...tops)).toFixed(1),
+        detail: states.map((st, i) => `${st.id}=${tops[i]}`).join('  ') })
+    }
+  }
+}
+const groupSummary = [...groups].map(([n, st]) => `${n}:${st.length}`).join(' ')
+check('elements that move between states of one screen', shifts.length, !shifts.length)
+check('invariance groups comparing nothing', emptyGroups.length, !emptyGroups.length)
+
 if (ellipsised.length) {
   console.log(`\n  note: ${ellipsised.length} label(s) ellipsised — truncated, but visibly so:`)
   ellipsised.forEach(e => console.log(`    ${e.state}  ${e.key}  -${e.over}px  "${e.text}"`))
@@ -146,7 +182,10 @@ if (fail.length) {
   offFrame.forEach(c => console.log(`  off-frame: ${c.state}  ${c.key} sticks out ${c.over}px (width ${c.width})  "${c.text}"`))
   truncated.forEach(c => console.log(`  cut text: ${c.state}  ${c.key} needs ${c.over}px more  "${c.text}"`))
   overChrome.forEach(c => console.log(`  over ${c.bar}: ${c.state}  ${c.key} by ${c.over}px  "${c.text}"`))
+  shifts.forEach(sh => console.log(`  moved: [${sh.group}] ${sh.key} by ${sh.spread}px — ${sh.detail}`))
+  emptyGroups.forEach(g => console.log(`  compares nothing: ${g}`))
   console.log('')
   process.exit(1)
 }
-console.log(`\nLAYOUT CHECK PASSED  (${match.duration}s of match, ${screens.results.length} states, ${pass.length} assertions)\n`)
+console.log(`\nLAYOUT CHECK PASSED  (${match.duration}s of match, ${screens.results.length} states, ` +
+  `${pass.length} assertions, invariance groups ${groupSummary})\n`)

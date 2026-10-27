@@ -100,7 +100,7 @@ window.__screens = async () => {
       const el = document.querySelector(`.screen[data-screen="${c.screen}"]`)
       rec.rendered = !!el && el.getBoundingClientRect().height > 0
       rec.nodes = el ? el.querySelectorAll('*').length : 0
-      if (rec.rendered) Object.assign(rec, measure())
+      if (rec.rendered) Object.assign(rec, measure(c.scope))
     } catch (e) {
       rec.rendered = false
       errors.push('setup: ' + (e && e.message))
