@@ -154,6 +154,11 @@ window.__screens = async () => {
          invariance check deliberately ignores SVG internals (a radar's
          vertices are the card's stats, not layout), so this is the only
          place that can tell a morph from a still picture. */
+      /* A case can name something that must NOT be on screen yet. The tear
+         is the one animation in step 6 allowed to gate information — a
+         sealed pack you can already read is not sealed — so "the card has
+         not appeared" is the thing worth asserting about it. */
+      rec.tooEarly = c.expectAbsent ? !!document.querySelector(c.expectAbsent) : false
       rec.shapePoints = [...document.querySelectorAll('.screen .radar .shape')].map(el => el.getAttribute('points'))
       rec.flyTokens = [...document.querySelectorAll('.fly')].map(el => ({
         pointer: getComputedStyle(el).pointerEvents

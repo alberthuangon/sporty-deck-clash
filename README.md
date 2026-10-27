@@ -34,7 +34,7 @@ Every state is reached the way a player reaches it: real game functions
 keep their stage in local component state, and reaching in to set those refs
 would test a reachability nobody has.
 
-Twenty-four assertions:
+Twenty-six assertions:
 
 | | |
 | --- | --- |
@@ -58,6 +58,8 @@ Twenty-four assertions:
 | interrupt surfaces that hide what is under them | the other half of that price: an exit, not a scrim |
 | flying tokens left behind | a diamond on its way to the wallet crosses the TopBar, because the chip it is flying to is in the TopBar — same exemption, same price. One frame held mid-flight by the gate leaked 12 tokens into every state measured after it |
 | flying tokens that could eat a tap | `pointer-events: none`, checked rather than assumed |
+| UI animations that ignore their dial | a timeline shorter than the duration it was asked for is worse than one over its cap: the number stops describing the animation, so the cap stops bounding it and the motion lab stops controlling it. The first tear draft compiled to 0.70s for a 0.92s dial, and raising that dial past its cap did not even fail |
+| content revealed before its animation finished | the tear is the one animation here allowed to gate information — a sealed pack you can already read was never sealed |
 | shapes that animate without moving | the radar morph's geometry mid-animation against its geometry at rest. A tween wired to nothing looks identical from the outside AND in the source — which is how three dead animations shipped here. The invariance check deliberately ignores SVG internals, since a radar's vertices are the card's stats rather than layout, so this is the only thing that can tell a morph from a still picture |
 
 The last two are the point. States are put in a **group** when a player

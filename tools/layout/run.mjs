@@ -190,6 +190,10 @@ check('invariance groups comparing nothing', emptyGroups.length, !emptyGroups.le
 const motion = screens.results.flatMap(r => (r.motion || []).map(m => ({ state: r.id, ...m })))
 const overBudget = motion.filter(m => m.duration > m.budget + 0.001)
 const noExit = motion.filter(m => m.needsExit && !m.interruptible)
+/* A timeline shorter than its dial is worse than one over its cap: the number
+   stops describing the animation, so the cap stops bounding it and MotionLab
+   stops controlling it. */
+const offDial = motion.filter(m => Math.abs(m.duration - m.spend) > 0.02)
 /* The interrupt surface covers the frame, bars included, and is exempt from
    the chrome assertion for it. The price of that exemption: it must hide
    nothing, and it must be gone the moment the animation ends. */
@@ -233,15 +237,19 @@ const still = (morphMid && morphEnd && (morphMid.shapePoints || []).length && (m
       ? [{ what: 'radar', mid: morphMid.shapePoints[0].slice(0, 40) }] : [])
   : [{ what: 'radar', mid: '(state missing)' }]
 
+const early = screens.results.filter(r => r.tooEarly).map(r => ({ state: r.id }))
+
 console.log(`\nUI animations stay inside the budget  (${motion.length} play(s) across the sweep)\n`)
 check('UI animations over their time budget', overBudget.length, !overBudget.length)
 check('long UI animations with no way to interrupt', noExit.length, !noExit.length)
+check('UI animations that ignore their dial', offDial.length, !offDial.length)
 check('interrupt surfaces left behind', skipLeaks.length, !skipLeaks.length)
 check('interrupt surfaces that hide what is under them', skipOpaque.length, !skipOpaque.length)
 check('rolling figures that start unreadable', unreadable.length, !unreadable.length)
 check('flying tokens left behind', flyLeaks.length, !flyLeaks.length)
 check('flying tokens that could eat a tap', flyTappable.length, !flyTappable.length)
 check('shapes that animate without moving', still.length, !still.length)
+check('content revealed before its animation finished', early.length, !early.length)
 
 if (ellipsised.length) {
   console.log(`\n  note: ${ellipsised.length} label(s) ellipsised — truncated, but visibly so:`)
@@ -273,12 +281,14 @@ if (fail.length) {
   emptyGroups.forEach(g => console.log(`  compares nothing: ${g}`))
   overBudget.forEach(m => console.log(`  over budget: ${m.state}  ${m.name} is ${m.duration}s against a ${m.budget}s cap`))
   noExit.forEach(m => console.log(`  no way out: ${m.state}  ${m.name} runs ${m.duration}s with no interrupt surface`))
+  offDial.forEach(m => console.log(`  ignores its dial: ${m.state}  ${m.name} compiled to ${m.duration}s for a ${m.spend}s dial`))
   skipLeaks.forEach(l => console.log(`  interrupt surface left behind: ${l.state}  [data-skip="${l.name}"]`))
   skipOpaque.forEach(l => console.log(`  interrupt surface is painted: ${l.state}  [data-skip="${l.name}"] bg ${l.bg} ${l.bgImage}`))
   unreadable.forEach(u => console.log(`  unreadable at frame zero: starts "${u.start}", lands "${u.end}"`))
   flyLeaks.forEach(f => console.log(`  flying tokens left behind: ${f.state}  ${f.n} token(s) still on .phone`))
   flyTappable.forEach(f => console.log(`  flying token takes taps: ${f.state}  pointer-events: ${f.pointer}`))
   still.forEach(d => console.log(`  did not move: the ${d.what} measures the same mid-animation as at rest — ${d.mid}`))
+  early.forEach(e => console.log(`  revealed early: ${e.state} is already showing what the animation was hiding`))
   console.log('')
   process.exit(1)
 }

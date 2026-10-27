@@ -23,9 +23,6 @@ import { uiPlay, UI_TIME, reduced } from '../ui/motion.js'
 const props = defineProps({
   value: { type: Number, required: true },
   from: { type: Number, default: 0 },
-  /* null = spend from the budget dial, so MotionLab retunes every rolling
-     figure at once rather than one hard-coded duration at a time */
-  duration: { type: Number, default: null },
   delay: { type: Number, default: 0 },
   prefix: { type: String, default: '' },
   suffix: { type: String, default: '' },
@@ -53,7 +50,7 @@ function run () {
   anim = uiPlay(props.budget, tl => {
     tl.to(box, {
       v: props.value,
-      duration: props.duration === null ? UI_TIME[props.budget] : props.duration,
+      duration: UI_TIME[props.budget],
       delay: props.delay,
       ease: 'power2.out',
       onUpdate: () => { current = box.v; shown.value = format(current) },

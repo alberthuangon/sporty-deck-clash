@@ -1,12 +1,30 @@
 <template>
   <div class="scroll pad po">
-    <!-- stage 1: sealed pack, swipe to tear (grey-box: a button stands in for
-         the gesture until step 6) -->
+    <!-- stage 1: the sealed pack. A TAP, not a drag: a real gesture can only
+         be judged by feel, and the one person who has to sign this off is
+         usually not at the machine. A tap reads almost the same on stage and
+         can be photographed frame by frame.
+
+         The two halves are always in the DOM and always carry the same
+         content, clipped to the top and bottom of the rip. Nothing here is
+         behind a v-if the animation depends on. -->
     <div v-if="stage === 'sealed'" class="stage">
-      <div class="seal">
-        <div class="seal-top">{{ pack.name }}</div>
-        <div class="seal-mid">◆ {{ pack.price }}</div>
-        <div class="seal-hint muted">pull to tear</div>
+      <div class="seal" ref="sealEl" @click="tear">
+        <div class="seal-half top" ref="tearA">
+          <div class="seal-in">
+            <div class="seal-top">{{ pack.name }}</div>
+            <div class="seal-mid">◆ {{ pack.price }}</div>
+            <div class="seal-hint muted">tap to tear</div>
+          </div>
+        </div>
+        <div class="seal-half bot" ref="tearB">
+          <div class="seal-in">
+            <div class="seal-top">{{ pack.name }}</div>
+            <div class="seal-mid">◆ {{ pack.price }}</div>
+            <div class="seal-hint muted">tap to tear</div>
+          </div>
+        </div>
+        <div class="seal-rip" ref="ripEl"></div>
       </div>
       <button class="btn btn-cta" data-sfx="tear" @click="tear">Tear open</button>
     </div>
@@ -58,9 +76,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import CardFace from '../components/CardFace.vue'
 import { flyTo } from '../ui/flyIn.js'
+import { uiPlay, UI_TIME } from '../ui/motion.js'
 import { store, go, buyPack, commitPull, entry, canUpgrade, upgradeCost, BY_ID } from '../game.js'
 import { buildCard } from '../engine/cards.js'
 import { PACKS } from '../engine/economy.js'
@@ -72,6 +91,12 @@ const pulls = ref([])
 const upgradable = ref([])
 const cardRef = ref(null)
 const shardLine = ref(null)
+const sealEl = ref(null)
+const tearA = ref(null)
+const tearB = ref(null)
+const ripEl = ref(null)
+let anim = null
+let alive = true
 
 onMounted(() => {
   const res = buyPack(pack)
@@ -101,11 +126,45 @@ function shardFlight () {
   })
 }
 
+/* The card is granted and shown at the END of the tear, never before — the
+   one place in step 6 where the animation is allowed to gate information,
+   because the whole point of a sealed pack is not knowing yet (§2.1).
+
+   A second tap during the tear skips it rather than starting another. That
+   matters more here than anywhere else: a pack is opened dozens of times in
+   a session, and the second one is already too slow. */
 function tear () {
-  stage.value = 'reveal'
-  index.value = 0
-  commitPull(pulls.value[0])
-  shardFlight()
+  if (anim && !anim.record.done) { anim.skip(); return }
+  if (stage.value !== 'sealed') return
+  const d = UI_TIME.tear
+  anim = uiPlay('tear', tl => {
+    tl.fromTo(ripEl.value, { opacity: 0, scaleX: 0.2 },
+      { opacity: 1, scaleX: 1, duration: d * 0.18, ease: 'power2.out' }, 0)
+    tl.to(sealEl.value, { scale: 0.96, duration: d * 0.12, ease: 'power2.out' }, 0)
+    tl.to(sealEl.value, { scale: 1, duration: d * 0.18, ease: 'power2.inOut' }, d * 0.12)
+    /* The halves land exactly ON the dial: `tear` is "tap -> first card
+       visible", so a timeline that finishes early makes the number a
+       decoration and MotionLab's slider a lie.
+
+       power1.in rather than power2.in. The steeper ease was truer to how
+       paper gives way, and it spent the first 0.4s of a 0.92s animation
+       looking like nothing was happening — on the one screen a player
+       revisits dozens of times a session. They also recede as they go, so
+       the bottom half stops sliding across the button underneath it. */
+    tl.to(tearA.value, { y: -70, x: -16, rotate: -9, scale: 0.94, duration: d * 0.84, ease: 'power1.in' }, d * 0.16)
+    tl.to(tearB.value, { y: 56, x: 14, rotate: 7, scale: 0.94, duration: d * 0.84, ease: 'power1.in' }, d * 0.16)
+    tl.to([tearA.value, tearB.value], { opacity: 0, duration: d * 0.5, ease: 'power1.in' }, d * 0.5)
+    tl.to(ripEl.value, { opacity: 0, scaleY: 3.4, duration: d * 0.4, ease: 'power2.out' }, d * 0.4)
+  }, {
+    interruptible: true,
+    onEnd: () => {
+      if (!alive) return
+      stage.value = 'reveal'
+      index.value = 0
+      commitPull(pulls.value[0])
+      shardFlight()
+    }
+  })
 }
 function next () {
   if (index.value === pulls.value.length - 1) {
@@ -119,16 +178,32 @@ function next () {
   shardFlight()
 }
 function goUpgrade (id) { store.upgradeTarget = id; go('upgrade') }
+
+onUnmounted(() => { alive = false; if (anim) anim.cancel() })
 </script>
 
 <style scoped>
 .po { align-items: center; }
 .stage { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 10px; }
-.seal {
-  width: 190px; height: 260px; border-radius: 10px;
+.seal { position: relative; width: 190px; height: 260px; cursor: pointer; }
+/* Two layers holding the SAME content, each clipped to its side of the rip,
+   so the pack reads as one card until it stops being one. The clip line and
+   the two insets have to add up to 100% or the seam shows. */
+.seal-half {
+  position: absolute; inset: 0; border-radius: 10px;
   background: linear-gradient(160deg, #3B4150, #22252D);
   border: 1px solid var(--divider);
+}
+.seal-half.top { clip-path: inset(0 0 56% 0); }
+.seal-half.bot { clip-path: inset(44% 0 0 0); }
+.seal-in {
+  position: absolute; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+}
+.seal-rip {
+  position: absolute; left: -6px; right: -6px; top: 44%;
+  height: 3px; background: var(--cta); opacity: 0;
+  box-shadow: 0 0 12px 3px var(--cta);
 }
 .seal-top { font-weight: 800; letter-spacing: .06em; }
 .seal-mid { color: #6EE7FF; font-weight: 700; }

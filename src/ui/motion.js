@@ -110,6 +110,12 @@ export function uiPlay (name, build, { interruptible = false, onEnd = null } = {
   const rec = {
     name,
     budget: UI_BUDGET[name],
+    /* what the dial asked for, next to what the timeline actually compiled
+       to. They have to agree: a timeline that finishes early turns the dial
+       into a decoration and MotionLab's slider into a lie, and the first
+       tear draft did exactly that — 0.70s of animation on a 0.92s dial, so
+       raising it past the cap did not even fail the budget check. */
+    spend: UI_TIME[name],
     duration,
     needsExit: duration > INTERRUPT_OVER,
     interruptible: !!interruptible,

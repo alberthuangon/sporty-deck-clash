@@ -162,6 +162,18 @@ function timeline () {
    three payout states showing whatever natural playback had happened to
    leave behind — three cases that looked like they were measuring a frame
    each and were measuring the same accident. */
+/* The first click on PackOpen now starts a 0.92s tear, and the card is not
+   granted until it finishes. Every case that walks the reveal has to get
+   through that door first; skipping it is what a second tap does anyway. */
+async function openPack (click, raf) {
+  await click('[data-sfx="tear"]')
+  const run = uiLast('tear')
+  if (!run) throw new Error('the pack did not tear')
+  run.skip()
+  await raf()
+  await raf()
+}
+
 /* Catch a flight in mid-air. It has to be paused IMMEDIATELY after the click
    that starts it: the tokens remove themselves when they land, and a frame
    that has already been cleaned up cannot be seeked back to — unlike the
@@ -601,13 +613,39 @@ export const CASES = [
   },
 
   /* ------------------------------------------------ Pack opening */
-  { id: 'packopen/sealed', screen: 'packopen', setup () { reset(); richCollection(); store.pendingPack = 'standard' } },
+  {
+    id: 'packopen/sealed',
+    screen: 'packopen',
+    group: 'packopen-tear',
+    scope: '.po > .stage > .btn',
+    setup () { reset(); richCollection(); store.pendingPack = 'standard' }
+  },
+  {
+    /* mid-rip. The halves are supposed to move, so the group is scoped to the
+       button underneath them: the thing a thumb is already reaching for must
+       not walk away while the pack opens.
+       expectAbsent is the other half of the claim — a pack that shows you the
+       card while it is still tearing was never sealed. */
+    id: 'packopen/tearing',
+    screen: 'packopen',
+    group: 'packopen-tear',
+    scope: '.po > .stage > .btn',
+    expectAbsent: '.reveal-card',
+    setup () { reset(); richCollection(); store.pendingPack = 'standard' },
+    async act ({ click, raf, at }) {
+      await click('[data-sfx="tear"]')
+      const run = uiLast('tear')
+      if (!run) throw new Error('the pack did not tear')
+      run.timeline.pause(at === null ? 0.45 : at)
+      await raf()
+    }
+  },
   {
     id: 'packopen/reveal-1',
     screen: 'packopen',
     group: 'packopen-reveal',
     setup () { reset(); richCollection(); store.pendingPack = 'standard' },
-    act: ({ click }) => click('.btn-cta')
+    act: ({ click, raf }) => openPack(click, raf)
   },
   {
     /* the first card is a duplicate, so a shard is on its way to the count
@@ -617,8 +655,7 @@ export const CASES = [
     group: 'packopen-reveal',
     setup () { reset(); richCollection(); store.pendingPack = 'standard' },
     async act ({ click, raf, at }) {
-      await click('.btn-cta')
-      await raf()          // the flight is launched inside a nextTick
+      await openPack(click, raf)
       holdFlight(at)
       await raf()
     }
@@ -628,7 +665,7 @@ export const CASES = [
     screen: 'packopen',
     group: 'packopen-reveal',
     setup () { reset(); richCollection(); store.pendingPack = 'standard' },
-    async act ({ click }) { await click('.btn-cta'); await click('.btn-cta'); await click('.btn-cta') }
+    async act ({ click, raf }) { await openPack(click, raf); await click('.btn-cta'); await click('.btn-cta') }
   },
   {
     /* the fifth card is the same screen two taps later, and it grows a
@@ -637,13 +674,13 @@ export const CASES = [
     screen: 'packopen',
     group: 'packopen-reveal',
     setup () { reset(); richCollection(); store.pendingPack = 'standard' },
-    async act ({ click }) { for (let i = 0; i < 5; i++) await click('.btn-cta') }
+    async act ({ click, raf }) { await openPack(click, raf); for (let i = 0; i < 4; i++) await click('.btn-cta') }
   },
   {
     id: 'packopen/summary',
     screen: 'packopen',
     setup () { reset(); richCollection(); store.pendingPack = 'standard' },
-    async act ({ click }) { for (let i = 0; i < 6; i++) await click('.btn-cta') }
+    async act ({ click, raf }) { await openPack(click, raf); for (let i = 0; i < 5; i++) await click('.btn-cta') }
   },
 
   /* ------------------------------------------------ Upgrade */
