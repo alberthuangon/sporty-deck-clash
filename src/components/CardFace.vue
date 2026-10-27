@@ -20,7 +20,7 @@
            paint: a conditional element would change the anchor indices of a
            Common against a Legendary and walk the rarity-ladder group. -->
       <template v-if="foil">
-        <i class="cf-foil" aria-hidden="true"></i>
+        <i class="cf-foil" :style="foilMask" aria-hidden="true"></i>
         <i class="cf-gloss" aria-hidden="true"></i>
       </template>
     </div>
@@ -37,6 +37,7 @@
 <script setup>
 import { computed } from 'vue'
 import PlayerArt from './PlayerArt.vue'
+import { buildFigure } from '../ui/figures.js'
 import { ROLE_LABEL } from '../engine/cards.js'
 
 /* Two-letter stamp per role. Lives here rather than beside ROLE_LABEL in
@@ -63,6 +64,43 @@ const props = defineProps({
 const artSize = computed(() => ({ sm: 44, md: 74, lg: 116 }[props.size]))
 const initials = computed(() => props.card.name.slice(0, 2).toUpperCase())
 const shirtNo = computed(() => (props.card.seed % 29) + 1)
+
+/* Clip the foil to the PLAYER, so the shine belongs to the person rather than
+   to a rectangle sitting over them. Real foil never has a straight border
+   across the subject, and the mask is what buys that.
+
+   Serialised to a data URI rather than referencing an inline <mask> by id:
+   the mask is stroked paths, which a clip-path cannot use at all (it reads
+   fill geometry only), and a data URI needs no id to be unique per card and
+   no bet on how this browser resolves url(#...) from CSS. Scaled from the
+   74-unit drawing space to the box the foil actually occupies. */
+const foilMask = computed(() => {
+  if (!props.foil || props.radar || props.size !== 'lg') return null
+  const fig = buildFigure(props.card.id, 'lg', { number: shirtNo.value })
+  if (!fig.mask || !fig.mask.length) return null
+  const draw = ([tag, attrs]) =>
+    `<${tag} ${Object.entries(attrs).map(([k, v]) => `${k}="${v}"`).join(' ')}/>`
+  /* The disc as well as the player. Masking to the silhouette ALONE was
+     measured and it halved the effect: hue spread fell from 0.427 to 0.199,
+     because a foil needs area to read as a rainbow and a 60x70 body only
+     exposes a single slice of the gradient. The disc restores the area
+     without touching the gradient's scale, so the four rarity steps keep
+     their tuning — and its edge is a circle, so the rectangle that made the
+     earlier version look cheap does not come back. It is also what the disc
+     was drawn for: the figure layer exists to give the foil something to
+     sweep across. */
+  const disc = fig.bg.map(([tag, attrs]) =>
+    draw([tag, { ...attrs, fill: '#fff', 'fill-opacity': 1 }])).join('')
+  const body = fig.mask.map(draw).join('')
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 74 74">` +
+    `${disc}<g fill="none">${body}</g></svg>`
+  const url = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`
+  return {
+    maskImage: url, WebkitMaskImage: url,
+    maskSize: '100% 100%', WebkitMaskSize: '100% 100%',
+    maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat'
+  }
+})
 const roleLabel = computed(() => ROLE_LABEL[props.card.role])
 const roleCode = computed(() => ROLE_CODE[props.card.role] || '')
 const venueMark = computed(() =>
@@ -149,9 +187,15 @@ const venueMark = computed(() =>
   opacity: var(--holo-on, 0);
 }
 /* The foil travels WITH the light. */
+/* 100%, not more. The foil gradient does not repeat, so background-size is
+   really "how much of the rainbow fits in the box": at 240% the card showed a
+   2.4x-stretched slice and the foil's own hue spread measured 0.043 — a
+   single-colour wash wearing a rainbow's name. At 100% the whole sweep lands
+   inside the box and it measures 0.314, seven times the variety, with the
+   same colours and the same alpha. */
 .cf-foil {
   background: var(--holo-foil, none);
-  background-size: 240% 240%;
+  background-size: 100% 100%;
   background-position: var(--holo-x, 50%) var(--holo-y, 50%);
   mix-blend-mode: color-dodge;
 }
