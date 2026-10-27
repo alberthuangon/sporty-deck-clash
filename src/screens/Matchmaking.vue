@@ -86,9 +86,12 @@ function cancel () { abandonMatch(); go('tierselect') }
 .blip { position: relative; font-size: 20px; font-weight: 800; }
 .status { font-size: 14px; font-weight: 700; }
 .log { width: 100%; background: var(--surface); border-radius: var(--r-md); padding: 4px 12px; min-height: 120px; }
+/* the log streams in a row at a time and ends up taller than its min-height,
+   so a button sitting under it walks down the screen while the player is
+   reaching for it. Pinned to the bottom instead: the log grows into the gap */
 .lrow { display: flex; justify-content: space-between; font-size: 12px; padding: 7px 0; border-bottom: 1px solid var(--divider); }
 .lrow:last-child { border-bottom: 0; }
 .lrow.ok { color: var(--green); font-weight: 700; }
 .lv { font-variant-numeric: tabular-nums; font-weight: 700; }
-.mm > .btn { width: 100%; }
+.mm > .btn { width: 100%; margin-top: auto; }
 </style>
