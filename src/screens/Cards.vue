@@ -46,10 +46,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import CardFace from '../components/CardFace.vue'
 import RadarChart from '../components/RadarChart.vue'
 import { store, go, CATALOGUE, BY_ID, cardOf, entry, owned as isOwned, canUpgrade, upgradeCost, RARITY } from '../game.js'
+import { screenBack } from '../store.js'
 import { SHARD_COST } from '../engine/economy.js'
 
 const detail = ref(store.cardTarget || null)
@@ -67,13 +68,20 @@ const barPct = computed(() => {
 })
 function firstCost (c) { return SHARD_COST[c.rarity][1] }
 function open (id) { detail.value = id }
+
+/* the top bar's back arrow leaves the detail view before it leaves the tab */
+watch(detail, v => { screenBack.value = v ? () => { detail.value = null } : null }, { immediate: true })
+onUnmounted(() => { screenBack.value = null })
 function goUpgrade () { store.upgradeTarget = detail.value; go('upgrade') }
 </script>
 
 <style scoped>
 .cnt { font-size: 12px; margin-bottom: 10px; }
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.slot { position: relative; cursor: pointer; }
+/* the cell stretches to the tallest card in its row; without this the card
+   inside does not, and owned cards render 14px shorter than locked ones */
+.slot { position: relative; cursor: pointer; display: flex; }
+.slot > * { flex: 1; min-width: 0; }
 .locked {
   height: 100%; min-height: 104px; border-radius: var(--r-md);
   border: 1px dashed var(--divider); background: var(--surface-lo);
@@ -83,7 +91,8 @@ function goUpgrade () { store.upgradeTarget = detail.value; go('upgrade') }
 .ln { font-size: 11px; font-weight: 700; color: var(--text-2); }
 .ls { font-size: 9px; }
 .detail { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.back { align-self: flex-start; font-size: 12px; }
+/* padded out to a real tap target, pulled back with margin so nothing moves */
+.back { align-self: flex-start; font-size: 12px; padding: 15px 12px; margin: -15px -12px; }
 .hero { width: 150px; }
 .rad { margin: 2px 0; }
 .meta, .shards { width: 100%; background: var(--surface); border-radius: var(--r-md); padding: 10px 12px; }

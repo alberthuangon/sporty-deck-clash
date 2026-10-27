@@ -62,7 +62,9 @@ const venueMark = computed(() =>
   padding: 0 4px; line-height: 13px;
 }
 .cf-lv { color: var(--text-2); }
-.cf-art { display: flex; align-items: center; justify-content: center; margin: 2px 0; }
+/* flex: 1 so a card stretched by its grid cell grows around the art rather
+   than leaving a gap under the role line */
+.cf-art { display: flex; flex: 1; align-items: center; justify-content: center; margin: 2px 0; }
 .cf-mono { font-size: 22px; font-weight: 800; color: var(--text-2); }
 .cf-name { font-size: 12px; font-weight: 700; line-height: 1.2; text-align: center; }
 .cf-role { font-size: 9px; color: var(--text-2); text-align: center; }
