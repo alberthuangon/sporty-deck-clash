@@ -17,6 +17,33 @@
 
 import gsap from 'gsap'
 import { uiPlay, UI_TIME } from './motion.js'
+import { ICONS } from './icons.js'
+
+/* A token's face. `icon` names a shape from icons.js and is built with real
+   DOM calls — these nodes are created outside Vue, so there is no template to
+   put an <Icon> in, and an emoji here would be the one platform-rendered
+   glyph left in the app now that the tab bar has gone. Falls back to a text
+   glyph, which is still how the diamond and the shard travel. */
+const SVG_NS = 'http://www.w3.org/2000/svg'
+function paint (el, icon, glyph) {
+  const shape = icon && ICONS[icon]
+  if (!shape) { el.textContent = glyph; return }
+  const svg = document.createElementNS(SVG_NS, 'svg')
+  svg.setAttribute('viewBox', '0 0 24 24')
+  svg.setAttribute('fill', 'none')
+  svg.setAttribute('stroke', 'currentColor')
+  svg.setAttribute('stroke-width', '1.8')
+  svg.setAttribute('stroke-linecap', 'round')
+  svg.setAttribute('stroke-linejoin', 'round')
+  svg.setAttribute('width', '1em')
+  svg.setAttribute('height', '1em')
+  for (const [tag, attrs] of shape) {
+    const node = document.createElementNS(SVG_NS, tag)
+    for (const k in attrs) node.setAttribute(k, attrs[k])
+    svg.appendChild(node)
+  }
+  el.appendChild(svg)
+}
 
 /* 'cash' / 'diamonds' name the wallet chips TopBar already marks up; anything
    starting with . [ or # is a selector; anything else is an element. */
@@ -26,7 +53,7 @@ function elementOf (x) {
   return document.querySelector(/^[.[#]/.test(x) ? x : `[data-wallet="${x}"]`)
 }
 
-export function flyTo (from, to, { count = 6, glyph = '◆', colour = null } = {}) {
+export function flyTo (from, to, { count = 6, glyph = '◆', icon = null, colour = null } = {}) {
   const host = document.querySelector('.phone')
   const src = elementOf(from)
   const dst = elementOf(to)
@@ -46,7 +73,7 @@ export function flyTo (from, to, { count = 6, glyph = '◆', colour = null } = {
   for (let i = 0; i < count; i++) {
     const el = document.createElement('i')
     el.className = 'fly'
-    el.textContent = glyph
+    paint(el, icon, glyph)
     if (colour) el.style.color = colour
     el.style.left = sx + 'px'
     el.style.top = sy + 'px'

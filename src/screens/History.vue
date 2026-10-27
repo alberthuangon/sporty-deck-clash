@@ -88,7 +88,7 @@
       <div v-for="p in detail.promotions" :key="p.id" class="promo">
         PROMOTED — {{ p.label }}
         <span v-if="p.reward.diamonds">· ◆{{ p.reward.diamonds }}</span>
-        <span v-if="p.reward.tickets">· 🎟{{ p.reward.tickets }}</span>
+        <span v-if="p.reward.tickets">· <Icon name="ticket" />{{ p.reward.tickets }}</span>
       </div>
 
       <button class="btn btn-cta" @click="startReplay(detail)">▶ Replay this match</button>
@@ -101,6 +101,7 @@
 
 <script setup>
 import { ref, watch, onUnmounted } from 'vue'
+import Icon from '../components/Icon.vue'
 import CardFace from '../components/CardFace.vue'
 import { store, BY_ID, startReplay } from '../game.js'
 import { screenBack } from '../store.js'
@@ -135,7 +136,13 @@ function ago (t) {
   font-size: 12px; font-weight: 800;
 }
 .r-badge.w { background: var(--cta-deep); color: #fff; }
-.r-badge.l { background: var(--surface-hi); color: var(--text-2); }
+/* Hollow, not a solid red disc: a solid colour disc is the jersey shape, and
+   the jersey red and the loss red are the same red (tokens.css). Shape is what
+   separates them, so a loss gets an outline and a win keeps the solid fill. */
+.r-badge.l {
+  background: transparent; color: var(--loss);
+  box-shadow: inset 0 0 0 1px var(--loss);
+}
 .r-main { flex: 1; min-width: 0; }
 .r-top { display: flex; align-items: baseline; gap: 7px; }
 .r-score { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -150,7 +157,7 @@ function ago (t) {
 
 .back { align-self: flex-start; font-size: 12px; padding: 15px 12px; margin: -12px -12px -15px; }
 .verdict { text-align: center; font-size: 22px; font-weight: 800; letter-spacing: .06em; }
-.verdict.win { color: var(--cta); } .verdict.lose { color: var(--text-2); }
+.verdict.win { color: var(--cta); } .verdict.lose { color: var(--loss); }
 .score { text-align: center; padding: 12px; }
 .sc { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .pk { font-size: 11px; margin-top: 2px; }
@@ -163,6 +170,13 @@ function ago (t) {
 .h-cell { padding: 3px 10px; font-size: 15px; }
 .fine { font-size: 10px; padding-bottom: 8px; }
 .red { color: var(--red); }
-.promo { background: var(--cta-deep); border-radius: var(--r-md); padding: 9px; text-align: center; font-size: 12px; font-weight: 700; }
+/* a record of a promotion, not a button — see base.css .banner-win */
+.promo {
+  background: linear-gradient(90deg, rgba(50,206,98,.18), rgba(50,206,98,.05));
+  box-shadow: inset 3px 0 0 var(--cta);
+  color: var(--cta);
+  border-radius: var(--r-md); padding: 9px; text-align: center;
+  font-size: 12px; font-weight: 700;
+}
 .replay-note { font-size: 10px; text-align: center; line-height: 1.5; }
 </style>

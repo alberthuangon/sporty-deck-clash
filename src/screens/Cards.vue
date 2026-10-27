@@ -6,7 +6,7 @@
         <div v-for="c in CATALOGUE" :key="c.id" class="slot" @click="open(c.id)">
           <CardFace v-if="isOwned(c.id)" :card="cardOf(c.id)" size="sm" />
           <div v-else class="locked" :class="'r-'+c.rarity">
-            <div class="lk">🔒</div>
+            <div class="lk"><Icon name="lock" /></div>
             <div class="ln">{{ c.name }}</div>
             <div class="ls muted">{{ entry(c.id).shards }} / {{ firstCost(c) }}</div>
           </div>
@@ -38,7 +38,7 @@
         {{ canUpgrade(detail) ? 'Upgrade to Lv.' + (entry(detail).level + 1) : 'Need more shards' }}
       </button>
       <div v-else-if="!isOwned(detail)" class="locked-note">
-        🔒 Not in your collection yet — pull it from a card pack.
+        <Icon name="lock" /> Not in your collection yet — pull it from a card pack.
       </div>
       <div v-else class="locked-note">Max level reached.</div>
     </div>
@@ -47,6 +47,7 @@
 
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
+import Icon from '../components/Icon.vue'
 import CardFace from '../components/CardFace.vue'
 import RadarChart from '../components/RadarChart.vue'
 import { store, go, CATALOGUE, BY_ID, cardOf, entry, owned as isOwned, canUpgrade, upgradeCost, RARITY } from '../game.js'

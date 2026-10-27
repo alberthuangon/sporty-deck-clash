@@ -83,12 +83,12 @@ const screenTarget = computed(() => (SCREENS[store.currentScreen] || {}).back)
 const backTarget = computed(() => !!screenBack.value || !!screenTarget.value)
 
 const tabs = computed(() => [
-  { id: 'cards', label: 'Cards', icon: '&#127183;', dot: CATALOGUE.some(c => canUpgrade(c.id)) },
-  { id: 'shop', label: 'Shop', icon: '&#128717;', dot: store.diamonds >= 100 },
-  { id: 'home', label: 'Play', icon: '&#9917;', dot: false },
-  { id: 'tasks', label: 'Missions', icon: '&#128203;', dot: store.tasks.some(t => t.done && !t.claimed) },
-  { id: 'history', label: 'History', icon: '&#129534;', dot: false },
-  { id: 'rank', label: 'Rank', icon: '&#127942;', dot: false }
+  { id: 'cards', label: 'Cards', icon: 'cards', dot: CATALOGUE.some(c => canUpgrade(c.id)) },
+  { id: 'shop', label: 'Shop', icon: 'shop', dot: store.diamonds >= 100 },
+  { id: 'home', label: 'Play', icon: 'play', dot: false },
+  { id: 'tasks', label: 'Missions', icon: 'missions', dot: store.tasks.some(t => t.done && !t.claimed) },
+  { id: 'history', label: 'History', icon: 'history', dot: false },
+  { id: 'rank', label: 'Rank', icon: 'rank', dot: false }
 ])
 
 function navTab (id) { go(id) }

@@ -96,7 +96,7 @@ watch(() => draw.value && draw.value.won, playBurst, { flush: 'post' })
   display: flex; flex-direction: column;
   overflow-y: auto;
 }
-.dr.won { background: radial-gradient(120% 60% at 50% 12%, #123021, var(--bg) 70%); }
+.dr.won { background: radial-gradient(120% 60% at 50% 12%, var(--good-glow), var(--bg) 70%); }
 .dr-in {
   padding: 28px 16px 20px; flex: 1;
   display: flex; flex-direction: column; justify-content: safe center;

@@ -64,11 +64,11 @@ function buy (p) {
 .pack { display: flex; gap: 12px; background: var(--surface); border-radius: var(--r-md); padding: 12px; margin-bottom: 12px; }
 .pk-art {
   width: 104px; flex: 0 0 104px; height: 140px; border-radius: var(--r-sm);
-  background: linear-gradient(160deg, #3B4150, #22252D);
+  background: linear-gradient(160deg, var(--pack-std-a), var(--pack-std-b));
   border: 1px solid var(--divider);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
 }
-.gold .pk-art { background: linear-gradient(160deg, #6B5320, #2B2616); border-color: #A5802E; }
+.gold .pk-art { background: linear-gradient(160deg, var(--pack-gold-a), var(--pack-gold-b)); border-color: var(--pack-gold-edge); }
 .pk-wrap { font-weight: 800; font-size: 13px; letter-spacing: .08em; }
 .pk-count { font-size: 10px; color: var(--text-2); }
 .pk-body { flex: 1; display: flex; flex-direction: column; min-width: 0; }
@@ -80,7 +80,7 @@ function buy (p) {
   align-self: flex-start; padding: 16px 10px; margin: -16px -10px auto;
 }
 .buy { gap: 6px; }
-.gem { color: #6EE7FF; font-style: normal; }
+.gem { color: var(--diamond); font-style: normal; }
 .short { font-size: 10px; line-height: 14px; min-height: 14px; text-align: center; margin-top: 5px; }
 .pity .bar { height: 6px; background: var(--surface-hi); border-radius: 999px; overflow: hidden; }
 .pity .bar i { display: block; height: 100%; background: var(--green); }

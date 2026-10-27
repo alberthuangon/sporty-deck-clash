@@ -40,5 +40,5 @@ defineEmits(['back', 'title'])
   display: inline-flex; align-items: center; gap: 3px;
   font-variant-numeric: tabular-nums;
 }
-.gem { color: #6EE7FF; font-style: normal; font-size: 11px; }
+.gem { color: var(--diamond); font-style: normal; font-size: 11px; }
 </style>

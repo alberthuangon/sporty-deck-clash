@@ -111,7 +111,7 @@ function doReset () { resetStore(); go('home') }
   background: var(--surface-hi); color: var(--text-2);
   font-size: 12px; font-weight: 700;
 }
-.opts button.on { background: var(--cta); color: #06240F; }
+.opts button.on { background: var(--cta); color: var(--on-cta); }
 .row input { margin-left: auto; width: 20px; height: 20px; accent-color: var(--cta); flex: 0 0 auto; }
 .rt { font-weight: 700; margin-bottom: 2px; }
 .rs { font-size: 12px; line-height: 1.4; }

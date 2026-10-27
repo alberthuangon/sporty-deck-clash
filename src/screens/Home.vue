@@ -1,6 +1,6 @@
 <template>
   <div class="scroll pad hm">
-    <div class="squad card">
+    <div class="squad card-hero">
       <div class="sq-head">
         <div>
           <div class="muted lbl">Squad Power</div>
@@ -28,7 +28,7 @@
         <span class="tf">₦{{ t.fee }}</span>
         <span class="tn muted">{{ t.name }}</span>
         <span v-if="unlocked(t)" class="ok">✓</span>
-        <span v-else class="lock muted">🔒 Raise your Power to unlock</span>
+        <span v-else class="lock muted"><Icon name="lock" /> Raise your Power to unlock</span>
       </div>
     </div>
 
@@ -53,6 +53,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import Icon from '../components/Icon.vue'
 import CardFace from '../components/CardFace.vue'
 import PowerStars from '../components/PowerStars.vue'
 import JackpotPanel from '../components/JackpotPanel.vue'

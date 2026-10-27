@@ -5,7 +5,7 @@
       class="tab" :class="{ active: current === t.id }" :data-tab="t.id"
       @click="$emit('nav', t.id)"
     >
-      <span class="ic" v-html="t.icon"></span>
+      <span class="ic"><Icon :name="t.icon" :size="19" /></span>
       <span class="lb">{{ t.label }}</span>
       <i v-if="t.dot" class="tdot"></i>
     </button>
@@ -13,6 +13,7 @@
 </template>
 
 <script setup>
+import Icon from './Icon.vue'
 defineProps({ tabs: Array, current: String })
 defineEmits(['nav'])
 </script>
@@ -37,7 +38,11 @@ defineEmits(['nav'])
   content: ''; position: absolute; top: 0; left: 24%; right: 24%;
   height: 2px; background: var(--green); border-radius: 0 0 2px 2px;
 }
-.ic { font-size: 19px; line-height: 1; }
+/* An explicit 19x19 box, not a font size. The emoji this replaced was sized
+   by `font-size: 19px; line-height: 1`, i.e. a 19px line box; stating the box
+   means the row's height stops depending on how tall a given glyph happens to
+   be in whatever font the platform picked. */
+.ic { width: 19px; height: 19px; font-size: 0; line-height: 0; }
 .tab.active .ic { filter: drop-shadow(0 0 6px rgba(50,206,98,.5)); }
 .tdot {
   position: absolute; top: 6px; right: calc(50% - 20px);

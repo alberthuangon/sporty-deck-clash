@@ -42,9 +42,22 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; }
   -webkit-overflow-scrolling: touch;
 }
 .pad { padding: 12px; }
+/* --surface #2C3039 sits only a little above --bg #1B1E25, so a panel and the
+   page behind it all but merge. A 4.5% inset hairline is enough to make it
+   read as an object, and inset costs no box: a real border would push a 44px
+   control to 46 and trip the tap-target floor. */
 .card {
   background: var(--surface);
   border-radius: var(--r-md);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.045);
+}
+/* One panel per screen is the subject. Everything else stays .card, and the
+   hierarchy comes from the difference rather than from making each panel
+   louder than the last. */
+.card-hero {
+  background: linear-gradient(180deg, var(--surface-hi) 0%, var(--surface) 46%);
+  border-radius: var(--r-md);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), 0 2px 10px rgba(0,0,0,.3);
 }
 .muted { color: var(--text-2); }
 .green { color: var(--green); }
@@ -52,6 +65,11 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; }
   font-size: 13px; font-weight: 700; letter-spacing: .04em;
   text-transform: uppercase; color: var(--text-2);
   margin: 0 0 8px;
+}
+.sec-title::before {
+  content: ''; display: inline-block;
+  width: 3px; height: 11px; border-radius: 2px;
+  background: var(--green); margin-right: 7px; vertical-align: -1px;
 }
 .btn {
   display: flex; align-items: center; justify-content: center;
@@ -66,20 +84,54 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; }
   width: 100%;
 }
 .btn:active { filter: brightness(.88); }
-.btn-cta { background: var(--cta); color: #06240F; }
-.btn-cta:disabled, .btn:disabled { opacity: .4; pointer-events: none; }
+.btn-cta { background: var(--cta); color: var(--on-cta); }
+/* Disabled used to be opacity .4, which dims the colour AND the shape at once
+   — a mint CTA at 40% reads as a dark green button, not as a button you
+   cannot press. An outlined well reads as "a control belongs here, not yet".
+   inset rather than border, again, so the 44px floor survives. */
+.btn-cta:disabled, .btn:disabled {
+  opacity: 1;
+  background: var(--surface-lo);
+  color: var(--text-3);
+  box-shadow: inset 0 0 0 1px var(--divider);
+  pointer-events: none;
+}
 .btn-row { display: flex; gap: 8px; }
+/* The price of a side. Mint by default, but the HOME and AWAY pair on the toss
+   and the confirm sheet were BOTH mint — at the exact moment the game tells
+   you which side you are. They take the team colours there instead: the
+   cheapest change in the app against the complaint that started all of this. */
 .odds-cell {
   background: var(--surface-hi); color: var(--green);
   border-radius: var(--r-sm); font-weight: 700;
   display: flex; align-items: center; justify-content: center;
 }
+.odds-cell.home { color: var(--home-on); box-shadow: inset 0 0 0 1px rgba(var(--home-rgb), .5); }
+.odds-cell.away { color: var(--away-on); box-shadow: inset 0 0 0 1px rgba(var(--away-rgb), .5); }
+.odds-cell.off { opacity: .4; }
 .pill {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 10px; font-weight: 700; padding: 2px 6px;
   border-radius: 999px; background: var(--surface-hi); color: var(--text-2);
 }
-.pill-red { background: var(--red); color: #fff; }
+.pill-red { background: var(--loss-solid); color: #fff; }
+/* Lifted out of Stage.vue, where these two were already proven readable. */
+.pill-home { background: rgba(var(--home-rgb), .22); color: var(--home-on); }
+.pill-away { background: rgba(var(--away-rgb), .22); color: var(--away-on); }
+.pill-win { background: rgba(50,206,98,.20); color: var(--win); }
+.pill-loss { background: rgba(255,90,104,.18); color: var(--loss); }
+.pill-gold { background: rgba(245,165,36,.18); color: var(--jackpot); }
+
+/* A state, not an action. Several screens stacked a --cta-deep banner directly
+   above a --cta button, two greens touching where one is a thing that happened
+   and the other is a thing to do. One solid mint button per screen; anything
+   else green becomes this — a green edge and a green haze. */
+.banner-win {
+  background: linear-gradient(90deg, rgba(50,206,98,.18), rgba(50,206,98,.05));
+  box-shadow: inset 3px 0 0 var(--cta);
+  border-radius: var(--r-md);
+  color: var(--cta);
+}
 .dot {
   position: absolute; top: 4px; right: 4px;
   width: 8px; height: 8px; border-radius: 50%;
@@ -100,7 +152,8 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; }
    `npm run layout` checks both. */
 .fly {
   position: absolute; z-index: 80; pointer-events: none;
-  margin: -8px 0 0 -7px; line-height: 1;
-  font-style: normal; font-size: 14px; font-weight: 800;
-  color: #6EE7FF;
+  margin: -10px 0 0 -8px; line-height: 1;
+  font-style: normal; font-size: 17px; font-weight: 800;
+  color: var(--diamond);
+  text-shadow: 0 0 10px rgba(var(--diamond-rgb), .7);
 }

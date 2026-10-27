@@ -24,11 +24,74 @@
   --r-e: #B069F8;
   --r-l: #F5A524;
 
-  /* team colours (match player) */
+  /* team colours (match player).
+     --home / --away are FILL colours — jersey swatches, pitch tokens. As text
+     on a dark surface they are too dark to read, which is why Stage.vue had
+     already hand-written the lighter pair in twelve places; -on is that pair,
+     -hi the brighter one the full-time line uses. The -rgb forms exist so the
+     dozen scattered rgba(228,24,39,.52)-style washes can keep their own
+     densities while having a single source for the hue. */
   --home: #E41827;
   --home-dim: #8E1019;
+  --home-on: #FF8A93;
+  --home-hi: #FF6B76;
+  --home-rgb: 228, 24, 39;
+
   --away: #2F7BE8;
   --away-dim: #1C4C91;
+  --away-on: #8FC0FF;
+  --away-hi: #6FB0FF;
+  --away-rgb: 47, 123, 232;
+
+  /* win / loss.
+     --loss is NOT --red. Measured against the two surfaces this app paints on,
+     #E41827 scores 3.54 on --bg and 2.81 on --surface — both under AA, and
+     both worse than the grey (6.38 / 5.05) someone evidently retreated to.
+     The problem was never the hue, it was the brightness. So text and small
+     badges take the light red; solid fills with white on top take the deep one.
+
+     --loss and --home-hi are all but the same value, deliberately. They are
+     the same red: every attempt to separate loss-red from home-red by hue
+     lands within a few degrees, and anything far enough to see turns the
+     warning pink or orange. They are told apart by SHAPE instead — a solid
+     swatch means a team, red text or a hollow outline means a loss, and team
+     colour never appears as text without a jersey swatch beside it. */
+  --win: #32CE62;
+  --loss: #FF6B77;
+  --loss-solid: #E41827;
+
+  /* diamonds. Cyan collides with none of the three meaningful families —
+     not rarity's grey/blue/purple/gold, not the team reds and blues, not
+     win/loss. It was hard-coded in seven places with no name. */
+  --diamond: #6EE7FF;
+  --diamond-rgb: 110, 231, 255;
+
+  /* tickets and the jackpot are one economy — tickets come from the reward
+     road and are spent on the draw — so they share a gold. Named separately
+     from --r-l, which means "rarity: legendary" and only happens to match. */
+  --jackpot: #F5A524;
+
+  /* ranked tiers. Promotion is not the same event as winning (it can land
+     after a loss), so it does not borrow the win green. The rank screen's
+     hex badge was already bronze; this just lets the rest of the app say so. */
+  --tier-bronze: #C98B4B;
+  --tier-silver: #C3CAD6;
+  --tier-gold: #F0C04A;
+
+  /* pack tiers, shared by the shop's thumbnail and the sealed pack itself —
+     the same object was drawn from two different sets of literals in two
+     files, which is how they drift apart */
+  --pack-std-a: #3B4150;
+  --pack-std-b: #22252D;
+  --pack-std-edge: #5A606D;
+  --pack-gold-a: #6B5320;
+  --pack-gold-b: #2B2616;
+  --pack-gold-edge: #A5802E;
+
+  /* literals that were repeated verbatim across files */
+  --good-glow: #123021;    /* the won-draw and rank-up radial */
+  --on-cta: #06240F;       /* ink on a mint CTA, x5 */
+  --on-rarity: #0E1117;    /* ink on a rarity stamp */
 
   /* layout */
   --frame-w: 430px;

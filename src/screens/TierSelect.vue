@@ -15,7 +15,7 @@
           <div class="t-go green">Enter ›</div>
         </template>
         <template v-else>
-          <div class="t-lock">🔒</div>
+          <div class="t-lock"><Icon name="lock" /></div>
           <div class="t-lockt muted">Raise your Power to unlock</div>
           <div class="t-need muted">Need {{ score(t.unlockPower) }} · you have {{ score(colPower) }}</div>
         </template>
@@ -27,6 +27,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import Icon from '../components/Icon.vue'
 import { store, go, TIERS, collectionPower, stakeRange, powerScore } from '../game.js'
 const colPower = computed(() => collectionPower())
 function unlocked (t) { return colPower.value >= t.unlockPower }

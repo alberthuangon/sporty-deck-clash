@@ -37,12 +37,12 @@
       <div class="quotes" v-if="quotes">
         <div class="q-row">
           <span class="q-case muted">if you're HOME</span>
-          <span class="odds-cell q-cell">{{ quotes.home.toFixed(2) }}</span>
+          <span class="odds-cell home q-cell">{{ quotes.home.toFixed(2) }}</span>
           <span class="q-win">win <b>₦{{ winHome.toLocaleString() }}</b></span>
         </div>
         <div class="q-row">
           <span class="q-case muted">if you're AWAY</span>
-          <span class="odds-cell q-cell">{{ quotes.away.toFixed(2) }}</span>
+          <span class="odds-cell away q-cell">{{ quotes.away.toFixed(2) }}</span>
           <span class="q-win">win <b>₦{{ winAway.toLocaleString() }}</b></span>
         </div>
       </div>

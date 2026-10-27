@@ -93,7 +93,7 @@ defineExpose({ tear, reset })
 /* The clip line and the two insets have to add up to 100% or the seam shows. */
 .seal-half {
   position: absolute; inset: 0; border-radius: 10px;
-  background: linear-gradient(160deg, #3B4150, #22252D);
+  background: linear-gradient(160deg, var(--pack-std-a), var(--pack-std-b));
   border: 1px solid var(--divider);
 }
 .seal-half.top { clip-path: inset(0 0 56% 0); }
@@ -103,7 +103,7 @@ defineExpose({ tear, reset })
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
 }
 .seal-top { font-weight: 800; letter-spacing: .06em; }
-.seal-mid { color: #6EE7FF; font-weight: 700; }
+.seal-mid { color: var(--diamond); font-weight: 700; }
 .seal-hint { font-size: 11px; }
 .seal-rip {
   position: absolute; left: -6px; right: -6px; top: 44%;

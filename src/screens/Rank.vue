@@ -27,7 +27,7 @@
         <div class="nl">{{ n.label }}</div>
         <div class="nr">
           <span v-if="n.reward.diamonds">◆{{ n.reward.diamonds }}</span>
-          <span v-if="n.reward.tickets">🎟{{ n.reward.tickets }}</span>
+          <span v-if="n.reward.tickets"><Icon name="ticket" />{{ n.reward.tickets }}</span>
         </div>
       </div>
     </div>
@@ -47,6 +47,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import Icon from '../components/Icon.vue'
 import { store, rankLabel, REWARD_ROAD } from '../game.js'
 import { RANK_TIERS, SUBTIER_LABEL } from '../engine/economy.js'
 

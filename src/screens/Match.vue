@@ -46,6 +46,11 @@ const homeName = computed(() => matchView.aIsHome ? 'You' : matchView.opponentNa
 const awayName = computed(() => matchView.aIsHome ? matchView.opponentName : 'You')
 
 function who (side) { return side === 'HOME' ? homeName.value : awayName.value }
+/* Which team the line belongs to. The feed used to paint EVERY goal mint
+   green, so the opponent scoring against you read as something good — the
+   same complaint Albert made about the pitch, in the text column. There is no
+   "good" in a match feed, only who did it. */
+function side (e) { return e.side === 'HOME' ? 'home' : 'away' }
 
 function describe (e) {
   if (e.round) {
@@ -53,7 +58,7 @@ function describe (e) {
       when: 'R' + e.round,
       text: `${who(e.side)} — ${e.shooterName} vs ${e.keeperName}: ${e.outcome}` +
         (e.suddenDeath ? ' (sudden death)' : ''),
-      cls: e.outcome === 'GOAL' ? 'goal' : ''
+      cls: e.outcome === 'GOAL' ? 'goal ' + side(e) : ''
     }
   }
   const w = who(e.side)
@@ -61,7 +66,7 @@ function describe (e) {
     KICK_OFF: ['Kick off', 'meta'],
     HALF_TIME: ['Half time', 'meta'],
     FULL_TIME: ['Full time', 'meta'],
-    GOAL: [`GOAL — ${e.actorName} (${w})`, 'goal'],
+    GOAL: [`GOAL — ${e.actorName} (${w})`, 'goal ' + side(e)],
     SHOT_SAVE: [`${e.actorName} shoots, ${e.keeperName} saves`, ''],
     SHOT_OFF: [`${e.actorName} shoots wide`, ''],
     SHOT_POST: [`${e.actorName} hits the post`, ''],
@@ -144,7 +149,9 @@ function toResult () {
 }
 .feed { flex: 1; padding: 6px 12px 0; min-height: 0; }
 .ev { display: flex; gap: 8px; font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--divider); }
-.ev.goal { color: var(--green); font-weight: 700; }
+.ev.goal { font-weight: 700; }
+.ev.goal.home { color: var(--home-on); }
+.ev.goal.away { color: var(--away-on); }
 .ev.meta { color: var(--text-3); }
 .em { width: 34px; flex: 0 0 34px; font-variant-numeric: tabular-nums; color: var(--text-2); }
 .ctrl { display: flex; gap: 8px; padding: 10px 12px; }

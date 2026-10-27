@@ -41,7 +41,7 @@
           <span v-else class="muted">(not in squad)</span></span>
       </div>
 
-      <div v-if="done" class="done-banner">
+      <div v-if="done" class="done-banner banner-win">
         <div class="db-t">Upgraded to Lv.{{ now.level }}</div>
         <div v-if="inDeck" class="db-s">Squad Power is now {{ fmt(powerBefore) }}</div>
         <button v-else class="btn btn-cta db-b" @click="go('deckedit')">
@@ -120,7 +120,11 @@ function doUpgrade () {
 .drow.zero { opacity: .5; }
 .dv { font-variant-numeric: tabular-nums; }
 .power { display: flex; justify-content: space-between; padding: 12px; font-size: 13px; }
-.done-banner { background: var(--cta-deep); color: #fff; text-align: center; padding: 12px; border-radius: var(--r-md); }
+/* .banner-win carries the colour now (base.css): a state, not an action.
+   It used to be a deep-green slab with a mint button sitting inside it, two
+   greens touching where one is a thing that happened and the other a thing
+   to do. */
+.done-banner { text-align: center; padding: 12px; }
 .db-t { font-size: 14px; font-weight: 800; }
 .db-s { font-size: 12px; margin-top: 2px; }
 .db-b { margin-top: 10px; }

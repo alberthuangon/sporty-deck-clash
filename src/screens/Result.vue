@@ -57,7 +57,7 @@
       <div class="pt">PROMOTED — {{ p.label }}</div>
       <div class="pr">
         <span v-if="p.reward.diamonds">◆ {{ p.reward.diamonds }}</span>
-        <span v-if="p.reward.tickets">🎟 {{ p.reward.tickets }} jackpot tickets</span>
+        <span v-if="p.reward.tickets"><Icon name="ticket" /> {{ p.reward.tickets }} jackpot tickets</span>
       </div>
       <div class="ph">tap to celebrate</div>
     </button>
@@ -80,6 +80,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import Icon from '../components/Icon.vue'
 import CountUp from '../components/CountUp.vue'
 import { store, go, ctx, matchView, abandonMatch, rankLabel } from '../game.js'
 import { RANK_TIERS } from '../engine/economy.js'
@@ -102,7 +103,8 @@ function again () { abandonMatch(); go('tierselect') }
 .rs { display: flex; flex-direction: column; gap: 10px; }
 .verdict { text-align: center; font-size: 26px; font-weight: 800; letter-spacing: .06em; padding: 6px 0; }
 .verdict.win { color: var(--cta); }
-.verdict.lose { color: var(--text-2); }
+/* A loss painted in the same grey as .muted reads as "nothing happened". */
+.verdict.lose { color: var(--loss); }
 .score { text-align: center; padding: 14px; }
 .sc { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .pk { font-size: 12px; margin-top: 2px; }

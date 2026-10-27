@@ -100,7 +100,7 @@ const venueMark = computed(() =>
   font-size: 9px; font-weight: 700; margin-top: 2px;
 }
 .cf-rar {
-  background: var(--rc); color: #0E1117; border-radius: 3px;
+  background: var(--rc); color: var(--on-rarity); border-radius: 3px;
   padding: 0 4px; line-height: 13px;
 }
 /* The position stamp is the third child of a row that was already a flex row

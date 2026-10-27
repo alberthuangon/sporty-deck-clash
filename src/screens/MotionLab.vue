@@ -378,7 +378,7 @@ onUnmounted(() => { if (tl) tl.kill(); stopIdle() })
   min-height: 44px; min-width: 44px; padding: 5px 9px;
   font-size: 11px; font-weight: 700; color: var(--text-2);
 }
-.opts button.on { background: var(--cta); color: #06240F; }
+.opts button.on { background: var(--cta); color: var(--on-cta); }
 .seg input[type=range] { flex: 1; accent-color: var(--cta); }
 .beat { display: flex; align-items: center; gap: 8px; }
 .bk { font-size: 10px; color: var(--text-2); width: 66px; flex: 0 0 66px; }
@@ -403,13 +403,13 @@ onUnmounted(() => { if (tl) tl.kill(); stopIdle() })
 .uiseal { transform: scale(.58); }
 .uinum { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--cta); }
 .uinum.small { font-size: 13px; font-weight: 700; color: var(--text-2); letter-spacing: .06em; }
-.uisrc { font-size: 26px; color: #6EE7FF; }
+.uisrc { font-size: 26px; color: var(--diamond); }
 .beat.ui { gap: 7px; }
 .uiplay {
   width: 44px; height: 44px; flex: 0 0 44px; border-radius: var(--r-sm);
   background: var(--surface-hi); color: var(--text-2); font-size: 12px;
 }
-.uiplay.on { background: var(--cta); color: #06240F; }
+.uiplay.on { background: var(--cta); color: var(--on-cta); }
 .beat.ui .bk { width: 54px; flex: 0 0 54px; }
 .cap { font-size: 10px; width: 30px; flex: 0 0 30px; }
 

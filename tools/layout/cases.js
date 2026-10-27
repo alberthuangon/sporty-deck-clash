@@ -368,6 +368,25 @@ export const CASES = [
       await raf()
     }
   },
+  {
+    /* The other reward the road pays. It matters on its own because the two
+       rewards take different routes — diamonds to the wallet chip in the top
+       bar, tickets to the Rank tab, since there is no ticket chip up there —
+       and because the ticket in flight is the one token built outside Vue, so
+       nothing in a template was ever going to prove it renders. */
+    id: 'rankup/ticket-flying',
+    screen: 'home',
+    setup () {
+      reset(); richCollection()
+      store.rankUpView = { label: 'Bronze II', reward: { tickets: 3 } }
+      store.overlay = 'rankup'
+    },
+    async act ({ click, raf, at }) {
+      await click('.ru-go')
+      holdFlight(at)
+      await raf()
+    }
+  },
 
   /* ------------------------------------------------ Cards */
   { id: 'cards/sparse', screen: 'cards', setup () { reset() } },

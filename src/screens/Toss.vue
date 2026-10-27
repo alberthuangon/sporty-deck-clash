@@ -12,11 +12,11 @@
     <div class="locks" v-if="quotes">
       <div class="lock" :class="lockClass(true)">
         <span class="l-case">HOME</span>
-        <span class="odds-cell l-cell">{{ quotes.home.toFixed(2) }}</span>
+        <span class="odds-cell home l-cell">{{ quotes.home.toFixed(2) }}</span>
       </div>
       <div class="lock" :class="lockClass(false)">
         <span class="l-case">AWAY</span>
-        <span class="odds-cell l-cell">{{ quotes.away.toFixed(2) }}</span>
+        <span class="odds-cell away l-cell">{{ quotes.away.toFixed(2) }}</span>
       </div>
     </div>
 

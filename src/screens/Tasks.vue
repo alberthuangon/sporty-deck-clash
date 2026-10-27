@@ -59,12 +59,12 @@ function claim (t, ev) {
   background: var(--surface-hi); border-radius: var(--r-sm);
   padding: 6px 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;
 }
-.gem { color: #6EE7FF; font-style: normal; }
+.gem { color: var(--diamond); font-style: normal; }
 .m-prog { font-size: 11px; }
 .btn.done { background: transparent; border: 1px solid var(--divider); color: var(--text-2); }
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: 90px;
-  background: var(--cta); color: #06240F; font-weight: 700;
+  background: var(--cta); color: var(--on-cta); font-weight: 700;
   padding: 10px 16px; border-radius: 999px; font-size: 13px; z-index: 50;
 }
 </style>
