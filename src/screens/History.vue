@@ -44,6 +44,17 @@
           {{ detail.aIsHome ? 'You' : detail.opponent.handle }} vs
           {{ detail.aIsHome ? detail.opponent.handle : 'You' }}
         </div>
+        <!-- the scorers live INSIDE the score card rather than in a panel of
+             their own: it is the same card already stating the result, and a
+             separate panel plus its heading pushed the replay button onto the
+             fold on the two states that also carry a promotion -->
+        <div v-if="detailGoals.length" class="goals">
+          <div v-for="(g,i) in detailGoals" :key="i" class="goal-row" :class="g.side.toLowerCase()">
+            <span class="g-min">{{ g.minute }}'</span>
+            <span class="g-who">{{ g.actorName }}</span>
+            <span class="g-team"><i class="g-jersey"></i>{{ teamOf(g.side) }}</span>
+          </div>
+        </div>
       </div>
 
       <div class="sec-title">Your squad that match</div>
@@ -100,7 +111,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import Icon from '../components/Icon.vue'
 import CardFace from '../components/CardFace.vue'
 import { store, BY_ID, startReplay } from '../game.js'
@@ -109,6 +120,21 @@ import { buildCard } from '../engine/cards.js'
 
 const SLOTS = ['gk', 'df', 'mf', 'fw']
 const detail = ref(null)
+
+/* The same list the result screen shows, from the same place: a history row
+   already carries the whole script (startReplay feeds it back through the
+   player), so this needs no new data and no new storage. Without it, the
+   match you just finished lists its scorers and the same match seen a minute
+   later does not. The replay button is not a substitute — replay is watching
+   thirty seconds again, this is knowing who scored in three. */
+const detailGoals = computed(() =>
+  (detail.value && detail.value.script ? detail.value.script.events : [])
+    .filter(e => e.type === 'GOAL'))
+function teamOf (side) {
+  const youAreHome = detail.value.aIsHome
+  const isHome = side === 'HOME'
+  return isHome === youAreHome ? 'You' : detail.value.opponent.handle
+}
 
 function snapCard (s) { return buildCard(BY_ID[s.id], s.level) }
 
@@ -179,4 +205,5 @@ function ago (t) {
   font-size: 12px; font-weight: 700;
 }
 .replay-note { font-size: 10px; text-align: center; line-height: 1.5; }
+.goals { margin-top: 9px; padding-top: 7px; border-top: 1px solid var(--divider); text-align: left; }
 </style>

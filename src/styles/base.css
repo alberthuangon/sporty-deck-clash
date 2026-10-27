@@ -137,6 +137,23 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; }
   width: 8px; height: 8px; border-radius: 50%;
   background: var(--red); box-shadow: 0 0 0 2px var(--surface);
 }
+/* One scored goal, as a row. Shared rather than scoped because the result
+   screen and a history entry show the SAME list — and this project has
+   already been bitten once by one object drawn from two files (the pack
+   gradients in Shop and SealTear). The jersey swatch is a real element with
+   a fixed box: team is information, not decoration, so the gate should see
+   it, and an inline-flex swatch is what cost CardFace 0.6px of line height. */
+.scorers { padding: 12px; }
+.goal-row { display: flex; gap: 10px; font-size: 12px; padding: 5px 0; }
+.goal-row .g-min { font-variant-numeric: tabular-nums; color: var(--text-2); }
+.goal-row .g-who { flex: 1; font-weight: 700; }
+.goal-row .g-team { color: var(--text-2); display: inline-flex; align-items: center; gap: 5px; }
+.goal-row .g-jersey { width: 6px; height: 8px; border-radius: 1.5px; flex: none; background: var(--text-3); }
+.goal-row.home .g-team { color: var(--home-on); }
+.goal-row.home .g-jersey { background: var(--home); }
+.goal-row.away .g-team { color: var(--away-on); }
+.goal-row.away .g-jersey { background: var(--away); }
+
 .locked-note { color: var(--text-2); font-size: 12px; }
 
 /* The way out of any UI animation over a second (src/ui/motion.js installs

@@ -64,9 +64,9 @@
 
     <div class="scorers card" v-if="goals.length">
       <div class="sec-title" style="margin-bottom:8px">Goals</div>
-      <div v-for="(g,i) in goals" :key="i" class="grow" :class="g.side.toLowerCase()">
-        <span>{{ g.minute }}'</span>
-        <span>{{ g.actorName }}</span>
+      <div v-for="(g,i) in goals" :key="i" class="goal-row" :class="g.side.toLowerCase()">
+        <span class="g-min">{{ g.minute }}'</span>
+        <span class="g-who">{{ g.actorName }}</span>
         <span class="g-team"><i class="g-jersey"></i>{{ g.side === 'HOME' ? homeName : awayName }}</span>
       </div>
     </div>
@@ -136,18 +136,4 @@ function again () { abandonMatch(); go('tierselect') }
 .pt { font-weight: 800; font-size: 13px; letter-spacing: .05em; }
 .pr { display: flex; gap: 14px; justify-content: center; margin-top: 6px; font-size: 13px; font-weight: 700; }
 .ph { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; opacity: .75; margin-top: 7px; }
-.scorers { padding: 12px; }
-.grow { display: flex; gap: 10px; font-size: 12px; padding: 5px 0; }
-.grow span:nth-child(2) { flex: 1; font-weight: 700; }
-/* By now the match has been played, so which side scored is known and worth
-   saying — unlike on the confirm sheet, where it is still sealed.
-   The swatch is a real element with a fixed box, not a pseudo-element: team
-   is information rather than decoration, and an inline-flex swatch is exactly
-   what cost CardFace 0.6px of line height. */
-.g-team { color: var(--text-2); display: inline-flex; align-items: center; gap: 5px; }
-.g-jersey { width: 6px; height: 8px; border-radius: 1.5px; flex: none; background: var(--text-3); }
-.grow.home .g-team { color: var(--home-on); }
-.grow.home .g-jersey { background: var(--home); }
-.grow.away .g-team { color: var(--away-on); }
-.grow.away .g-jersey { background: var(--away); }
 </style>
