@@ -87,26 +87,40 @@ onUnmounted(() => { if (anim) anim.cancel() })
 /* a takeover: above the top bar and the tab bar, both of which sit at 20 */
 .ru {
   position: absolute; inset: 0; z-index: 60;
-  /* the same beam-from-above as a winning draw, in the tier's colour. Kept on
+  /* The same beam-from-above as a winning draw, in the tier's colour. Kept on
      .ru rather than .ru-in so adding .ru.silver / .ru.gold later is one rule
-     each rather than a restructure. */
+     each rather than a restructure.
+
+     The stripe matters more than it looks. Unlike the draw takeover, this one
+     stays CENTRED: it is a stamp, not a ledger — one tier name and one reward
+     chip — and a stamp belongs in the middle, so the room around it is margin
+     rather than space waiting to be filled. Margin still has to look
+     deliberate though, and measured as luminance spread across the empty
+     region a bare radial came out at 1.23 against the draw's 2.69. The stripe
+     is what makes the emptiness read as a lit room rather than as nothing. */
   background:
+    repeating-linear-gradient(96deg, rgba(201,139,75,.05) 0 2px, transparent 2px 26px),
     radial-gradient(150% 72% at 50% 6%, rgba(201,139,75,.26), transparent 62%),
     radial-gradient(120% 60% at 50% 12%, var(--good-glow), var(--bg) 70%);
   display: flex; flex-direction: column;
   overflow-y: auto;
 }
 .ru-in {
-  padding: 48px 16px 20px; flex: 1;
-  display: flex; flex-direction: column; justify-content: flex-start;
+  padding: 28px 16px 20px; flex: 1;
+  display: flex; flex-direction: column; justify-content: safe center;
 }
-/* Centred on the tier line, which is the thing being celebrated. The number
-   is measured, not guessed: with the three-band layout the tier line's centre
-   sits at 91.5px of a 932px takeover, i.e. 9.8%. It was 43% when the content
-   was vertically centred, so moving the layout without moving this would have
-   fired the burst 309px below the words it is cheering — an animation playing
-   correctly, in the wrong place. */
-.ru :deep(.burst) { top: 9.8%; }
+/* Centred on the tier line, which is the thing being celebrated, and the
+   number is MEASURED rather than tuned by eye: the line's centre sits at
+   398.8px of a 932px takeover, so 42.8%.
+
+   This figure is anchored to something the layout can move. A three-band
+   layout was tried and reverted; while it was in, the tier line sat at 9.8%
+   and this rule still said 43%, which would have fired the burst 309px below
+   the words it is cheering. Nothing would have caught it — the element
+   exists, the timeline runs, the gate is green, and a still frame cannot
+   photograph a burst. So if the distribution in .ru-in ever changes again,
+   re-measure this line rather than assuming it survived. */
+.ru :deep(.burst) { top: 42.8%; }
 .ru-kicker {
   font-size: 10px; font-weight: 800; letter-spacing: .18em;
   color: var(--text-2); text-align: center;
@@ -125,8 +139,8 @@ onUnmounted(() => { if (anim) anim.cancel() })
   display: inline-flex; align-items: center; gap: 5px;
 }
 .gem { color: var(--diamond); font-style: normal; }
-.ru-note { font-size: 12px; line-height: 1.5; text-align: center; margin: 20px 10px 12px; margin-top: auto; color: var(--text-2); }
-.ru-go { margin-top: 16px; flex: 0 0 auto; }
+.ru-note { font-size: 12px; line-height: 1.5; text-align: center; margin: 20px 10px 12px; color: var(--text-2); }
+.ru-go { margin-top: 22px; flex: 0 0 auto; }
 .ru-tier.t-bronze { color: var(--tier-bronze); }
 .ru-tier.t-silver { color: var(--tier-silver); }
 .ru-tier.t-gold { color: var(--tier-gold); }

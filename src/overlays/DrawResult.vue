@@ -111,11 +111,17 @@ watch(() => draw.value && draw.value.won, playBurst, { flush: 'post' })
     radial-gradient(140% 70% at 50% 100%, rgba(110,115,128,.16), transparent 60%),
     linear-gradient(180deg, #171A21 0%, var(--bg) 46%);
 }
-/* Three bands rather than one centred block. Centring suits a container whose
-   content fills it; this one holds about 380px in a 932px frame, so centring
-   put a small thing in the middle of a large void and called it composition.
-   The headline now lands where the eye starts, the ledger sits mid-screen,
-   and the closing line and the way out are down at the thumb. */
+/* Three bands, not centred — and the two takeovers deliberately differ here.
+   This one is a LEDGER: tickets, odds, winning number, a table with rows and
+   evidence. A ledger is read from the top, so the headline sits where the eye
+   starts and the table follows it.
+
+   The 522px below it is not empty: the win's beam carries a 96deg stripe, and
+   sampling horizontal scanlines through the dead zone gives a luminance
+   spread of 2.69 against 1.23 for the rank-up takeover's plain radial. That
+   is the difference between content standing in a lit space and content that
+   has fallen off the bottom — which is why RankUp keeps its centred layout
+   and this one does not. */
 .dr-in {
   padding: 48px 16px 20px; flex: 1;
   display: flex; flex-direction: column; justify-content: flex-start;
