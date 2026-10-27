@@ -23,10 +23,12 @@
 </script>
 
 <style>
-  /* Chrome's --window-size is inert in this headless build (innerWidth reports
-     500x845 whatever you pass), so the phone frame is pinned from the page.
-     Without this the gate measures a viewport that depends on leftover window
-     state in the profile dir — a flaky gate is worse than no gate. */
+  /* --window-size cannot give us a 430px layout viewport: --dump-dom opens a
+     real window, so macOS clamps the width to its 500px minimum and spends
+     87px of the height on window chrome — ask for 430x932, lay out at
+     500x845. (--screenshot is a different path and honours the size exactly,
+     which is why captures of this app come out right.) So the frame is
+     pinned here; a gate whose viewport depends on the host is not a gate. */
   /* !important because base.css sets html/body height and .phone height at the
      same specificity and is injected after this block */
   html, body { width: 430px !important; height: 932px !important; overflow: hidden !important; }

@@ -79,9 +79,15 @@ Four things about headless Chrome that each produced a confident lie first:
   screen is not mounted until the last one's leave tween finishes — so no
   screen after the first ever appeared. rAF is pointed at `setTimeout` from a
   classic inline script (classic because gsap grabs rAF at import time).
-* `--window-size` is **ignored**; `innerWidth` reports 500×845 whatever you
-  pass, and it moves when other flags change. The 430×932 frame is pinned
-  from the page.
+* `--window-size` cannot give you a phone-width **layout viewport**. With
+  `--dump-dom` Chrome opens a real window, so macOS clamps the width to its
+  500px minimum and spends 87px of the height on window chrome: ask for
+  430×932 and the page lays out at 500×845. Above the floor it is honoured
+  exactly — 520 → 520, 700 → 700 — and the height always comes back 87px
+  short. `--screenshot` is a different path: it renders offscreen at exactly
+  the size asked for (430×932, 320×700), in both old and new headless. So
+  screenshots are fine and only the live viewport is stuck, which is why the
+  430×932 frame is pinned from the page instead.
 * `mode="out-in"` leaves the **outgoing** screen as the only `.screen` in the
   DOM, settled and opaque. Waiting for "a screen that looks ready" measured
   the previous one, and reported 20 identical copies of Home as a pass.
