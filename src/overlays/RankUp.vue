@@ -87,17 +87,26 @@ onUnmounted(() => { if (anim) anim.cancel() })
 /* a takeover: above the top bar and the tab bar, both of which sit at 20 */
 .ru {
   position: absolute; inset: 0; z-index: 60;
-  background: radial-gradient(120% 60% at 50% 16%, var(--good-glow), var(--bg) 70%);
+  /* the same beam-from-above as a winning draw, in the tier's colour. Kept on
+     .ru rather than .ru-in so adding .ru.silver / .ru.gold later is one rule
+     each rather than a restructure. */
+  background:
+    radial-gradient(150% 72% at 50% 6%, rgba(201,139,75,.26), transparent 62%),
+    radial-gradient(120% 60% at 50% 12%, var(--good-glow), var(--bg) 70%);
   display: flex; flex-direction: column;
   overflow-y: auto;
 }
 .ru-in {
-  padding: 28px 16px 20px; flex: 1;
-  display: flex; flex-direction: column; justify-content: safe center;
+  padding: 48px 16px 20px; flex: 1;
+  display: flex; flex-direction: column; justify-content: flex-start;
 }
-/* centred on the tier line, which is what is being celebrated — the default
-   origin is tuned for the draw takeover's taller headline block */
-.ru :deep(.burst) { top: 43%; }
+/* Centred on the tier line, which is the thing being celebrated. The number
+   is measured, not guessed: with the three-band layout the tier line's centre
+   sits at 91.5px of a 932px takeover, i.e. 9.8%. It was 43% when the content
+   was vertically centred, so moving the layout without moving this would have
+   fired the burst 309px below the words it is cheering — an animation playing
+   correctly, in the wrong place. */
+.ru :deep(.burst) { top: 9.8%; }
 .ru-kicker {
   font-size: 10px; font-weight: 800; letter-spacing: .18em;
   color: var(--text-2); text-align: center;
@@ -116,8 +125,8 @@ onUnmounted(() => { if (anim) anim.cancel() })
   display: inline-flex; align-items: center; gap: 5px;
 }
 .gem { color: var(--diamond); font-style: normal; }
-.ru-note { font-size: 12px; line-height: 1.5; text-align: center; margin: 20px 10px 12px; color: var(--text-2); }
-.ru-go { margin-top: 22px; flex: 0 0 auto; }
+.ru-note { font-size: 12px; line-height: 1.5; text-align: center; margin: 20px 10px 12px; margin-top: auto; color: var(--text-2); }
+.ru-go { margin-top: 16px; flex: 0 0 auto; }
 .ru-tier.t-bronze { color: var(--tier-bronze); }
 .ru-tier.t-silver { color: var(--tier-silver); }
 .ru-tier.t-gold { color: var(--tier-gold); }

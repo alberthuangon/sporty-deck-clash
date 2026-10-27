@@ -1,5 +1,5 @@
 <template>
-  <div class="dr" :class="draw.won ? 'won' : 'lost'">
+  <div class="dr" :class="[draw.won ? 'won' : 'lost', { none: !draw.myTickets }]">
     <div class="dr-in">
       <div class="dr-kicker">SEASON {{ draw.season }} · DRAW RESULT</div>
 
@@ -19,7 +19,7 @@
           <span class="muted">Your tickets</span>
           <span class="dr-v">{{ draw.myTickets }} of {{ draw.totalTickets.toLocaleString() }}</span>
         </div>
-        <div class="dr-row">
+        <div class="dr-row odds">
           <span class="muted">Your odds were</span>
           <span class="dr-v">{{ odds === null ? '—' : `1 in ${odds.toLocaleString()}` }}</span>
         </div>
@@ -96,16 +96,30 @@ watch(() => draw.value && draw.value.won, playBurst, { flush: 'post' })
   display: flex; flex-direction: column;
   overflow-y: auto;
 }
-.dr.won { background: radial-gradient(120% 60% at 50% 12%, var(--good-glow), var(--bg) 70%); }
-.dr-in {
-  padding: 28px 16px 20px; flex: 1;
-  display: flex; flex-direction: column; justify-content: safe center;
+/* Winning is a beam from above — a light source with a direction. Losing is a
+   haze settling from below. The point is that they are two KINDS of treatment
+   rather than one treatment and its absence: the losing draw used to have no
+   atmosphere at all, which reads as unfinished rather than as a result. */
+.dr.won {
+  background:
+    repeating-linear-gradient(96deg, rgba(51,234,106,.055) 0 2px, transparent 2px 26px),
+    radial-gradient(150% 72% at 50% 6%, rgba(51,234,106,.30), transparent 62%),
+    radial-gradient(120% 60% at 50% 12%, var(--good-glow), var(--bg) 70%);
 }
-/* One block, centred, the way the full-time card this is modelled on sits.
-   Top-anchoring left ~440px of nothing in the middle of the screen, and
-   centring only the ledger split that into two smaller voids. `safe` on the
-   container so content taller than the frame starts at the top and keeps its
-   head rather than being centred out of view. */
+.dr.lost {
+  background:
+    radial-gradient(140% 70% at 50% 100%, rgba(110,115,128,.16), transparent 60%),
+    linear-gradient(180deg, #171A21 0%, var(--bg) 46%);
+}
+/* Three bands rather than one centred block. Centring suits a container whose
+   content fills it; this one holds about 380px in a 932px frame, so centring
+   put a small thing in the middle of a large void and called it composition.
+   The headline now lands where the eye starts, the ledger sits mid-screen,
+   and the closing line and the way out are down at the thumb. */
+.dr-in {
+  padding: 48px 16px 20px; flex: 1;
+  display: flex; flex-direction: column; justify-content: flex-start;
+}
 .dr-kicker {
   font-size: 10px; font-weight: 800; letter-spacing: .18em;
   color: var(--text-2); text-align: center;
@@ -128,6 +142,15 @@ watch(() => draw.value && draw.value.won, playBurst, { flush: 'post' })
 }
 .dr-row.last { border-bottom: 0; }
 .dr-v { font-weight: 700; font-variant-numeric: tabular-nums; }
-.dr-next { font-size: 12px; line-height: 1.5; text-align: center; margin: 18px 4px 12px; color: var(--text-2); }
-.dr-go { margin-top: 22px; flex: 0 0 auto; }
+.dr-next {
+  font-size: 12px; line-height: 1.5; text-align: center;
+  margin: 18px 4px 12px; margin-top: auto; color: var(--text-2);
+}
+/* With no ticket in the draw the odds row says "—", so it has nothing to
+   report; the line that does have something to say is where to get tickets.
+   No wording changes — the words are not mine to choose — only which of them
+   carries the emphasis. */
+.dr.none .dr-row.odds { opacity: .45; }
+.dr.none .dr-next { color: var(--text); font-weight: 700; }
+.dr-go { margin-top: 16px; flex: 0 0 auto; }
 </style>
