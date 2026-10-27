@@ -12,15 +12,80 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build    # -> dist/ (base './', zero external CDN, works offline)
 npm run sim      # 10,000-match engine sanity check (RTP / draw rate / odds cap)
-npm run layout   # drives a real match in headless Chrome; asserts nothing shifts
+npm run layout   # every screen, every state, in headless Chrome
 ```
 
 `npm run sim` runs in node against a fake stage, so it can see a thrown
 animation callback but not a scoreboard row that appears at kick-off and
-shoves the feed down 11px. `npm run layout` covers that second kind: it
-mounts the real match screen, steps a compiled match frame by frame, and
-fails if the stage's height or the feed's position ever changes. It needs
-Chrome (override the path with `CHROME=...`).
+shoves the feed down 11px.
+
+`npm run layout` covers that second kind. It needs Chrome (override the path
+with `CHROME=...`), takes a couple of seconds, and makes two passes over one
+build:
+
+* the **match screen**, stepped frame by frame through a whole compiled match
+* **every screen**, walked through 56 states — history empty and full, results
+  won and lost with penalties and without, a pack mid-reveal and on its last
+  card, upgrade short of shards and done, the match paused on the goal cut-in,
+  the save cut-in, the shootout and the full-time card
+
+Every state is reached the way a player reaches it: real game functions
+(seeded, so it is reproducible) and real clicks on real buttons. The screens
+keep their stage in local component state, and reaching in to set those refs
+would test a reachability nobody has.
+
+Twelve assertions:
+
+| | |
+| --- | --- |
+| stage height / feed position during a match | the scoreboard's pens row grew 11px at kick-off and pushed the feed down |
+| stage clips its overlays | four overlays' entrances painted over the feed |
+| on-screen things parked by compiling | gsap renders a `fromTo`'s start state immediately, so a beat that never plays still paints its "before" look. The scoreboard sat at 1.9× and bright green for whole matches |
+| every state renders, and logs nothing | found a reactive write in a render pass that froze the tab, and two dead cut-in tweens |
+| content cropped by its container | the cut-in's subtitle never fit on screen |
+| elements past the 430px frame | |
+| text cut off with nothing to show for it | an ellipsis is reported as a note, not a failure — it is truncation that says so |
+| things painting over the TopBar / TabBar | |
+| elements that move between states of one screen | the main one; see below |
+| invariance groups comparing nothing | a check that compares nothing passes for free |
+
+The last two are the point. States are put in a **group** when a player
+sitting still on one screen can watch it turn into the other — mid-reveal in a
+pack, a log streaming in, a coin landing, a mission being claimed. Inside a
+group every shared element must sit at the same height, because those are the
+transitions where something that grows shoves a button out from under a thumb.
+Two outcomes rendered on two separate visits are allowed to differ, and are
+only smoke- and geometry-checked. `scope` narrows a group to the region that
+is promised to hold still.
+
+Adding an assertion means first proving it goes red: break the thing
+deliberately, watch it fail, put it back. Every one of the twelve has been
+through that, and two of them were *wrong* until it was done — one compared
+nothing at all, another cropped a fixed-position box against a container that
+does not crop it.
+
+Four things about headless Chrome that each produced a confident lie first:
+
+* `requestAnimationFrame` fires **once** under `--virtual-time-budget` and
+  never again. gsap's ticker runs on it, App.vue's screen transition is
+  `:css="false"` + `onComplete -> done`, and `mode="out-in"` means the next
+  screen is not mounted until the last one's leave tween finishes — so no
+  screen after the first ever appeared. rAF is pointed at `setTimeout` from a
+  classic inline script (classic because gsap grabs rAF at import time).
+* `--window-size` is **ignored**; `innerWidth` reports 500×845 whatever you
+  pass, and it moves when other flags change. The 430×932 frame is pinned
+  from the page.
+* `mode="out-in"` leaves the **outgoing** screen as the only `.screen` in the
+  DOM, settled and opaque. Waiting for "a screen that looks ready" measured
+  the previous one, and reported 20 identical copies of Home as a pass.
+* a state that spins the main thread freezes virtual time too, so Chrome
+  never exits and never dumps — no output, no timeout. Progress also goes to
+  `console.log`, because Chrome's stderr survives being killed, and the runner
+  turns "froze" into a named failure.
+
+`window.__skd` on the real build (`store`, `go`, `game`) and `window.__match`
+on the match screen are the same hatch by hand: `currentScreen` is
+deliberately not persisted, so navigation cannot come from a saved state.
 
 Designed for a 430px portrait phone frame; on desktop the frame is centred.
 
