@@ -36,14 +36,15 @@
         <div>
           <div class="rt">Season draw</div>
           <div class="rs muted">
-            Runs the Jackpot draw and shows its takeover on the next screen.
+            Decides what the next unopened draw turns out to be. Choosing one
+            re-seals it, so Play shows "Open last season's draw" again.
             Winning credits the pool to your balance and starts season N+1,
             which clears the reward road and your tickets.
           </div>
         </div>
         <div class="opts">
           <button v-for="o in DRAW_MODES" :key="o.id"
-                  :class="{ on: store.settings.jackpotDemo === o.id }"
+                  :class="{ on: (store.settings.jackpotDemo === o.id) || (o.id === 'random' && !['won','lost'].includes(store.settings.jackpotDemo)) }"
                   @click="pickDraw(o.id)">{{ o.label }}</button>
         </div>
       </div>
@@ -72,17 +73,17 @@
 
 <script setup>
 import { store, resetStore, go } from '../store.js'
-import { runSeasonDraw, enterTheDraw } from '../game.js'
+import { sealNextDraw } from '../game.js'
 
 const build = import.meta.env.MODE
-const DRAW_MODES = [{ id: 'none', label: 'Off' }, { id: 'lost', label: 'No win' }, { id: 'won', label: 'Grand prize' }]
+const DRAW_MODES = [{ id: 'random', label: 'Random' }, { id: 'lost', label: 'No win' }, { id: 'won', label: 'Grand prize' }]
 
+/* Sets the outcome and puts the draw back in its envelope. It does NOT run
+   the draw: opening it is the player's move, and the anticipation is the
+   point of sealing it in the first place. */
 function pickDraw (id) {
   store.settings.jackpotDemo = id
-  if (id === 'none') return
-  enterTheDraw()
-  runSeasonDraw(id === 'won')
-  go('home')                 // the takeover lands on the next screen
+  sealNextDraw()
 }
 
 function doReset () { resetStore(); go('home') }

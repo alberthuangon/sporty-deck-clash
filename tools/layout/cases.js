@@ -181,8 +181,17 @@ export const CASES = [
   },
 
   {
-    /* the draw's only lasting trace, on the screen that is opened every time */
+    /* sealed: a draw is waiting and the card is an invitation to open it */
+    id: 'home/draw-sealed',
+    screen: 'home',
+    group: 'jackpot-card',
+    setup () { reset(); richCollection(); store.tickets = 2 }
+  },
+  {
+    /* opened: the same card, now a record of what happened. Nothing on it may
+       move between the two — the line changes, the card does not. */
     id: 'home/after-draw',
+    group: 'jackpot-card',
     screen: 'home',
     setup () {
       reset(); richCollection(); store.tickets = 2
@@ -205,7 +214,7 @@ export const CASES = [
     group: 'draw-mirror',
     scope: '.dr',
     wait: 1800,
-    setup () { reset(); richCollection(); store.tickets = 2; game.runSeasonDraw(false) }
+    setup () { reset(); richCollection(); store.tickets = 2; game.runSeasonDraw(false); store.overlay = 'draw' }
   },
   {
     id: 'draw/won',
@@ -213,7 +222,7 @@ export const CASES = [
     group: 'draw-mirror',
     scope: '.dr',
     wait: 1800,
-    setup () { reset(); richCollection(); store.tickets = 2; game.runSeasonDraw(true) }
+    setup () { reset(); richCollection(); store.tickets = 2; game.runSeasonDraw(true); store.overlay = 'draw' }
   },
   {
     /* nobody holds a ticket in their first season: the odds row has to say
@@ -221,7 +230,7 @@ export const CASES = [
     id: 'draw/no-tickets',
     screen: 'home',
     wait: 1800,
-    setup () { reset(); richCollection(); store.tickets = 0; game.runSeasonDraw(false) }
+    setup () { reset(); richCollection(); store.tickets = 0; game.runSeasonDraw(false); store.overlay = 'draw' }
   },
 
   /* ------------------------------------------------ Cards */

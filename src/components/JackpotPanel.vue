@@ -20,7 +20,7 @@
       <div class="muted jp-minor">+ diamond prizes for more winners</div>
 
       <div class="jp-cta">
-        <button class="jp-link" @click="$emit('last-season')">
+        <button class="jp-link" :class="{ sealed }" @click="$emit('last-season')">
           {{ lastLabel }}
         </button>
       </div>
@@ -35,16 +35,18 @@
    odds out of the app, which §6.7 asks to be available at any time. */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import CountUp from './CountUp.vue'
-import { store, grandPrizeOdds, timeToDraw } from '../game.js'
+import { store, grandPrizeOdds, timeToDraw, drawIsSealed } from '../game.js'
 
 defineEmits(['last-season'])
 
 const total = computed(() => store.jackpot.totalTickets.toLocaleString())
 const odds = computed(() => grandPrizeOdds())
+/* Sealed reads as something to do; opened reads as something that happened. */
+const sealed = computed(() => drawIsSealed())
 const lastLabel = computed(() =>
-  store.jackpot.lastDraw
-    ? (store.jackpot.lastDraw.won ? 'Last season: you won ›' : 'Last season: no win ›')
-    : 'View last season ›')
+  sealed.value
+    ? 'Open last season\u2019s draw ›'
+    : (store.jackpot.lastDraw.won ? 'Last season: you won ›' : 'Last season: no win ›'))
 
 /* The pool is fed by every table's rake, so it climbs while you look at it.
    Local to the view: writing each tick into the store would rewrite the whole
@@ -78,5 +80,6 @@ onUnmounted(() => { clearInterval(pulse); clearInterval(clock) })
 .of { font-weight: 400; font-size: 12px; }
 .jp-minor { font-size: 10px; margin-top: 2px; }
 .jp-cta { display: flex; align-items: center; margin: 0 -12px -12px; }
-.jp-link { padding: 15px 12px; color: var(--green); font-size: 12px; font-weight: 700; }
+.jp-link { padding: 15px 12px; color: var(--text-2); font-size: 12px; font-weight: 700; }
+.jp-link.sealed { color: var(--cta); }
 </style>

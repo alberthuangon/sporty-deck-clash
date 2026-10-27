@@ -246,12 +246,29 @@ export function timeToDraw (now = Date.now()) {
 /* Demo figure: a pool large enough to read as a jackpot, varied per season. */
 const DEMO_POOL = 2850182
 
-/* The one-tap way into the draw. The season draw happens at season end, which
-   nobody reaches in a pitch, so this stands in for it — the real product
-   would reopen the draw that actually happened rather than running one. */
-export function showLastSeasonDraw () {
-  enterTheDraw()
-  runSeasonDraw(Math.random() < 0.5)
+/* The draw sits sealed until the player opens it. Opening an unopened season
+   runs it; opening one already seen just shows it again — the result is a
+   fact, and looking at it twice must not roll it twice. */
+export function openLastSeasonDraw () {
+  const sealed = !store.jackpot.lastDraw
+  if (sealed) {
+    enterTheDraw()
+    const pick = store.settings.jackpotDemo
+    runSeasonDraw(pick === 'won' ? true : pick === 'lost' ? false : Math.random() < 0.5)
+  }
+  store.overlay = 'draw'
+}
+
+export function drawIsSealed () {
+  const d = store.jackpot.lastDraw
+  return !d || store.flags.seenDraw !== d.season
+}
+
+/* Demo: put the draw back in its envelope so the next open runs a fresh one
+   with whatever outcome has just been chosen. */
+export function sealNextDraw () {
+  store.jackpot.lastDraw = null
+  store.overlay = null
 }
 
 /* A player who never climbed the road holds no tickets, and a draw they were

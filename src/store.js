@@ -77,7 +77,7 @@ function initialState () {
       forcePkScenario: true,   // demo: condition the draw on a regular-time tie so PK always shows
       forceWin: false,         // presenter only: rig the player to win (see Settings)
       fastMatch: false,
-      jackpotDemo: 'none'      // 'none' | 'won' | 'lost' — the draw is at season end, so the demo needs a way in
+      jackpotDemo: 'random'    // 'random' | 'won' | 'lost' — what the next unopened draw turns out to be
     },
 
     /* seenDraw holds the season whose draw has already taken over the screen.

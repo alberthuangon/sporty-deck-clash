@@ -56,7 +56,7 @@ import { computed } from 'vue'
 import CardFace from '../components/CardFace.vue'
 import PowerStars from '../components/PowerStars.vue'
 import JackpotPanel from '../components/JackpotPanel.vue'
-import { store, go, cardOf, deckPower, venueLean, collectionPower, TIERS, showLastSeasonDraw } from '../game.js'
+import { store, go, cardOf, deckPower, venueLean, collectionPower, TIERS, openLastSeasonDraw } from '../game.js'
 
 const SLOTS = [
   { key: 'gk', short: 'GK' }, { key: 'df', short: 'DF' },
@@ -73,9 +73,9 @@ const leanLabel = computed(() => {
 const colPower = computed(() => collectionPower())
 
 /* Demo: the season draw happens at season end, which nobody reaches in a
-   pitch. This is the one-tap way in — the real product would reopen the draw
-   that actually happened. */
-function showLastSeason () { showLastSeasonDraw() }
+   pitch. This is the way in — sealed until opened, then a record of what
+   happened. */
+function showLastSeason () { openLastSeasonDraw() }
 function unlocked (t) { return colPower.value >= t.unlockPower }
 </script>
 
