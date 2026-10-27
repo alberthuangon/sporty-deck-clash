@@ -243,11 +243,34 @@ export function timeToDraw (now = Date.now()) {
    result screen are the season that just ENDED, so they are captured before
    anything resets. Demo only: a real draw happens server-side from a seed
    published in advance. */
+/* Demo figure: a pool large enough to read as a jackpot, varied per season. */
+const DEMO_POOL = 2850182
+
+/* The one-tap way into the draw. The season draw happens at season end, which
+   nobody reaches in a pitch, so this stands in for it — the real product
+   would reopen the draw that actually happened rather than running one. */
+export function showLastSeasonDraw () {
+  enterTheDraw()
+  runSeasonDraw(Math.random() < 0.5)
+}
+
+/* A player who never climbed the road holds no tickets, and a draw they were
+   not in has nothing to show: 0 of 48,310, odds "—", and — before this — a
+   headline announcing they had won it. The demo entry points stand in for a
+   season that was played, so they stand in for its tickets too: the road's
+   full ticket value, which is exactly what the previous draw screen promised
+   was "waiting on the reward road". */
+export function enterTheDraw () {
+  if (!store.tickets) store.tickets = ticketsWaiting()
+}
+
 export function runSeasonDraw (won) {
   const j = store.jackpot
   const seed = seasonSeed(j.season)
   const rng = mulberry(hashCode(seed))
   const myTickets = store.tickets
+  /* you cannot win a draw you are not in */
+  if (!myTickets) won = false
 
   /* The player's tickets are a block somewhere in the global range, placed by
      the same seed, so BOTH outcomes draw their winning number from one space.
@@ -275,7 +298,11 @@ export function runSeasonDraw (won) {
 
   // season N+1 starts now: soft reset, fresh pool, fresh road
   j.season += 1
-  j.pool = Math.round(j.pool * 0.12)
+  /* A new season's pool is fed by that season's rake, not by a slice of the
+     last one. Carrying a fraction over compounded across demo draws — three
+     presses took the headline from ₦2,850,182 to ₦41,043, which makes the
+     jackpot look like loose change. Seeded, so a season's figures repeat. */
+  j.pool = DEMO_POOL + Math.floor(rng() * 400000) - 200000
   j.drawAt = Date.now() + 6 * 86400000
   store.tickets = 0
   store.rank = { ...store.rank, peakNodes: [] }

@@ -72,7 +72,7 @@
 
 <script setup>
 import { store, resetStore, go } from '../store.js'
-import { runSeasonDraw } from '../game.js'
+import { runSeasonDraw, enterTheDraw } from '../game.js'
 
 const build = import.meta.env.MODE
 const DRAW_MODES = [{ id: 'none', label: 'Off' }, { id: 'lost', label: 'No win' }, { id: 'won', label: 'Grand prize' }]
@@ -80,6 +80,7 @@ const DRAW_MODES = [{ id: 'none', label: 'Off' }, { id: 'lost', label: 'No win' 
 function pickDraw (id) {
   store.settings.jackpotDemo = id
   if (id === 'none') return
+  enterTheDraw()
   runSeasonDraw(id === 'won')
   go('home')                 // the takeover lands on the next screen
 }

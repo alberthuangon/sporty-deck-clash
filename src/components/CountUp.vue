@@ -21,23 +21,26 @@ const props = defineProps({
   animate: { type: Boolean, default: true }
 })
 
-const n = ref(props.animate ? props.from : props.value)
-const shown = ref(format(n.value))
+/* where the number is RIGHT NOW, so a value that changes mid-flight carries
+   on from here instead of snapping back to `from` and starting again — which
+   is what a ticking figure does every time it ticks */
+let current = props.animate ? props.from : props.value
+const shown = ref(format(current))
 let tween = null
 
 function format (v) { return Math.round(v).toLocaleString() }
 
 function run () {
   if (tween) tween.kill()
-  if (!props.animate) { shown.value = format(props.value); return }
-  const box = { v: props.from }
+  if (!props.animate) { current = props.value; shown.value = format(current); return }
+  const box = { v: current }
   tween = gsap.to(box, {
     v: props.value,
     duration: props.duration,
     delay: props.delay,
     ease: 'power2.out',
-    onUpdate: () => { shown.value = format(box.v) },
-    onComplete: () => { shown.value = format(props.value) }
+    onUpdate: () => { current = box.v; shown.value = format(current) },
+    onComplete: () => { current = props.value; shown.value = format(current) }
   })
 }
 
