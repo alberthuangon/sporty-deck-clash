@@ -108,7 +108,7 @@ onUnmounted(() => clearInterval(timer))
 .lock { font-size: 10px; text-align: right; }
 .recent { padding: 12px; }
 .rc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.rc-all { font-size: 11px; color: var(--green); font-weight: 700; }
+.rc-all { font-size: 11px; color: var(--green); font-weight: 700; padding: 15px 12px; margin: -15px -12px; }
 .rc-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 12px; cursor: pointer; }
 .rc-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 7px; }
 .rc-dot.w { background: var(--cta); } .rc-dot.l { background: var(--text-3); }

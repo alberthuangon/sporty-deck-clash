@@ -100,15 +100,20 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import CardFace from '../components/CardFace.vue'
 import { store, BY_ID, startReplay } from '../game.js'
+import { screenBack } from '../store.js'
 import { buildCard } from '../engine/cards.js'
 
 const SLOTS = ['gk', 'df', 'mf', 'fw']
 const detail = ref(null)
 
 function snapCard (s) { return buildCard(BY_ID[s.id], s.level) }
+
+/* the top bar's back arrow leaves the detail view before it leaves the tab */
+watch(detail, v => { screenBack.value = v ? () => { detail.value = null } : null }, { immediate: true })
+onUnmounted(() => { screenBack.value = null })
 
 function ago (t) {
   const m = Math.max(0, Math.round((Date.now() - t) / 60000))
@@ -143,7 +148,7 @@ function ago (t) {
 .r-net.down, .r-rank.down { color: var(--red); }
 .r-rank { font-size: 10px; margin-top: 2px; }
 
-.back { align-self: flex-start; font-size: 12px; }
+.back { align-self: flex-start; font-size: 12px; padding: 15px 12px; margin: -15px -12px; }
 .verdict { text-align: center; font-size: 22px; font-weight: 800; letter-spacing: .06em; }
 .verdict.win { color: var(--cta); } .verdict.lose { color: var(--text-2); }
 .score { text-align: center; padding: 12px; }

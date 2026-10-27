@@ -5,7 +5,7 @@
         :title="screenTitle"
         :cash="store.cash"
         :diamonds="store.diamonds"
-        :can-back="!!backTarget"
+        :can-back="backTarget"
         @back="back"
         @title="titleTap"
       />
@@ -22,7 +22,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import gsap from 'gsap'
-import { store, go, isTab } from './store.js'
+import { store, go, isTab, screenBack } from './store.js'
 import { canUpgrade, CATALOGUE } from './game.js'
 import TopBar from './components/TopBar.vue'
 import TabBar from './components/TabBar.vue'
@@ -70,7 +70,8 @@ const SCREENS = {
 const screenComponent = computed(() => (SCREENS[store.currentScreen] || SCREENS.home).c)
 const screenTitle = computed(() => (SCREENS[store.currentScreen] || SCREENS.home).title)
 const isTabScreen = computed(() => isTab(store.currentScreen))
-const backTarget = computed(() => (SCREENS[store.currentScreen] || {}).back)
+const screenTarget = computed(() => (SCREENS[store.currentScreen] || {}).back)
+const backTarget = computed(() => !!screenBack.value || !!screenTarget.value)
 
 const tabs = computed(() => [
   { id: 'cards', label: 'Cards', icon: '&#127183;', dot: CATALOGUE.some(c => canUpgrade(c.id)) },
@@ -82,7 +83,10 @@ const tabs = computed(() => [
 ])
 
 function navTab (id) { go(id) }
-function back () { if (backTarget.value) go(backTarget.value) }
+function back () {
+  if (screenBack.value) { screenBack.value(); return }   // leave a detail view first
+  if (screenTarget.value) go(screenTarget.value)
+}
 
 /* GSAP-driven screen transition (also proves the GSAP wiring) */
 function onEnter (el, done) {

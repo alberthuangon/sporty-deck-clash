@@ -1,4 +1,4 @@
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { SHARD_COST } from './engine/economy.js'
 
 const KEY = 'skd.v1'
@@ -114,7 +114,15 @@ export function resetStore () {
 /* ---------- navigation ---------- */
 export const TABS = ['cards', 'shop', 'home', 'tasks', 'history', 'rank']
 
+/* Cards and History open a detail view WITHIN a tab screen, so there is a
+   place to go back to that is not another screen. The screen registers how to
+   leave it and the top bar's back arrow means the same thing everywhere;
+   otherwise the only way out is a text link in the corner. Cleared on every
+   navigation, so it can never point at a screen that is gone. */
+export const screenBack = ref(null)
+
 export function go (screen) {
+  screenBack.value = null
   store.currentScreen = screen
 }
 
