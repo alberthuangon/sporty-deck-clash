@@ -163,7 +163,14 @@ window.__screens = async () => {
          sealed pack you can already read is not sealed — so "the card has
          not appeared" is the thing worth asserting about it. */
       rec.tooEarly = c.expectAbsent ? !!document.querySelector(c.expectAbsent) : false
-      rec.shapePoints = [...document.querySelectorAll('.screen .radar .shape')].map(el => el.getAttribute('points'))
+      /* The MORPHING radar, named rather than taken by document order. This
+         used to be every .shape on the screen, with run.mjs comparing the
+         first — and the first is whichever radar happens to be earliest in
+         the markup, so adding one anywhere above the chart silently moved the
+         measurement onto a different picture. A target that drifts is a
+         target that can describe something other than the thing under test. */
+      rec.shapePoints = [...document.querySelectorAll('.screen .radwrap .radar .shape')]
+        .map(el => el.getAttribute('points'))
       rec.flyTokens = [...document.querySelectorAll('.fly')].map(el => ({
         pointer: getComputedStyle(el).pointerEvents
       }))

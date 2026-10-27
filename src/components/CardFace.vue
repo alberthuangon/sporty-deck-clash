@@ -59,7 +59,7 @@ const venueMark = computed(() =>
 .cf {
   position: relative;
   background: var(--cf-body);
-  border: 1px solid var(--rc, var(--divider));
+  border: 1px solid var(--cf-edge, var(--rc, var(--divider)));
   border-radius: var(--r-md);
   box-shadow: var(--cf-shadow);
   padding: 6px 6px 8px;
@@ -110,12 +110,16 @@ const venueMark = computed(() =>
    gets shape and letters; rarity keeps the colour. */
 .cf-pos {
   font-size: 8px; font-weight: 800; letter-spacing: .08em;
-  color: var(--text-2);
+  color: #D4D8E0;
   border: 1px solid var(--divider);
   border-radius: var(--r-sm);
   padding: 0 4px; line-height: 11px;
 }
-.cf-lv { color: var(--text-2); }
+/* The top row sits on the gradient's BRIGHT corner, where --text-2 measures
+   3.73 / 3.97 / 3.80 / 2.80 against the four bodies — all under AA, worst on
+   Legendary. The role line below is on the dark end and measures 5.0+, so it
+   keeps --text-2. */
+.cf-lv { color: #D4D8E0; }
 /* flex: 1 so a card stretched by its grid cell grows around the art rather
    than leaving a gap under the role line */
 .cf-art { display: flex; flex: 1; align-items: center; justify-content: center; margin: 2px 0; }

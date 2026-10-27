@@ -53,19 +53,31 @@
    Four steps, and three channels climb together so the ladder does not depend
    on hue alone — a colour-blind viewer, or a projector that mangles hue, still
    reads it:
-     hue              grey -> blue -> purple -> gold
-     top-left bright   C darkest -> L brightest
-     glow radius       0 -> 10 -> 16 -> 22px
-   E and L add a fourth channel that costs no layout at all: texture. */
+     saturation    grey -> blue -> purple -> gold
+     glow radius   0 -> 10 -> 16 -> 22px
+     texture       none -> none -> hatch -> hatch + foil
+   Brightness is deliberately NOT on that list. An earlier draft of this
+   comment claimed it was; measured over --bg the top-left corners come out
+   0.0510 / 0.0513 / 0.0555 / 0.0933, so C and R are the same brightness and
+   only L steps up. Nothing here rests on it, which is why C's body can be
+   lifted for legibility without flattening the ladder.
+
+   --rc feeds the rarity stamp, the top rail and the lg monogram, so it has to
+   stay light enough to carry near-black ink (#0E1117): C at #5A606D measured
+   3.00:1 against that ink, the worst of the four and under AA. The BORDER
+   wants the opposite — Common should read as untouched — so the border is its
+   own token rather than a second job for --rc. */
 .r-C {
-  --rc: #5A606D;
-  --cf-body: linear-gradient(160deg, #3B404B 0%, #2A2E37 58%);
+  --rc: #9CA0AB;
+  --cf-edge: #6E7380;
+  --cf-body: linear-gradient(160deg, #3F4450 0%, #2C3039 58%);
   --cf-shadow: 0 1px 3px rgba(0,0,0,.35);
   --cf-deco: none;
   --radar-c: #AEB3BE;
-  --radar-fill: rgba(174,179,190,.18);
+  --radar-fill: rgba(174,179,190,.26);
 }
 .r-R {
+  --cf-edge: var(--rc);
   --rc: #4C9BFF;
   --cf-body: linear-gradient(160deg, rgba(76,155,255,.28) 0%, #262B36 58%);
   --cf-shadow: 0 1px 3px rgba(0,0,0,.35), 0 0 10px rgba(76,155,255,.22);
@@ -74,6 +86,7 @@
   --radar-fill: rgba(76,155,255,.22);
 }
 .r-E {
+  --cf-edge: var(--rc);
   --rc: #B069F8;
   --cf-body: linear-gradient(160deg, rgba(176,105,248,.34) 0%, #2A2439 58%);
   --cf-shadow: 0 1px 3px rgba(0,0,0,.35), 0 0 16px rgba(176,105,248,.38);
@@ -84,6 +97,7 @@
   --radar-fill: rgba(176,105,248,.24);
 }
 .r-L {
+  --cf-edge: var(--rc);
   --rc: #F5A524;
   --cf-body: linear-gradient(160deg, rgba(245,165,36,.38) 0%, #332714 58%);
   --cf-shadow: 0 1px 3px rgba(0,0,0,.35), 0 0 22px rgba(245,165,36,.45),

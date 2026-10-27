@@ -49,6 +49,25 @@ function richCollection () {
   store.deck = { gk: 'G1', fw: 'F1', mf: 'F2', df: 'F3' }
 }
 
+/* One owned card of every rarity, so Epic and Legendary actually reach the
+   sweep. richCollection deliberately owns none of either (F12 is Epic but
+   sits at level 0, which is not owned), which is why these need their own
+   base rather than a tweak to that one. */
+function ladderCollection () {
+  store.diamonds = 820
+  store.cash = 40000
+  store.tickets = 4
+  store.ownedCards = {
+    G1: { level: 3, shards: 0 },      // C  neutral
+    G3: { level: 2, shards: 0 },      // R  away
+    G4: { level: 2, shards: 0 },      // E  home
+    F13: { level: 1, shards: 0 },     // E  away
+    F15: { level: 1, shards: 0 },     // L  home
+    F16: { level: 2, shards: 0 }      // L  away
+  }
+  store.deck = { gk: 'G1', fw: 'F15', mf: 'F16', df: 'F13' }
+}
+
 /* ---------- real match flow ---------- */
 
 /* Runs the betting flow as the screens run it and stops at `upto`.
@@ -375,6 +394,35 @@ export const CASES = [
     id: 'cards/detail-locked',
     screen: 'cards',
     setup () { reset(); richCollection(); store.cardTarget = 'F16' }
+  },
+  /* ---- the rarity ladder ----
+
+     Epic and Legendary were all but invisible to this sweep. Measured across
+     the 74 states: C appeared in 37, R in 6, E in 9, and L in exactly ONE
+     (cards/detail-locked). So the two steps the card face spends most of its
+     colour on had almost nothing asserting they fit, and L's foil layer had a
+     single state looking at it.
+
+     The group is the real claim: a card's geometry may not depend on its
+     rarity. That is not a style preference — packopen-reveal already compares
+     four states showing four different cards, so a rarity that costs a pixel
+     of height walks every row under it. Here it is asserted head-on, one card
+     of each rarity in the same place, with the venues deliberately mixed
+     (neutral / away / home / away) so the jersey swatch is pinned too. */
+  { id: 'cards/rarity-C', screen: 'cards', group: 'rarity-ladder', scope: '.hero',
+    setup () { reset(); ladderCollection(); store.cardTarget = 'G1' } },
+  { id: 'cards/rarity-R', screen: 'cards', group: 'rarity-ladder', scope: '.hero',
+    setup () { reset(); ladderCollection(); store.cardTarget = 'G3' } },
+  { id: 'cards/rarity-E', screen: 'cards', group: 'rarity-ladder', scope: '.hero',
+    setup () { reset(); ladderCollection(); store.cardTarget = 'G4' } },
+  { id: 'cards/rarity-L', screen: 'cards', group: 'rarity-ladder', scope: '.hero',
+    setup () { reset(); ladderCollection(); store.cardTarget = 'F16' } },
+  {
+    /* the same four at sm, in the grid, where the radar and the hatch are
+       drawn into a 130x104 cell rather than a 150px hero */
+    id: 'cards/all-rarities',
+    screen: 'cards',
+    setup () { reset(); ladderCollection() }
   },
   {
     id: 'cards/detail-upgradable',
