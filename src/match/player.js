@@ -266,9 +266,12 @@ export function buildGoalCutIn (stage, { card, scoreSide, scoreHome, scoreAway, 
   tl.fromTo(ci.streaks, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: .5, ease: 'power2.out' }, 0)
   tl.to(ci.streaks, { x: 40, duration: beat.cutIn, ease: 'none' }, .1)
 
+  /* every transform the OTHER cut-in touches has to be named here too: all of
+     these timelines are compiled up front, gsap renders a fromTo's start state
+     immediately, and both cut-ins drive the same slot */
   tl.fromTo(ci.card,
-    { x: -110, opacity: 0, rotate: -9, scale: .82 },
-    { x: 0, opacity: 1, rotate: 0, scale: 1, duration: .42, ease: 'back.out(1.5)' }, .04)
+    { x: -110, y: 0, opacity: 0, rotate: -9, scale: .82 },
+    { x: 0, y: 0, opacity: 1, rotate: 0, scale: 1, duration: .42, ease: 'back.out(1.5)' }, .04)
 
   tl.fromTo(ci.text,
     { scale: 2.1, opacity: 0, letterSpacing: '0.3em' },
@@ -297,8 +300,8 @@ export function buildSaveCutIn (stage, { card, subtitle, side, team }, beat = BE
   tl.set(ci.root, { visibility: 'visible' })
   tl.fromTo(ci.bg, { opacity: 0 }, { opacity: 1, duration: .14 }, 0)
   tl.fromTo(ci.tint, { opacity: 0 }, { opacity: .85, duration: .12 }, 0)
-  tl.fromTo(ci.card, { y: 70, opacity: 0, scale: .9 },
-    { y: 0, opacity: 1, scale: 1, duration: .34, ease: 'back.out(1.4)' }, .03)
+  tl.fromTo(ci.card, { x: 0, y: 70, opacity: 0, rotate: 0, scale: .9 },
+    { x: 0, y: 0, opacity: 1, rotate: 0, scale: 1, duration: .34, ease: 'back.out(1.4)' }, .03)
   tl.fromTo(ci.text, { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: .26, ease: 'back.out(2)' }, .14)
   sfx(tl, .14, 'save_shout', onSfx)
   tl.to([ci.bg, ci.body, ci.tint], { opacity: 0, duration: .22, ease: 'power2.in' }, beat.saveCutIn)
