@@ -17,7 +17,9 @@
 
     <div v-else class="detail">
       <button class="back muted" @click="detail = null">‹ All cards</button>
-      <CardFace :card="cardOf(detail)" size="lg" class="hero" :radar="false" />
+      <HoloCard class="hero" :intensity="HOLO[BY_ID[detail].rarity]">
+        <CardFace :card="cardOf(detail)" size="lg" :radar="false" />
+      </HoloCard>
       <RadarChart :axis-keys="cardOf(detail).axisKeys" :values="cardOf(detail).axes"
                   :size="260" labels class="rad" :class="'r-' + BY_ID[detail].rarity" />
       <div class="meta">
@@ -49,10 +51,15 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import Icon from '../components/Icon.vue'
 import CardFace from '../components/CardFace.vue'
+import HoloCard from '../components/HoloCard.vue'
 import RadarChart from '../components/RadarChart.vue'
 import { store, go, CATALOGUE, BY_ID, cardOf, entry, owned as isOwned, canUpgrade, upgradeCost, RARITY } from '../game.js'
 import { screenBack } from '../store.js'
 import { SHARD_COST } from '../engine/economy.js'
+
+/* The finish is the rarity ladder's fourth channel, after saturation, glow
+   and texture: a Common is matte, a Legendary is fully foiled. */
+const HOLO = { C: 0, R: 0.45, E: 0.75, L: 1 }
 
 const detail = ref(store.cardTarget || null)
 store.cardTarget = null
@@ -117,6 +124,7 @@ function goUpgrade () { store.upgradeTarget = detail.value; go('upgrade') }
 /* padded out to a real tap target, pulled back with margin so nothing moves */
 .back { align-self: flex-start; font-size: 12px; padding: 15px 12px; margin: -12px -12px -15px; }
 .hero { width: 150px; }
+.hero :deep(.cf) { width: 100%; }
 .rad { margin: 2px 0; }
 .meta, .shards { width: 100%; background: var(--surface); border-radius: var(--r-md); padding: 10px 12px; }
 .mrow, .srow { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }

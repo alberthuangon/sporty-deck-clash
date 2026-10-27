@@ -36,6 +36,15 @@ const CHROME_OVERLAYS = ['.sheet', '.toast', '[data-skip]', '.fly', ...TAKEOVERS
 /* Boxes that are MEANT to be bigger than their container and cropped by it:
    a full-bleed texture is drawn oversized on purpose. Everything else that
    gets cropped is a thing the player cannot read. */
+/* The holo finish. These sit OVER the card's own text, and the covered-content
+   check deliberately lets them through: a layer that swallows a box whole is
+   an overlay doing its job, and this one covers the card entirely. That is the
+   right call for a takeover and the wrong protection for a foil — it passes
+   because of its SIZE, and nothing anywhere asks whether you can still see
+   through it. Raise a colour stop to .95 and the card vanishes with the gate
+   still green. So the foil is bounded directly instead (see run.mjs). */
+const HOLO = ['.holo-foil', '.holo-glare']
+
 const DECORATIONS = ['.ci-streaks', '.ci-bg', '.ci-tint', '.pk-bg', '.pk-vig', '.fi-bg', '.turf', '.sweep']
 const decorative = el => DECORATIONS.some(sel => el.matches(sel))
 
@@ -268,6 +277,28 @@ export function measure (scope) {
       const short = Math.max(r.top - frame.top, frame.bottom - r.bottom,
         r.left - frame.left, frame.right - r.right)
       if (short > TOL) out.leakyTakeover.push({ key: label(el), short: +short.toFixed(1) })
+    }
+  }
+
+  /* max alpha of any colour stop in a background-image, scaled by the
+     element's own opacity — i.e. the most of the card this layer can hide */
+  out.holoLayers = []
+  for (const sel of HOLO) {
+    for (const el of phone.querySelectorAll(sel)) {
+      const cs = getComputedStyle(el)
+      let maxA = 0
+      const img = cs.backgroundImage || ''
+      for (const m of img.matchAll(/rgba?\(([^)]*)\)/g)) {
+        const parts = m[1].split(',').map(v => parseFloat(v))
+        maxA = Math.max(maxA, parts.length > 3 ? parts[3] : 1)
+      }
+      out.holoLayers.push({
+        key: label(el),
+        pointer: cs.pointerEvents,
+        opacity: +(+cs.opacity).toFixed(3),
+        maxStopAlpha: +maxA.toFixed(3),
+        effective: +(maxA * (+cs.opacity)).toFixed(3)
+      })
     }
   }
 

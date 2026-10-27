@@ -282,6 +282,23 @@ for (const [name, states] of barStates) {
   }
 }
 
+/* ---------- the holo finish ----------
+
+   The foil sits over the card's own name, level and role. The covered-content
+   check lets it through on purpose — a layer that swallows a box WHOLE is an
+   overlay doing its job — but that means it passes because of its size, and
+   nothing was asking the question that actually matters for a decorative
+   layer: can you still read the card through it? Verified: a foil inset to
+   cover only part of the card fails `content hidden behind something on top
+   of it` with 4 findings, while the same foil at full size passes. So the
+   protection cannot come from there.
+
+   Two properties instead, the same bargain the flying tokens make: it must
+   stay see-through, and it must never take a tap. */
+const holo = screens.results.flatMap(r => (r.holoLayers || []).map(h => ({ state: r.id, ...h })))
+const holoSolid = holo.filter(h => h.effective > 0.5)
+const holoTappable = holo.filter(h => h.pointer !== 'none')
+
 const early = screens.results.filter(r => r.tooEarly).map(r => ({ state: r.id }))
 
 console.log(`\nUI animations stay inside the budget  (${motion.length} play(s) across the sweep)\n`)
@@ -298,6 +315,8 @@ check('shapes that animate without moving', still.length, !still.length)
 check('content revealed before its animation finished', early.length, !early.length)
 check('chrome that changes between screens', chromeShifts.length, !chromeShifts.length && barStates.size === 2)
 check('chrome that does not match its token', chromeDrift.length, !chromeDrift.length)
+check('foil layers you cannot see through', holoSolid.length, !holoSolid.length && !!holo.length)
+check('foil layers that could eat a tap', holoTappable.length, !holoTappable.length)
 
 if (ellipsised.length) {
   console.log(`\n  note: ${ellipsised.length} label(s) ellipsised — truncated, but visibly so:`)
@@ -341,6 +360,9 @@ if (fail.length) {
   if (barStates.size !== 2) console.log(`  chrome never measured: saw ${[...barStates.keys()].join(', ') || 'no bars'} — expected TopBar and TabBar`)
   chromeShifts.forEach(c => console.log(`  chrome moved: ${c.bar} ${c.key} takes values ${c.seen} — ${c.detail}`))
   chromeDrift.forEach(c => console.log(`  chrome drifted: ${c.bar} measures ${c.measured}px against a token that says ${c.declared}px`))
+  if (!holo.length) console.log('  foil never measured: no state in the sweep shows a holo card')
+  holoSolid.forEach(h => console.log(`  foil too solid: ${h.state}  ${h.key} hides up to ${h.effective} (stop ${h.maxStopAlpha} x opacity ${h.opacity})`))
+  holoTappable.forEach(h => console.log(`  foil takes taps: ${h.state}  ${h.key} pointer-events: ${h.pointer}`))
   console.log('')
   process.exit(1)
 }
