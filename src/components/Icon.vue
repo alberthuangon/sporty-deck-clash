@@ -2,7 +2,7 @@
   <svg
     class="icon" :style="{ width: px, height: px }"
     viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+    :stroke-width="stroke" stroke-linecap="round" stroke-linejoin="round"
     aria-hidden="true" focusable="false"
   ><component v-for="(p, i) in shape" :key="i" :is="p[0]" v-bind="p[1]" /></svg>
 </template>
@@ -23,7 +23,10 @@ import { ICONS } from '../ui/icons.js'
 
 const props = defineProps({
   name: { type: String, required: true },
-  size: { type: [Number, String], default: null }   // px number, or any CSS length
+  size: { type: [Number, String], default: null },  // px number, or any CSS length
+  /* the football needs 1.5: it carries eleven strokes, and at 1.8 they merge
+     into each other at tab-bar size. Everything else is drawn for 1.8. */
+  stroke: { type: [Number, String], default: 1.8 }
 })
 const shape = computed(() => ICONS[props.name] || [])
 const px = computed(() =>

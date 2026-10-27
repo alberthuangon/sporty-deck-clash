@@ -71,7 +71,7 @@
           <div class="ci-team" :class="cutSide" v-if="cutTeam">
             <i class="ci-jersey"></i>{{ cutTeam }}
           </div>
-          <div class="ci-text" ref="ciTextEl">{{ cutText }}</div>
+          <div class="ci-text" :class="cutSide" ref="ciTextEl">{{ cutText }}</div>
           <div class="ci-sub">{{ cutSub }}</div>
         </div>
       </div>
@@ -558,7 +558,12 @@ onMounted(() => { /* refs are live from here on */ })
 .ci-card { width: 100%; }
 .ci-text {
   font-size: 36px; font-weight: 900; letter-spacing: .04em; line-height: 1;
-  color: var(--cta); text-shadow: 0 3px 18px rgba(51,234,106,.5); white-space: nowrap;
+  white-space: nowrap;
 }
+/* The word took the win colour and did not vary by side, so an opponent goal
+   arrived as a blue wash, a blue team tag and a mint GOAL! — the same mistake
+   the feed was making, one layer up. */
+.ci-text.home { color: var(--home-hi); text-shadow: 0 3px 18px rgba(var(--home-rgb), .5); }
+.ci-text.away { color: var(--away-hi); text-shadow: 0 3px 18px rgba(var(--away-rgb), .5); }
 .ci-sub { font-size: 12px; font-weight: 700; color: #fff; }
 </style>

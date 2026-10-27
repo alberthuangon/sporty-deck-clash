@@ -5,7 +5,7 @@
       class="tab" :class="{ active: current === t.id }" :data-tab="t.id"
       @click="$emit('nav', t.id)"
     >
-      <span class="ic"><Icon :name="t.icon" :size="19" /></span>
+      <span class="ic"><Icon :name="t.icon" :size="19" :stroke="t.icon === 'play' ? 1.5 : 1.8" /></span>
       <span class="lb">{{ t.label }}</span>
       <i v-if="t.dot" class="tdot"></i>
     </button>

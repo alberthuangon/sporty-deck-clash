@@ -49,9 +49,9 @@ onMounted(() => {
        confirm screen, where they are one. */
     { d: 2100, fn: () => {
       statusText.value = 'Stage 2 — checking the match is fair'
-      push('Win chance — you', pct(found.priced.qA))
+      push('Win chance — you', pct(found.priced.qA), 'me')
     } },
-    { d: 2500, fn: () => { push('Win chance — ' + found.opponent.handle, pct(found.priced.qB)) } },
+    { d: 2500, fn: () => { push('Win chance — ' + found.opponent.handle, pct(found.priced.qB), 'them') } },
     { d: 2900, fn: () => {
       push('Both inside ' + BAND + ' — accepted', '✓', 'ok')
       statusText.value = 'Opponent found'
@@ -92,6 +92,9 @@ function cancel () { abandonMatch(); go('tierselect') }
 .lrow { display: flex; justify-content: space-between; font-size: 12px; padding: 7px 0; border-bottom: 1px solid var(--divider); }
 .lrow:last-child { border-bottom: 0; }
 .lrow.ok { color: var(--green); font-weight: 700; }
+/* same axis as Confirm: whose row is this, not which side they are */
+.lrow.me { color: var(--text); font-weight: 700; }
+.lrow.them { color: var(--text-2); }
 .lv { font-variant-numeric: tabular-nums; font-weight: 700; }
 .mm > .btn { width: 100%; margin-top: auto; }
 </style>

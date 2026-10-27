@@ -22,9 +22,14 @@ export const ICONS = {
     ['path', { d: 'M5 8h14l-1 12H6L5 8z' }],
     ['path', { d: 'M9 8V6a3 3 0 0 1 6 0v2' }]
   ],
+  /* The pentagon is FILLED and half the ball's radius, with five radial
+     seams. Drawn as an outline at a third that size it closed up into a dot
+     at 19px and the whole icon read as a crosshair. Takes stroke 1.5 rather
+     than 1.8 — eleven strokes at 1.8 merge at this size. */
   play: [
     ['circle', { cx: 12, cy: 12, r: 8.5 }],
-    ['path', { d: 'M12 7.5l4 2.9-1.5 4.7h-5L8 10.4z' }]
+    ['path', { d: 'M12 7.8 16 10.7 14.47 15.4 9.53 15.4 8 10.7Z', fill: 'currentColor', stroke: 'none' }],
+    ['path', { d: 'M12 7.8V3.5M16 10.7l4.08-1.33M14.47 15.4l2.52 3.48M9.53 15.4l-2.52 3.48M8 10.7L3.92 9.37' }]
   ],
   missions: [
     ['rect', { x: 5, y: 4, width: 14, height: 17, rx: 2 }],
@@ -35,11 +40,14 @@ export const ICONS = {
     ['circle', { cx: 12, cy: 12, r: 8.5 }],
     ['path', { d: 'M12 7v5.3l3.4 2' }]
   ],
+  /* A podium, not a trophy. A trophy's handles are about 1.8px wide at the
+     size this is drawn, so they vanish whatever you do to them, and a cup
+     without handles is a wine glass. Three bars have no detail to lose — and
+     "placing" is what the screen is actually about. */
   rank: [
-    ['path', { d: 'M8 4h8v5a4 4 0 0 1-8 0V4z' }],
-    ['path', { d: 'M8 5.5H5.5V7a3 3 0 0 0 3 3' }],
-    ['path', { d: 'M16 5.5h2.5V7a3 3 0 0 1-3 3' }],
-    ['path', { d: 'M12 13v3.5M9 20h6' }]
+    ['rect', { x: 3.5, y: 13.5, width: 5.6, height: 6.5, rx: 1 }],
+    ['rect', { x: 9.2, y: 9, width: 5.6, height: 11, rx: 1 }],
+    ['rect', { x: 14.9, y: 15.5, width: 5.6, height: 4.5, rx: 1 }]
   ],
 
   /* ---- glyphs used inline in the screens ---- */

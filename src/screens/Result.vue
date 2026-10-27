@@ -64,10 +64,10 @@
 
     <div class="scorers card" v-if="goals.length">
       <div class="sec-title" style="margin-bottom:8px">Goals</div>
-      <div v-for="(g,i) in goals" :key="i" class="grow">
+      <div v-for="(g,i) in goals" :key="i" class="grow" :class="g.side.toLowerCase()">
         <span>{{ g.minute }}'</span>
         <span>{{ g.actorName }}</span>
-        <span class="muted">{{ g.side === 'HOME' ? homeName : awayName }}</span>
+        <span class="g-team"><i class="g-jersey"></i>{{ g.side === 'HOME' ? homeName : awayName }}</span>
       </div>
     </div>
 
@@ -120,11 +120,34 @@ function again () { abandonMatch(); go('tierselect') }
 .bar { height: 7px; background: var(--surface-hi); border-radius: 999px; overflow: hidden; margin: 8px 0 5px; }
 .bar i { display: block; height: 100%; background: var(--green); }
 .rk-sub { font-size: 11px; }
-.promo { background: var(--cta-deep); border-radius: var(--r-md); padding: 12px; text-align: center; width: 100%; display: block; }
+/* Still a button — it says TAP TO CELEBRATE and removing the affordance
+   would be worse than the problem. But a screen gets one solid mint button,
+   and that one is Play again, so this keeps the colour and loses the fill.
+   The 1px inner ring is what says "pressable" alongside the label; no arrow
+   pseudo-element, because "you can tap this" is information and information
+   belongs in a real element. */
+.promo {
+  background: linear-gradient(90deg, rgba(50,206,98,.20), rgba(50,206,98,.07));
+  box-shadow: inset 3px 0 0 var(--cta), inset 0 0 0 1px rgba(50,206,98,.35);
+  color: var(--cta);
+  border-radius: var(--r-md); padding: 12px; text-align: center;
+  width: 100%; display: block; min-height: 44px;
+}
 .pt { font-weight: 800; font-size: 13px; letter-spacing: .05em; }
 .pr { display: flex; gap: 14px; justify-content: center; margin-top: 6px; font-size: 13px; font-weight: 700; }
 .ph { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; opacity: .75; margin-top: 7px; }
 .scorers { padding: 12px; }
 .grow { display: flex; gap: 10px; font-size: 12px; padding: 5px 0; }
 .grow span:nth-child(2) { flex: 1; font-weight: 700; }
+/* By now the match has been played, so which side scored is known and worth
+   saying — unlike on the confirm sheet, where it is still sealed.
+   The swatch is a real element with a fixed box, not a pseudo-element: team
+   is information rather than decoration, and an inline-flex swatch is exactly
+   what cost CardFace 0.6px of line height. */
+.g-team { color: var(--text-2); display: inline-flex; align-items: center; gap: 5px; }
+.g-jersey { width: 6px; height: 8px; border-radius: 1.5px; flex: none; background: var(--text-3); }
+.grow.home .g-team { color: var(--home-on); }
+.grow.home .g-jersey { background: var(--home); }
+.grow.away .g-team { color: var(--away-on); }
+.grow.away .g-jersey { background: var(--away); }
 </style>

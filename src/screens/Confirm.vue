@@ -94,13 +94,18 @@ function cancel () { abandonMatch(); go('home') }
 .vs { display: flex; align-items: center; justify-content: space-between; padding: 12px; }
 .side { min-width: 0; }
 .side.right { text-align: right; }
-.s-name { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.s-name { font-weight: 800; font-size: 14px; margin-bottom: 4px; }
+.side.right .s-name { color: var(--text-2); font-weight: 700; }
 .vs-x { font-size: 11px; color: var(--text-2); font-weight: 800; padding: 0 8px; }
 .lineups { padding: 4px 12px; }
 .lrow { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--divider); font-size: 12px; }
 .lrow:last-child { border-bottom: 0; }
-.ln { flex: 1; }
-.ln.right { text-align: right; }
+/* Which row is mine, without saying which SIDE I am — the assignment is
+   still sealed at this point (src/game.js). Weight and lightness answer
+   "which one is me" on their own, and inventing a fourth colour family for
+   it would dilute the three that already carry meaning. */
+.ln { flex: 1; color: var(--text); font-weight: 700; }
+.ln.right { text-align: right; color: var(--text-2); font-weight: 400; }
 .lp { width: 34px; text-align: center; font-size: 10px; font-weight: 700; }
 .stake { padding: 12px; }
 .st-head { display: flex; justify-content: space-between; align-items: baseline; }
