@@ -24,7 +24,7 @@ with `CHROME=...`), takes a couple of seconds, and makes two passes over one
 build:
 
 * the **match screen**, stepped frame by frame through a whole compiled match
-* **every screen**, walked through 56 states — history empty and full, results
+* **every screen**, walked through 60 states — history empty and full, results
   won and lost with penalties and without, a pack mid-reveal and on its last
   card, upgrade short of shards and done, the match paused on the goal cut-in,
   the save cut-in, the shootout and the full-time card
@@ -34,7 +34,7 @@ Every state is reached the way a player reaches it: real game functions
 keep their stage in local component state, and reaching in to set those refs
 would test a reachability nobody has.
 
-Fifteen assertions:
+Sixteen assertions:
 
 | | |
 | --- | --- |
@@ -45,7 +45,8 @@ Fifteen assertions:
 | content cropped by its container | the cut-in's subtitle never fit on screen |
 | elements past the 430px frame | |
 | text cut off with nothing to show for it | an ellipsis is reported as a note, not a failure — it is truncation that says so |
-| things painting over the TopBar / TabBar | |
+| things painting over the TopBar / TabBar | with one declared exception, below |
+| takeovers that do not take the whole frame | the other half of that exception |
 | content hidden behind something on top of it | laid out fine, inside its container, not cropped — and still invisible. The board and clock sit ABOVE the cut-in on purpose, so a cut-in reaching too far up just quietly disappeared behind them. A box swallowed WHOLE is an overlay doing its job; a partial eclipse is a layout mistake |
 | grid cells whose contents are ragged | a grid stretches its cells but not necessarily what is in them: owned cards sat 14px shorter than the locked placeholders beside them |
 | controls under the 44px tap target | the floor Apple and Google both publish, measured on the PAINTED rect — a button padded out past the edge of its scroll container only counts the part you can reach. Native inputs are exempt: the browser gives a checkbox or a slider thumb a hit area bigger than its box |
@@ -70,6 +71,19 @@ does not crop it.
 The last two were added after a pair of screenshots found what the gate could
 not see yet, which is the honest order of events: the net gets bigger when
 something swims through it.
+
+**Exceptions carry obligations.** The jackpot draw takes over the whole
+screen, tab bar included, so it is declared a takeover and exempted from the
+chrome assertion. The exemption is not free: a declared takeover must then
+cover the entire frame, which is its own assertion. An exemption that asks
+nothing in return is a hole in the gate rather than an exception to it — and
+the chrome assertion still catches the takeover the moment the declaration is
+removed, which is how that was checked.
+
+Two things can hide a third, and they are different questions: what *can*
+hide something, and what can be *blamed* for hiding it. A takeover or a toast
+legitimately puts the screen behind it out of play, so content under one is
+skipped — but neither is ever named as the thing that ate a row.
 
 Four things about headless Chrome that each produced a confident lie first:
 
