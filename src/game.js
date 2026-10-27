@@ -95,6 +95,19 @@ export function teamFromDeck (deck = store.deck, name = 'Your Squad') {
 }
 
 export function deckPower (deck = store.deck) { return powerOf(teamFromDeck(deck)) }
+
+/* Squad power with some card levels overridden, WITHOUT touching the store.
+   The Upgrade screen needs "what would Power be one level up"; answering that
+   by writing the level into the store and writing it back is a reactive write
+   inside a render pass, which spins Vue forever and freezes the tab. */
+export function deckPowerWith (levels = {}, deck = store.deck) {
+  const spec = {}
+  for (const slot of ['gk', 'fw', 'mf', 'df']) {
+    const id = deck[slot]
+    spec[slot] = { def: BY_ID[id], level: levels[id] ?? (entry(id).level || 1) }
+  }
+  return powerOf(buildTeam(spec, 'Your Squad'))
+}
 export { powerStars, powerScore }
 
 /* home/away lean of the squad, for the "betting on the toss" indicator */

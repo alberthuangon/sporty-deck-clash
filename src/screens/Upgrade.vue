@@ -61,7 +61,7 @@
 import { ref, computed } from 'vue'
 import CardFace from '../components/CardFace.vue'
 import RadarChart from '../components/RadarChart.vue'
-import { store, go, cardOf, entry, canUpgrade, upgradeCost, upgradeCard, BY_ID, deckPower, powerScore } from '../game.js'
+import { store, go, cardOf, entry, canUpgrade, upgradeCost, upgradeCard, BY_ID, deckPower, deckPowerWith, powerScore } from '../game.js'
 import { buildCard, AXIS_LABEL } from '../engine/cards.js'
 
 const target = ref(store.upgradeTarget || null)
@@ -86,11 +86,7 @@ const powerBefore = computed(() => { tick.value; return deckPower() })
 const powerAfter = computed(() => {
   tick.value
   if (!inDeck.value || !next.value) return powerBefore.value
-  const saved = entry(target.value).level
-  store.ownedCards[target.value].level = saved + 1
-  const p = deckPower()
-  store.ownedCards[target.value].level = saved
-  return p
+  return deckPowerWith({ [target.value]: entry(target.value).level + 1 })
 })
 function fmt (q) { return powerScore(q) }
 function doUpgrade () {
