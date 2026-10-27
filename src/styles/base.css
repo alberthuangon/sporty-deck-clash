@@ -143,6 +143,56 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; }
    gradients in Shop and SealTear). The jersey swatch is a real element with
    a fixed box: team is information, not decoration, so the gate should see
    it, and an inline-flex swatch is what cost CardFace 0.6px of line height. */
+/* ---------- the card pack ----------
+
+   One object, two places: the sealed pack you tear open and the thumbnail in
+   the shop. They are shared as a CLASS rather than as a component, because
+   their structure legitimately differs — the sealed pack is two halves each
+   holding the whole face so a clip-path can rip it down the middle, and the
+   shop's is a single box. The paint is what has to agree, and the paint is
+   what lives here. (The crest is a component; that part really is identical.)
+
+   Layer 2 is the one worth reading twice. The tear guide is a dashed line at
+   44%, which is exactly where SealTear's clip-path divides and where the rip
+   element sits — so the pack tells you where it opens, and then opens there.
+   It is not decoration, it is a promise about what the tap will do. */
+.pack-face {
+  --pack-band: 13px;
+  background:
+    repeating-linear-gradient(90deg, var(--pack-emboss) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, var(--pack-emboss) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 4px, transparent 4px 8px),
+    var(--pack-foil2, linear-gradient(0deg, transparent, transparent)),
+    linear-gradient(118deg, transparent 34%, rgba(255,255,255,.10) 44%, transparent 52%),
+    linear-gradient(90deg, rgba(0,0,0,.34) 0%, transparent 15%, transparent 85%, rgba(0,0,0,.34) 100%),
+    linear-gradient(160deg, var(--pack-a), var(--pack-b));
+  background-size:
+    100% var(--pack-band), 100% var(--pack-band), 100% 1px,
+    100% 100%, 100% 100%, 100% 100%, 100% 100%;
+  background-position: 0 0, 0 100%, 0 44%, 0 0, 0 0, 0 0, 0 0;
+  background-repeat: no-repeat;
+  border: 1px solid var(--pack-edge);
+  box-shadow: var(--pack-glow, none);
+}
+.pack-std {
+  --pack-a: var(--pack-std-a); --pack-b: var(--pack-std-b);
+  --pack-edge: var(--pack-std-edge);
+  --pack-ink: rgba(255,255,255,.34);
+  --pack-emboss: rgba(255,255,255,.16);
+  --pack-glow: none;
+}
+/* Gold is dearer on four channels, not one — hue, outer glow, a SECOND foil
+   sweep, and brighter emboss. Same reasoning as the rarity ladder: a step
+   carried by hue alone disappears on a projector or a tired eye. */
+.pack-gold {
+  --pack-a: var(--pack-gold-a); --pack-b: var(--pack-gold-b);
+  --pack-edge: var(--pack-gold-edge);
+  --pack-ink: #F0C96A;
+  --pack-emboss: rgba(255,220,150,.26);
+  --pack-glow: 0 0 24px rgba(165,128,46,.38);
+  --pack-foil2: linear-gradient(104deg, transparent 58%, rgba(255,232,180,.13) 63%, transparent 68%);
+}
+
 .scorers { padding: 12px; }
 .goal-row { display: flex; gap: 10px; font-size: 12px; padding: 5px 0; }
 .goal-row .g-min { font-variant-numeric: tabular-nums; color: var(--text-2); }

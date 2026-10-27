@@ -688,6 +688,18 @@ export const CASES = [
     setup () { reset(); richCollection(); store.pendingPack = 'standard' }
   },
   {
+    /* The gold pack at full size had nothing looking at it: every packopen
+       case pins pendingPack to 'standard', so the dearer of the two products
+       only ever appeared as a 104px shop thumbnail. Same shape as Legendary
+       turning out to have one state — the tier the art spends most on is the
+       tier the sweep sees least. Not in the tear group: it is the same
+       geometry, and a second pack in that group would compare a pack with
+       itself rather than a sealed pack with a tearing one. */
+    id: 'packopen/sealed-gold',
+    screen: 'packopen',
+    setup () { reset(); richCollection(); store.diamonds = 900; store.pendingPack = 'gold' }
+  },
+  {
     /* mid-rip. The halves are supposed to move, so the group is scoped to the
        button underneath them: the thing a thumb is already reaching for must
        not walk away while the pack opens.

@@ -3,7 +3,7 @@
     <!-- stage 1: the sealed pack. The tear itself lives in SealTear so the
          motion lab can replay it while its slider moves. -->
     <div v-if="stage === 'sealed'" class="stage">
-      <SealTear ref="sealRef" :title="pack.name" :price="pack.price" @torn="revealFirst" />
+      <SealTear ref="sealRef" :title="pack.name" :price="pack.price" :tier="pack.id" @torn="revealFirst" />
       <button class="btn btn-cta" data-sfx="tear" @click="tear">Tear open</button>
     </div>
 

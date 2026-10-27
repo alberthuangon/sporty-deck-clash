@@ -2,16 +2,18 @@
   <!-- Two layers holding the SAME content, each clipped to its side of the
        rip, so the pack reads as one card until it stops being one. Both are
        always in the DOM: nothing the timeline touches is behind a v-if. -->
-  <div class="seal" ref="sealEl" @click="tear">
-    <div class="seal-half top" ref="tearA">
+  <div class="seal" :class="tier === 'gold' ? 'pack-gold' : 'pack-std'" ref="sealEl" @click="tear">
+    <div class="seal-half pack-face top" ref="tearA">
       <div class="seal-in">
+        <div class="seal-crest"><PackCrest /></div>
         <div class="seal-top">{{ title }}</div>
         <div class="seal-mid">◆ {{ price }}</div>
         <div class="seal-hint muted">{{ hint }}</div>
       </div>
     </div>
-    <div class="seal-half bot" ref="tearB">
+    <div class="seal-half pack-face bot" ref="tearB">
       <div class="seal-in">
+        <div class="seal-crest"><PackCrest /></div>
         <div class="seal-top">{{ title }}</div>
         <div class="seal-mid">◆ {{ price }}</div>
         <div class="seal-hint muted">{{ hint }}</div>
@@ -34,10 +36,13 @@ import { ref, onUnmounted } from 'vue'
 import gsap from 'gsap'
 import { uiPlay, UI_TIME } from '../ui/motion.js'
 
+import PackCrest from './PackCrest.vue'
+
 defineProps({
   title: { type: String, default: 'Pack' },
   price: { type: [Number, String], default: 0 },
-  hint: { type: String, default: 'tap to tear' }
+  hint: { type: String, default: 'tap to tear' },
+  tier: { type: String, default: 'standard' }     // standard | gold
 })
 const emit = defineEmits(['torn'])
 
@@ -90,14 +95,17 @@ defineExpose({ tear, reset })
 
 <style scoped>
 .seal { position: relative; width: 190px; height: 260px; cursor: pointer; }
-/* The clip line and the two insets have to add up to 100% or the seam shows. */
+/* The clip line and the two insets have to add up to 100% or the seam shows.
+   Each half carries the WHOLE face and is then clipped, so the top seal band
+   lands on the top half and the bottom one on the bottom half with nothing
+   extra to arrange. .pack-face (base.css) paints it; the shop thumbnail wears
+   the same class. */
 .seal-half {
   position: absolute; inset: 0; border-radius: 10px;
-  background: linear-gradient(160deg, var(--pack-std-a), var(--pack-std-b));
-  border: 1px solid var(--divider);
 }
 .seal-half.top { clip-path: inset(0 0 56% 0); }
 .seal-half.bot { clip-path: inset(44% 0 0 0); }
+.seal-crest { width: 62px; height: 62px; }
 .seal-in {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
@@ -107,7 +115,11 @@ defineExpose({ tear, reset })
 .seal-hint { font-size: 11px; }
 .seal-rip {
   position: absolute; left: -6px; right: -6px; top: 44%;
-  height: 3px; background: var(--cta); opacity: 0;
-  box-shadow: 0 0 12px 3px var(--cta);
+  height: 3px; opacity: 0;
+  /* white-gold in the middle, mint at the ends — something inside the bag
+     catching the light. Static paint: the timeline only touches opacity,
+     scaleX and scaleY, so no beat changes. */
+  background: linear-gradient(90deg, transparent, var(--cta) 18%, #FFF6D8 50%, var(--cta) 82%, transparent);
+  box-shadow: 0 0 14px 4px rgba(51,234,106,.55), 0 0 30px 10px rgba(255,214,120,.22);
 }
 </style>

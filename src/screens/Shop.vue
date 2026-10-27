@@ -1,13 +1,19 @@
 <template>
   <div class="scroll pad">
     <div v-for="p in PACKS" :key="p.id" class="pack" :class="p.id">
-      <div class="pk-art">
+      <div class="pk-art pack-face" :class="p.id === 'gold' ? 'pack-gold' : 'pack-std'">
+        <div class="pk-crest"><PackCrest /></div>
         <div class="pk-wrap">{{ p.id === 'gold' ? 'GOLD' : 'STANDARD' }}</div>
         <div class="pk-count">{{ p.cards }} cards</div>
       </div>
       <div class="pk-body">
         <div class="pk-name">{{ p.name }}</div>
-        <div class="pk-guar muted">{{ p.guarantee }}</div>
+        <!-- the guarantee wears the rarity colour the collection taught the
+             player to read. p.guarantee is an engine string and stays one;
+             the dot is picked off p.id rather than by parsing it. -->
+        <div class="pk-guar muted">
+          <i class="gd" :class="p.id === 'gold' ? 'gd-e' : 'gd-r'"></i>{{ p.guarantee }}
+        </div>
         <button class="odds-link" @click="showOdds = p">View drop rates</button>
         <button class="btn btn-cta buy" :disabled="store.diamonds < p.price" @click="buy(p)">
           <i class="gem">◆</i> {{ p.price }}
@@ -51,6 +57,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import PackCrest from '../components/PackCrest.vue'
 import { store, go } from '../game.js'
 import { PACKS } from '../engine/economy.js'
 const showOdds = ref(null)
@@ -62,18 +69,29 @@ function buy (p) {
 
 <style scoped>
 .pack { display: flex; gap: 12px; background: var(--surface); border-radius: var(--r-md); padding: 12px; margin-bottom: 12px; }
+/* paint comes from .pack-face (base.css) — the same face the sealed pack in
+   PackOpen wears. The border used to be --divider here and the gold edge
+   there, so the two tiers were not even drawn from one set of rules. */
 .pk-art {
   width: 104px; flex: 0 0 104px; height: 140px; border-radius: var(--r-sm);
-  background: linear-gradient(160deg, var(--pack-std-a), var(--pack-std-b));
-  border: 1px solid var(--divider);
+  --pack-band: 9px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
 }
-.gold .pk-art { background: linear-gradient(160deg, var(--pack-gold-a), var(--pack-gold-b)); border-color: var(--pack-gold-edge); }
+.pk-crest { width: 38px; height: 38px; }
 .pk-wrap { font-weight: 800; font-size: 13px; letter-spacing: .08em; }
 .pk-count { font-size: 10px; color: var(--text-2); }
 .pk-body { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .pk-name { font-weight: 700; font-size: 15px; }
 .pk-guar { font-size: 11px; margin: 2px 0 8px; line-height: 1.35; }
+/* gd- rather than r-: Shop's scoped .r-C/.r-R/... already colour the drop-rate
+   sheet, and tokens.css now defines a global .r-* for the rarity ladder.
+   A third claim on that name would be a three-way fight. */
+.gd {
+  width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+  margin-right: 6px; vertical-align: 1px; flex: none;
+}
+.gd-r { background: var(--r-r); }
+.gd-e { background: var(--r-e); }
 /* padded to a real tap target and pulled back, so the pack card is unchanged */
 .odds-link {
   color: var(--green); font-size: 11px; text-decoration: underline; text-align: left;
