@@ -34,7 +34,7 @@ Every state is reached the way a player reaches it: real game functions
 keep their stage in local component state, and reaching in to set those refs
 would test a reachability nobody has.
 
-Twelve assertions:
+Fourteen assertions:
 
 | | |
 | --- | --- |
@@ -46,6 +46,8 @@ Twelve assertions:
 | elements past the 430px frame | |
 | text cut off with nothing to show for it | an ellipsis is reported as a note, not a failure — it is truncation that says so |
 | things painting over the TopBar / TabBar | |
+| grid cells whose contents are ragged | a grid stretches its cells but not necessarily what is in them: owned cards sat 14px shorter than the locked placeholders beside them |
+| controls too small to hit | under 20px nothing is reliably tappable. The 44px both Apple and Google publish is printed as a note instead — most of this app is under it, and that is step 7's conversation |
 | elements that move between states of one screen | the main one; see below |
 | invariance groups comparing nothing | a check that compares nothing passes for free |
 
@@ -59,10 +61,14 @@ only smoke- and geometry-checked. `scope` narrows a group to the region that
 is promised to hold still.
 
 Adding an assertion means first proving it goes red: break the thing
-deliberately, watch it fail, put it back. Every one of the twelve has been
+deliberately, watch it fail, put it back. Every one of the fourteen has been
 through that, and two of them were *wrong* until it was done — one compared
 nothing at all, another cropped a fixed-position box against a container that
 does not crop it.
+
+The last two were added after a pair of screenshots found what the gate could
+not see yet, which is the honest order of events: the net gets bigger when
+something swims through it.
 
 Four things about headless Chrome that each produced a confident lie first:
 

@@ -92,7 +92,7 @@ function goUpgrade () { store.upgradeTarget = detail.value; go('upgrade') }
 .ls { font-size: 9px; }
 .detail { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 /* padded out to a real tap target, pulled back with margin so nothing moves */
-.back { align-self: flex-start; font-size: 12px; padding: 15px 12px; margin: -15px -12px; }
+.back { align-self: flex-start; font-size: 12px; padding: 15px 12px; margin: -12px -12px -15px; }
 .hero { width: 150px; }
 .rad { margin: 2px 0; }
 .meta, .shards { width: 100%; background: var(--surface); border-radius: var(--r-md); padding: 10px 12px; }

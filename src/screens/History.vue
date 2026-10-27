@@ -148,7 +148,7 @@ function ago (t) {
 .r-net.down, .r-rank.down { color: var(--red); }
 .r-rank { font-size: 10px; margin-top: 2px; }
 
-.back { align-self: flex-start; font-size: 12px; padding: 15px 12px; margin: -15px -12px; }
+.back { align-self: flex-start; font-size: 12px; padding: 15px 12px; margin: -12px -12px -15px; }
 .verdict { text-align: center; font-size: 22px; font-weight: 800; letter-spacing: .06em; }
 .verdict.win { color: var(--cta); } .verdict.lose { color: var(--text-2); }
 .score { text-align: center; padding: 12px; }
