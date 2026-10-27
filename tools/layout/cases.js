@@ -113,9 +113,12 @@ function resultLike ({ wantPk = true, wantWin = true, reward = null, seed = 11 }
    the same as playing it. Feed rows can double up while seeking, because the
    callbacks that build the feed fire on every render; nothing measured here
    depends on the feed's length. */
-async function seekUntil (ready, raf, what) {
-  const tl = window.__match && window.__match.timeline
-  if (!tl) throw new Error('match screen exposed no compiled timeline')
+/* `hold` is how long the overlay must have been up before measuring, so the
+   entrance tweens have landed. It has to clear the longest entrance (the goal
+   cut-in's 0.42s card slide) and still be shorter than the shortest hold (the
+   save cut-in is only 0.70s on screen). */
+async function seekUntil (ready, raf, what, hold = 0.55) {
+  const tl = timeline()
   tl.pause(0)
   let since = null
   for (let t = 0; t <= tl.duration(); t += 0.04) {
@@ -123,9 +126,29 @@ async function seekUntil (ready, raf, what) {
     await raf()
     if (!ready()) { since = null; continue }
     if (since === null) since = t
-    if (t - since > 0.6) return            // let the entrance tweens land
+    if (t - since > hold) return           // let the entrance tweens land
   }
   throw new Error(`never reached ${what} in this match`)
+}
+
+/* The full-time card is the terminal state — it has no exit, the match ends
+   there and stays there (buildFinalWhistle). Measuring it anywhere earlier
+   catches its entrance mid-flight: the winner line lands from scale 2.2, and
+   at 2.2 a perfectly ordinary "IBADANBLAZE WIN" measures 727px wide inside a
+   430px phone and reports itself as a layout bug that is not there. */
+async function seekToEnd (raf) {
+  const tl = timeline()
+  tl.pause(0)
+  const dur = tl.duration()
+  for (let t = 0; t <= dur; t += 0.06) { tl.time(Math.min(t, dur), false); await raf() }
+  tl.time(dur, false)
+  await raf()
+}
+
+function timeline () {
+  const tl = window.__match && window.__match.timeline
+  if (!tl) throw new Error('match screen exposed no compiled timeline')
+  return tl
 }
 
 const overlayUp = (sel, text) => () => {
@@ -341,7 +364,7 @@ export const CASES = [
     id: 'match/full-time',
     screen: 'match',
     setup () { reset(); richCollection(); flow('match') },
-    act: ({ raf }) => seekUntil(overlayUp('.final'), raf, 'the full-time card')
+    act: ({ raf }) => seekToEnd(raf)
   },
 
   /* ------------------------------------------------ Result */
