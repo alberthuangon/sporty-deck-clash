@@ -54,12 +54,17 @@
          reason, so this follows it. -->
     <button v-for="p in matchView.promotions" :key="p.id" class="promo"
             data-sfx="rankup" @click="celebrate(p)">
-      <div class="pt">PROMOTED — {{ p.label }}</div>
-      <div class="pr">
-        <span v-if="p.reward.diamonds">◆ {{ p.reward.diamonds }}</span>
-        <span v-if="p.reward.tickets"><Icon name="ticket" /> {{ p.reward.tickets }} jackpot tickets</span>
-      </div>
-      <div class="ph">tap to celebrate</div>
+      <span class="p-body">
+        <span class="pt">PROMOTED — {{ p.label }}</span>
+        <span class="pr">
+          <span v-if="p.reward.diamonds">◆ {{ p.reward.diamonds }}</span>
+          <span v-if="p.reward.tickets"><Icon name="ticket" /> {{ p.reward.tickets }} jackpot tickets</span>
+        </span>
+        <span class="ph">tap to celebrate</span>
+      </span>
+      <!-- a real element, not a pseudo one: "you can press this" is
+           information, and the gate can only see what is really there -->
+      <i class="p-go">&rsaquo;</i>
     </button>
 
     <div class="scorers card" v-if="goals.length">
@@ -130,10 +135,18 @@ function again () { abandonMatch(); go('tierselect') }
   background: linear-gradient(90deg, rgba(50,206,98,.20), rgba(50,206,98,.07));
   box-shadow: inset 3px 0 0 var(--cta), inset 0 0 0 1px rgba(50,206,98,.35);
   color: var(--cta);
-  border-radius: var(--r-md); padding: 12px; text-align: center;
-  width: 100%; display: block; min-height: 44px;
+  border-radius: var(--r-md); padding: 12px; text-align: left;
+  width: 100%; min-height: 44px;
+  display: flex; align-items: center; gap: 10px;
+}
+.p-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.p-go {
+  flex: none; width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800; font-style: normal; line-height: 1;
+  color: var(--cta); box-shadow: inset 0 0 0 1px rgba(50,206,98,.5);
 }
 .pt { font-weight: 800; font-size: 13px; letter-spacing: .05em; }
-.pr { display: flex; gap: 14px; justify-content: center; margin-top: 6px; font-size: 13px; font-weight: 700; }
+.pr { display: flex; gap: 14px; margin-top: 6px; font-size: 13px; font-weight: 700; }
 .ph { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; opacity: .75; margin-top: 7px; }
 </style>

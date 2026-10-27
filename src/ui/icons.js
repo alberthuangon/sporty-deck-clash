@@ -25,10 +25,12 @@ export const ICONS = {
   /* The pentagon is FILLED and half the ball's radius, with five radial
      seams. Drawn as an outline at a third that size it closed up into a dot
      at 19px and the whole icon read as a crosshair. Takes stroke 1.5 rather
-     than 1.8 — eleven strokes at 1.8 merge at this size. */
+     than 1.8 — eleven strokes at 1.8 merge at this size — and the fill is held
+     at 0.55 so the one solid shape in a row of outlines carries about the same
+     ink as the strokes beside it. */
   play: [
     ['circle', { cx: 12, cy: 12, r: 8.5 }],
-    ['path', { d: 'M12 7.8 16 10.7 14.47 15.4 9.53 15.4 8 10.7Z', fill: 'currentColor', stroke: 'none' }],
+    ['path', { d: 'M12 7.8 16 10.7 14.47 15.4 9.53 15.4 8 10.7Z', fill: 'currentColor', 'fill-opacity': 0.55, stroke: 'none' }],
     ['path', { d: 'M12 7.8V3.5M16 10.7l4.08-1.33M14.47 15.4l2.52 3.48M9.53 15.4l-2.52 3.48M8 10.7L3.92 9.37' }]
   ],
   missions: [

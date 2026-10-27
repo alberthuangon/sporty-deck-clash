@@ -28,14 +28,56 @@
     <div class="arena">
       <div class="pitch" ref="pitchEl">
         <div class="turf"></div>
-        <div class="line half"></div>
-        <div class="circle"></div>
-        <div class="box left"></div>
-        <div class="box right"></div>
-        <div class="six left"></div>
-        <div class="six right"></div>
-        <div class="net left"></div>
-        <div class="net right"></div>
+
+        <!-- One SVG instead of six divs. Divs cannot draw an arc, which is why
+             this pitch had no centre spot, no D and no corner arcs and read as
+             a tennis court. The viewBox is the pitch's real pixel size, so the
+             numbers here are the numbers measured on screen; nothing is drawn
+             outside it, because SVG children are subject to the layout gate's
+             geometry assertions just like any other element. -->
+        <svg class="lines" viewBox="0 0 406 186" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <pattern id="netmesh" width="4" height="4" patternUnits="userSpaceOnUse">
+              <rect width="4" height="4" fill="rgba(255,255,255,.08)" />
+              <path d="M0 0H4M0 0V4" stroke="rgba(255,255,255,.22)" stroke-width=".5" />
+            </pattern>
+          </defs>
+          <!-- The goal spans y 63-123 (34%-66%). It has to: the engine lands a
+               scored ball at y 39% or 61% and the ball is 4.8% tall, so it
+               occupies 36.6%-63.4%. The old 18.3% goal mouth meant a goal
+               finished with the ball's centre OUTSIDE the posts — invisible
+               only because the goal was a translucent bar. -->
+          <g class="goal">
+            <rect class="mesh" x="0" y="63" width="8" height="60" />
+            <rect class="mesh" x="398" y="63" width="8" height="60" />
+            <path class="post" d="M8 63V123" />
+            <path class="post" d="M398 63V123" />
+          </g>
+          <!-- box, six-yard box and centre circle keep their exact previous
+               size: the keeper stands at x=7%, inside the box and outside the
+               six, and that relationship is correct as it is -->
+          <g class="l1">
+            <path d="M203 0V186" />
+            <circle cx="203" cy="93" r="26" />
+            <path d="M0 41H52V145H0" />
+            <path d="M406 41H354V145H406" />
+            <path d="M52 69.8A28.8 28.8 0 0 1 52 116.2" />
+            <path d="M354 116.2A28.8 28.8 0 0 1 354 69.8" />
+          </g>
+          <g class="l2">
+            <path d="M0 68H20V118H0" />
+            <path d="M406 68H386V118H406" />
+            <path d="M0 4A4 4 0 0 0 4 0" />
+            <path d="M402 0A4 4 0 0 0 406 4" />
+            <path d="M406 182A4 4 0 0 0 402 186" />
+            <path d="M4 186A4 4 0 0 0 0 182" />
+          </g>
+          <g class="spot">
+            <circle cx="203" cy="93" r="1.8" />
+            <circle cx="35" cy="93" r="1.6" />
+            <circle cx="371" cy="93" r="1.6" />
+          </g>
+        </svg>
 
         <svg class="trail" viewBox="0 0 100 100" preserveAspectRatio="none">
           <path ref="trailEl" d="" />
@@ -336,22 +378,37 @@ onMounted(() => { /* refs are live from here on */ })
 .phase { font-size: 10px; font-weight: 800; letter-spacing: .08em; color: var(--r-l); }
 
 .arena { position: relative; }
-.pitch { position: relative; margin: 10px 12px; height: 186px; border-radius: 6px; overflow: hidden; }
+.pitch {
+  position: relative; margin: 10px 12px; height: 186px;
+  border-radius: 6px; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.13), 0 4px 16px rgba(0,0,0,.45);
+}
+/* DARKER, not greener — and that is a legibility decision rather than a taste
+   one. The tokens are painted ON this, so the brighter the grass the further
+   they sink into it. Measured against the worst case (a token sitting on a
+   bright mown stripe), home red scores 2.18:1 on the old top edge and 2.98:1
+   on this one; under deuteranopia simulation, 2.67 against 3.62. Red on green
+   is the classic colour-blind pair and this app has a red team on a green
+   pitch, so the only axis that helps both normal and colour-blind vision is
+   lightness. The pitch earns its looks from lighting, texture and line work. */
 .turf {
   position: absolute; inset: 0;
   background:
-    repeating-linear-gradient(90deg, rgba(255,255,255,.028) 0 28px, transparent 28px 56px),
-    linear-gradient(180deg, #1F3D27, #16291A);
+    radial-gradient(130% 115% at 50% 42%,
+      rgba(255,255,255,.085) 0%, rgba(255,255,255,.02) 42%, transparent 68%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 28px, transparent 28px 56px),
+    radial-gradient(118% 108% at 50% 50%, transparent 52%, rgba(0,0,0,.42) 100%),
+    linear-gradient(180deg, #1B3A24 0%, #163119 46%, #102517 100%);
 }
-.line, .circle, .box, .six, .net { position: absolute; border-color: rgba(255,255,255,.20); }
-.half { left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,.20); }
-.circle { left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border: 1px solid rgba(255,255,255,.20); border-radius: 50%; }
-.box { top: 50%; width: 52px; height: 104px; margin-top: -52px; border: 1px solid rgba(255,255,255,.20); }
-.box.left { left: 0; border-left: 0; } .box.right { right: 0; border-right: 0; }
-.six { top: 50%; width: 20px; height: 50px; margin-top: -25px; border: 1px solid rgba(255,255,255,.16); }
-.six.left { left: 0; border-left: 0; } .six.right { right: 0; border-right: 0; }
-.net { top: 50%; width: 6px; height: 34px; margin-top: -17px; background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.28); }
-.net.left { left: 0; } .net.right { right: 0; }
+.lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.lines g { fill: none; }
+.l1 path, .l1 circle { stroke: rgba(255,255,255,.30); stroke-width: 1; }
+.l2 path { stroke: rgba(255,255,255,.20); stroke-width: 1; }
+.spot circle { fill: rgba(255,255,255,.34); stroke: none; }
+.goal .mesh { fill: url(#netmesh); }
+/* the same #EDEFF3 the shootout's bar and posts use, so regular time and the
+   penalty camera are showing one goal rather than two different ones */
+.goal .post { stroke: #EDEFF3; stroke-width: 2; fill: none; }
 
 .trail { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .trail path { fill: none; stroke: rgba(255,255,255,.55); stroke-width: .5; stroke-linecap: round; vector-effect: non-scaling-stroke; }
@@ -363,19 +420,33 @@ onMounted(() => { /* refs are live from here on */ })
   font-size: 8px; font-weight: 800; color: #fff; letter-spacing: .02em;
   will-change: left, top, transform;
 }
-.token.home { background: var(--home); box-shadow: 0 1px 4px rgba(0,0,0,.45); }
-.token.away { background: var(--away); box-shadow: 0 1px 4px rgba(0,0,0,.45); }
-.token.keeper { background: #3B4150; border: 1.5px solid #fff3; }
+/* A pale rim, for the same reason the rarity ladder climbs more than hue: it
+   is a channel that does not depend on telling red from blue. Against the
+   darkened turf the rim reads about 14:1, so even where the two shirt colours
+   collapse into each other you can still see that a piece is there.
+   box-shadow rather than a border or a transform — a border would resize the
+   box, and GSAP owns this element's transform (and its left/top). */
+.token.home { background: radial-gradient(circle at 38% 32%, #FF4A57, var(--home) 62%); }
+.token.away { background: radial-gradient(circle at 38% 32%, #5B9BF2, var(--away) 62%); }
+.token.home, .token.away {
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,.55), 0 2px 6px rgba(0,0,0,.55);
+}
+.token.keeper {
+  background: radial-gradient(circle at 38% 32%, #576070, #3B4150 62%);
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,.7), 0 2px 6px rgba(0,0,0,.55);
+}
 .token .ring {
   position: absolute; inset: -5px; border-radius: 50%;
-  border: 2px solid var(--cta); opacity: 0; transform: scale(.7);
+  border: 2px solid var(--cta); box-shadow: 0 0 10px rgba(51,234,106,.55);
+  opacity: 0; transform: scale(.7);
 }
 
 .ball {
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%,-50%);
   width: 9px; height: 9px; border-radius: 50%;
-  background: #fff; box-shadow: 0 0 7px rgba(255,255,255,.6);
+  background: radial-gradient(circle at 36% 30%, #FFFFFF, #D8DEE8 70%);
+  box-shadow: 0 0 9px rgba(255,255,255,.75), 0 1px 3px rgba(0,0,0,.6);
   will-change: left, top, transform;
 }
 .flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
