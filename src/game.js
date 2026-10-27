@@ -248,11 +248,19 @@ export function runSeasonDraw (won) {
   const seed = seasonSeed(j.season)
   const rng = mulberry(hashCode(seed))
   const myTickets = store.tickets
-  /* a winning ticket the player holds when they won, somebody else's when
-     they did not — the number has to be consistent with the headline */
+
+  /* The player's tickets are a block somewhere in the global range, placed by
+     the same seed, so BOTH outcomes draw their winning number from one space.
+     The first version gave a winner [1, myTickets] and everyone else
+     everything above — internally consistent, but it quietly modelled a world
+     where every player holds #1 upwards, and with two tickets it printed
+     "Winning ticket #1" on the one screen whose whole job is being checkable.
+     A five-figure number on both screens is not cosmetic here: #1 is exactly
+     what a placeholder looks like. */
+  const myFirst = 1 + Math.floor(rng() * Math.max(1, j.totalTickets - myTickets))
   const winningTicket = won
-    ? 1 + Math.floor(rng() * Math.max(1, myTickets))
-    : Math.max(myTickets + 1, 1 + Math.floor(rng() * j.totalTickets))
+    ? myFirst + Math.floor(rng() * Math.max(1, myTickets))
+    : ticketOutsideBlock(rng, j.totalTickets, myFirst, myTickets)
 
   j.lastDraw = {
     season: j.season,
@@ -272,6 +280,15 @@ export function runSeasonDraw (won) {
   store.tickets = 0
   store.rank = { ...store.rank, peakNodes: [] }
   store.flags.seenDraw = j.lastDraw.season - 1      // not seen yet: takes over on the next render
+}
+
+/* A number in [1, total] that is not one of the player's: drawn from the
+   complement and shifted past their block, so every other ticket in the draw
+   is equally likely — rather than re-rolling until it happens to miss. */
+function ticketOutsideBlock (rng, total, first, mine) {
+  let t = 1 + Math.floor(rng() * Math.max(1, total - mine))
+  if (t >= first) t += mine
+  return Math.min(t, total)
 }
 
 function seasonSeed (season) {

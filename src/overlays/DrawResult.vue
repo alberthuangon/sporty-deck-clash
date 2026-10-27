@@ -125,7 +125,15 @@ onUnmounted(() => { if (tl) tl.kill() })
   overflow-y: auto;
 }
 .dr.won { background: radial-gradient(120% 60% at 50% 12%, #123021, var(--bg) 70%); }
-.dr-in { padding: 28px 16px 20px; display: flex; flex-direction: column; flex: 1; }
+.dr-in {
+  padding: 28px 16px 20px; flex: 1;
+  display: flex; flex-direction: column; justify-content: safe center;
+}
+/* One block, centred, the way the full-time card this is modelled on sits.
+   Top-anchoring left ~440px of nothing in the middle of the screen, and
+   centring only the ledger split that into two smaller voids. `safe` on the
+   container so content taller than the frame starts at the top and keeps its
+   head rather than being centred out of view. */
 .dr-kicker {
   font-size: 10px; font-weight: 800; letter-spacing: .18em;
   color: var(--text-2); text-align: center;
@@ -156,7 +164,7 @@ onUnmounted(() => { if (tl) tl.kill() })
 }
 .dr-fine { font-size: 10px; line-height: 1.5; margin-top: 10px; }
 .dr-next { font-size: 12px; line-height: 1.5; text-align: center; margin: 18px 4px 12px; color: var(--text-2); }
-.dr-go { margin-top: auto; }
+.dr-go { margin-top: 22px; flex: 0 0 auto; }
 
 .dr-burst { position: absolute; left: 50%; top: 32%; pointer-events: none; }
 .dr-burst i {
