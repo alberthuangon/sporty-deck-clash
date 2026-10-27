@@ -283,6 +283,10 @@ onUnmounted(() => { if (tl) tl.kill(); stopIdle() })
 
 <style scoped>
 .lab { padding-bottom: 20px; }
+/* the controls are tall, and a flex item shrinks before its scroll container
+   scrolls — without this the stage is squeezed to a sliver and the pitch,
+   the board and every token are cropped away */
+.lab > .stage { flex: 0 0 auto; }
 .ctrl { display: flex; flex-direction: column; gap: 10px; }
 .row { display: flex; gap: 8px; }
 .play { flex: 2; } .stop { flex: 1; }
