@@ -11,7 +11,7 @@
       />
 
       <Transition :css="false" mode="out-in" @enter="onEnter" @leave="onLeave">
-        <component :is="screenComponent" :key="store.currentScreen" class="screen" />
+        <component :is="screenComponent" :key="store.currentScreen" :data-screen="store.currentScreen" class="screen" />
       </Transition>
 
       <TabBar v-if="isTabScreen" :tabs="tabs" :current="store.currentScreen" @nav="navTab" />

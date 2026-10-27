@@ -1,0 +1,62 @@
+<!doctype html><html><head><meta charset="utf-8"><title>layout check — screens</title>
+
+<!-- Must be a classic inline script, so it runs before any module: gsap grabs
+     requestAnimationFrame at import time (gsap-core's trailing _wake()), and
+     headless Chrome under --virtual-time-budget fires rAF exactly ONCE and
+     then never again. With the real rAF, gsap's ticker is dead, so App.vue's
+     screen transition (:css="false", onComplete -> done, mode="out-in") never
+     completes and NO screen after the first one ever mounts. setTimeout does
+     advance under virtual time, so point rAF at it. -->
+<script>
+  (function () {
+    var live = new Map(), next = 1
+    window.requestAnimationFrame = function (cb) {
+      var id = next++
+      live.set(id, setTimeout(function () { live.delete(id); cb(performance.now()) }, 16))
+      return id
+    }
+    window.cancelAnimationFrame = function (id) {
+      var t = live.get(id)
+      if (t !== undefined) { clearTimeout(t); live.delete(id) }
+    }
+  })()
+</script>
+
+<style>
+  /* Chrome's --window-size is inert in this headless build (innerWidth reports
+     500x845 whatever you pass), so the phone frame is pinned from the page.
+     Without this the gate measures a viewport that depends on leftover window
+     state in the profile dir — a flaky gate is worse than no gate. */
+  /* !important because base.css sets html/body height and .phone height at the
+     same specificity and is injected after this block */
+  html, body { width: 430px !important; height: 932px !important; overflow: hidden !important; }
+  .phone { height: 932px !important; max-width: 430px !important; }
+</style>
+</head>
+<body><div id="app"></div><pre id="out"></pre><pre id="progress"></pre>
+<script>
+  /* Vue reports recursive-update storms and bad props through console.warn,
+     which a --dump-dom run would otherwise throw away */
+  window.__warns = []
+  const realWarn = console.warn, realError = console.error
+  console.warn = (...a) => {
+    var at = (new Error().stack || '').split('\n').slice(1, 9).join(' <- ').replace(/https?:\/\/[^/]+\//g, '')
+    window.__warns.push('warn: ' + a.join(' ').slice(0, 200) + '  @ ' + at)
+    realWarn(...a)
+  }
+  console.error = (...a) => { window.__warns.push('error: ' + a.join(' ').slice(0, 300)); realError(...a) }
+  window.onerror = (m, s, l, c, e) => {
+    document.getElementById('out').textContent = 'ERR ' + m + '\n' + (e && e.stack)
+  }
+</script>
+<script type="module" src="./screens.js"></script>
+<script type="module">
+  setTimeout(async () => {
+    try {
+      document.getElementById('out').textContent = JSON.stringify(await window.__screens(), null, 1)
+    } catch (e) {
+      document.getElementById('out').textContent = 'ERR ' + e + '\n' + e.stack
+    }
+    document.title = 'done'
+  }, 300)
+</script></body></html>
