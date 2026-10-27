@@ -49,19 +49,29 @@ function invisible (el) {
    block (its nearest positioned ancestor) upwards; the scroll container it
    happens to sit inside does not touch it.
 
-   Getting this wrong is not academic: it is why a Rank badge pinned over the
-   TopBar was waved through — the scroll container "cropped" it on paper.
-   (Simplification: a transform on an ancestor also makes a containing block
-   for fixed descendants. Nothing here does that in a settled state.) */
+   A transform makes a containing block too, and that is not a corner case
+   here: App.vue animates the screen with gsap, which leaves an identity
+   matrix behind, so .screen is a containing block for everything inside it
+   even when it looks untransformed. A "position: fixed" overlay in a screen
+   is therefore still trapped in — and cropped by — that screen. */
+function containingBlock (cs) {
+  return cs.position !== 'static' || cs.transform !== 'none' ||
+    cs.filter !== 'none' || cs.perspective !== 'none' || cs.contain.includes('paint')
+}
 function clipAncestors (el) {
   const pos = getComputedStyle(el).position
-  if (pos === 'fixed') return []
   const out = []
-  let reachedBlock = pos !== 'absolute'
+  let reachedBlock = pos !== 'absolute' && pos !== 'fixed'
   for (let a = el.parentElement; a; a = a.parentElement) {
     const cs = getComputedStyle(a)
-    if (!reachedBlock && cs.position !== 'static') reachedBlock = true
-    if (!reachedBlock) continue
+    if (!reachedBlock) {
+      // a fixed box only escapes a positioned ancestor, not a transformed one
+      const isBlock = pos === 'fixed'
+        ? (cs.transform !== 'none' || cs.filter !== 'none' || cs.perspective !== 'none')
+        : containingBlock(cs)
+      if (isBlock) reachedBlock = true
+      else continue
+    }
     if (clips(cs, 'x') || clips(cs, 'y') || scrolls(cs, 'x') || scrolls(cs, 'y')) out.push({ el: a, cs })
   }
   return out
