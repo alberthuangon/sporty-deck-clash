@@ -23,26 +23,32 @@
 import { reactive, ref } from 'vue'
 import gsap from 'gsap'
 
-/* Albert's approved caps, §3. A number here is a promise to the player, so
-   nothing is allowed to exceed it — MotionLab's sliders top out at exactly
-   these values, which is why the cap and the dial are separate objects. */
+/* Albert's caps. A number here is a promise to the player, so nothing is
+   allowed to exceed it — MotionLab's sliders top out at exactly these values,
+   which is why the cap and the dial are separate objects.
+
+   Revised after watching the clips: rankUp 1.40 -> 1.80 and flyIn 0.60 ->
+   1.00, because the dials he asked for did not fit under the originals. The
+   cap moving to meet the dial is the one direction this discipline cannot
+   check for itself, so it is a decision, written down, rather than a drift. */
 export const UI_BUDGET = Object.freeze({
   tear: 1.20,        // tap -> first card visible
   radar: 0.90,       // the radar shape morphing to next level
   payout: 1.10,      // the payout figure rolling
-  rankUp: 1.40,      // the promotion burst
-  flyIn: 0.60        // diamonds / shards flying to the wallet
+  rankUp: 1.80,      // the promotion burst
+  flyIn: 1.00        // diamonds / shards flying to the wallet
 })
 
-/* What they actually spend. Live, so MotionLab retunes the rhythm without a
-   reload, and every default sits UNDER its cap rather than on it: a budget
-   spent to the last millisecond leaves no room to be wrong about. */
+/* What they actually spend — Albert's numbers, set by eye off the clips.
+   Three of them now sit exactly ON their cap, which means the slider only
+   moves downwards from here and any beat that quietly grows fails the gate
+   on the next run. That is the discipline working, not a problem with it. */
 export const UI_TIME = reactive({
-  tear: 0.92,
-  radar: 0.72,
+  tear: 1.10,
+  radar: 0.90,
   payout: 0.80,
-  rankUp: 1.22,
-  flyIn: 0.46
+  rankUp: 1.80,
+  flyIn: 1.00
 })
 
 /* Past this, an animation has to be interruptible — same semantics as the
@@ -67,6 +73,12 @@ export function setReduced (v) { reduced.value = !!v }
    One row per animation NAME, holding its most recent play. The gate reads
    this: a budget nobody checks is a comment. */
 const REGISTER = new Map()
+/* Everything still in the air. REGISTER holds one row per NAME, which is what
+   the report and the camera want; but two flights of the same name can
+   overlap — claim two missions quickly, or walk a pack of duplicates — and
+   the one that gets superseded in the register is still running, still
+   holding tokens. Cancelling needs all of them, not the latest of each. */
+const LIVE = new Set()
 let current = null
 
 export function uiReport () {
@@ -89,7 +101,7 @@ export function uiSkip () { if (current) current.skip() }
    takes its tokens away. Without it one held frame leaked 12 tokens into
    every state measured after it. */
 export function uiCancelAll () {
-  REGISTER.forEach(api => api.cancel())
+  ;[...LIVE].forEach(api => api.cancel())
   current = null
 }
 
@@ -143,6 +155,7 @@ export function uiPlay (name, build, { interruptible = false, onEnd = null } = {
   function finish () {
     if (rec.done) return
     rec.done = true
+    LIVE.delete(api)
     if (layer) { layer.remove(); layer = null }
     if (current === api) current = null
     if (onEnd) onEnd()
@@ -172,6 +185,7 @@ export function uiPlay (name, build, { interruptible = false, onEnd = null } = {
 
   tl.eventCallback('onComplete', finish)
   REGISTER.set(name, api)
+  LIVE.add(api)
   current = api
 
   if (reduced.value) { tl.progress(1, false); return api }

@@ -254,7 +254,7 @@ export const CASES = [
     screen: 'home',
     group: 'draw-mirror',
     scope: '.dr',
-    wait: 1800,
+    wait: 2600,
     setup () { reset(); richCollection(); store.tickets = 2; game.runSeasonDraw(false); store.overlay = 'draw' }
   },
   {
@@ -262,7 +262,7 @@ export const CASES = [
     screen: 'home',
     group: 'draw-mirror',
     scope: '.dr',
-    wait: 1800,
+    wait: 2600,
     setup () { reset(); richCollection(); store.tickets = 2; game.runSeasonDraw(true); store.overlay = 'draw' }
   },
   {
@@ -305,7 +305,7 @@ export const CASES = [
     screen: 'home',
     group: 'rankup-end',
     scope: '.ru',
-    wait: 1800,
+    wait: 2600,
     setup () {
       reset(); richCollection()
       store.rankUpView = { label: 'Bronze I', reward: { diamonds: 50 } }
