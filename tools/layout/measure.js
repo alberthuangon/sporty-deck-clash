@@ -161,6 +161,9 @@ export function measure (scope) {
   const frame = phone.getBoundingClientRect()
 
   const out = {
+    ragged: [],         // grid cells in one row whose contents are different heights
+    tinyTargets: [],    // tappable things too small to hit at all
+    smallTargets: [],   // tappable things under the published 44px minimum
     clipped: [],        // content cut off by an overflow:hidden ancestor
     offFrame: [],       // laid out past the edge of the 430px phone
     truncated: [],      // text cut off with no ellipsis to say so
@@ -173,6 +176,33 @@ export function measure (scope) {
     topbar && { name: 'TopBar', rect: topbar.getBoundingClientRect() },
     tabbar && { name: 'TabBar', rect: tabbar.getBoundingClientRect() }
   ].filter(Boolean)
+
+  /* A grid stretches its cells, but not necessarily what is INSIDE them: a
+     CardFace does not fill the cell a locked placeholder sets the height of,
+     so owned cards render 13px shorter than their neighbours and the grid
+     looks ragged along the bottom. */
+  for (const grid of phone.querySelectorAll('*')) {
+    if (getComputedStyle(grid).display !== 'grid') continue
+    const byRow = new Map()
+    for (const cell of grid.children) {
+      if (invisible(cell)) continue
+      const r = cell.getBoundingClientRect()
+      const row = Math.round(r.top)
+      const kids = [...cell.children].filter(k => !invisible(k)).map(k => k.getBoundingClientRect())
+      const h = kids.length ? Math.max(...kids.map(k => k.bottom)) - Math.min(...kids.map(k => k.top)) : r.height
+      if (!byRow.has(row)) byRow.set(row, [])
+      byRow.get(row).push({ h: +h.toFixed(1), what: label(cell.firstElementChild || cell) })
+    }
+    for (const [row, cells] of byRow) {
+      if (cells.length < 2) continue
+      const hs = cells.map(c => c.h)
+      const spread = Math.max(...hs) - Math.min(...hs)
+      if (spread > 1) {
+        out.ragged.push({ grid: label(grid), row, spread: +spread.toFixed(1),
+          cells: cells.map(c => `${c.what}=${c.h}`).join(' ') })
+      }
+    }
+  }
 
   const seen = new Map()
   const anchorSeen = new Map()
@@ -210,6 +240,23 @@ export function measure (scope) {
 
     const t = truncation(el, cs)
     if (t) (t.ellipsis ? out.ellipsised : out.truncated).push({ key, over: t.over, text: textOf(el) })
+
+    /* Anything you are meant to tap has to be big enough to tap. 44px is the
+       floor Apple and Google both publish, and most of this app's controls sit
+       under it — that is a step 7 conversation, so it is a note. What fails is
+       TINY: below 20px a control is not reliably hittable at all, and when it
+       is the only way out of a screen the screen reads as a dead end.
+       Native inputs are left out: the browser gives a checkbox or a slider
+       thumb a hit area bigger than its box. */
+    const tappable = el.matches('button, a[href], [role="button"]') && !el.disabled
+    if (tappable) {
+      const pr = paintedRect(el, rect)
+      const w = +(pr.right - pr.left).toFixed(1), h = +(pr.bottom - pr.top).toFixed(1)
+      if (w > 0 && h > 0 && (w < 44 || h < 44)) {
+        ;(Math.min(w, h) < 20 ? out.tinyTargets : out.smallTargets)
+          .push({ key, w, h, text: textOf(el) })
+      }
+    }
 
     if (screen && screen.contains(el) && !CHROME_OVERLAYS.some(sel => el.closest(sel))) {
       const pr = paintedRect(el, rect)
