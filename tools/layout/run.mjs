@@ -173,6 +173,40 @@ const groupSummary = [...groups].map(([n, st]) => `${n}:${st.length}`).join(' ')
 check('elements that move between states of one screen', shifts.length, !shifts.length)
 check('invariance groups comparing nothing', emptyGroups.length, !emptyGroups.length)
 
+/* ---------- the UI animation budget (src/ui/motion.js, plan §3) ----------
+
+   The match has a 30s cap and a solver to spend it. These five animations had
+   no equivalent, and they are the ones on the repeated path: one match per
+   bet, but dozens of pack openings, reward claims and upgrades in a session.
+   An 8-second pack opening is harder to sit through than a 30-second match,
+   and the failure is invisible in review — each animation is fine alone, the
+   fifth pack is what hurts. Two rules, both mechanical:
+
+     1. no animation may exceed its budget
+     2. anything over a second has to be interruptible, and the interrupt has
+        to land on the END state (that last part is the rankup-end invariance
+        group, not a number — it is a layout claim, so the layout gate makes
+        it) */
+const motion = screens.results.flatMap(r => (r.motion || []).map(m => ({ state: r.id, ...m })))
+const overBudget = motion.filter(m => m.duration > m.budget + 0.001)
+const noExit = motion.filter(m => m.needsExit && !m.interruptible)
+/* The interrupt surface covers the frame, bars included, and is exempt from
+   the chrome assertion for it. The price of that exemption: it must hide
+   nothing, and it must be gone the moment the animation ends. */
+const doneByName = new Map(motion.map(m => [`${m.state}/${m.name}`, m.done]))
+const skipLeaks = screens.results.flatMap(r => (r.skipLayers || [])
+  .filter(l => doneByName.get(`${r.id}/${l.name}`) !== false)
+  .map(l => ({ state: r.id, ...l })))
+const skipOpaque = screens.results.flatMap(r => (r.skipLayers || [])
+  .filter(l => l.bgImage !== 'none' || !/rgba\(0, 0, 0, 0\)|transparent/.test(l.bg))
+  .map(l => ({ state: r.id, ...l })))
+
+console.log(`\nUI animations stay inside the budget  (${motion.length} play(s) across the sweep)\n`)
+check('UI animations over their time budget', overBudget.length, !overBudget.length)
+check('long UI animations with no way to interrupt', noExit.length, !noExit.length)
+check('interrupt surfaces left behind', skipLeaks.length, !skipLeaks.length)
+check('interrupt surfaces that hide what is under them', skipOpaque.length, !skipOpaque.length)
+
 if (ellipsised.length) {
   console.log(`\n  note: ${ellipsised.length} label(s) ellipsised — truncated, but visibly so:`)
   ellipsised.forEach(e => console.log(`    ${e.state}  ${e.key}  -${e.over}px  "${e.text}"`))
@@ -201,6 +235,10 @@ if (fail.length) {
   ;[...byTarget].forEach(([k, n]) => console.log(`  too small to tap: ${k}${n > 1 ? `  (${n} states)` : ''}`))
   shifts.forEach(sh => console.log(`  moved: [${sh.group}] ${sh.key} by ${sh.spread}px — ${sh.detail}`))
   emptyGroups.forEach(g => console.log(`  compares nothing: ${g}`))
+  overBudget.forEach(m => console.log(`  over budget: ${m.state}  ${m.name} is ${m.duration}s against a ${m.budget}s cap`))
+  noExit.forEach(m => console.log(`  no way out: ${m.state}  ${m.name} runs ${m.duration}s with no interrupt surface`))
+  skipLeaks.forEach(l => console.log(`  interrupt surface left behind: ${l.state}  [data-skip="${l.name}"]`))
+  skipOpaque.forEach(l => console.log(`  interrupt surface is painted: ${l.state}  [data-skip="${l.name}"] bg ${l.bg} ${l.bgImage}`))
   console.log('')
   process.exit(1)
 }

@@ -81,3 +81,9 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; }
   background: var(--red); box-shadow: 0 0 0 2px var(--surface);
 }
 .locked-note { color: var(--text-2); font-size: 12px; }
+
+/* The way out of any UI animation over a second (src/ui/motion.js installs
+   it, and removes it when the animation ends). Transparent on purpose: this
+   is an exit, not a scrim — it must never hide what is underneath it. Above
+   the takeovers, which sit at 60. */
+.ui-skip { position: absolute; inset: 0; z-index: 90; background: none; }

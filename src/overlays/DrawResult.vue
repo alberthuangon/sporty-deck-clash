@@ -41,9 +41,11 @@
       <button class="btn dr-go" @click="dismiss">Close</button>
     </div>
 
-    <div v-if="draw.won" class="dr-burst" ref="burstEl" aria-hidden="true">
-      <i v-for="n in 14" :key="n"></i>
-    </div>
+    <!-- Always mounted, never behind the v-if it used to sit behind: a
+         component that mounted on a losing draw and then saw a winning one ran
+         its animation against nothing. Burst holds its shards at opacity 0
+         until it is told to play, so "won" decides the PLAY, not the DOM. -->
+    <Burst ref="burstRef" :count="18" :radius="150" />
   </div>
 </template>
 
@@ -53,9 +55,9 @@
    Losing takes over the screen exactly as winning does. That is the point:
    "the draw algorithm is published" is only worth saying if the player is
    shown the same ledger on the day it did not go their way. */
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
-import gsap from 'gsap'
+import { computed, ref, watch, onMounted } from 'vue'
 import CountUp from '../components/CountUp.vue'
+import Burst from '../components/Burst.vue'
 import { store, ticketsWaiting } from '../game.js'
 
 const props = defineProps({ animate: { type: Boolean, default: true } })
@@ -63,42 +65,27 @@ const props = defineProps({ animate: { type: Boolean, default: true } })
 const draw = computed(() => store.jackpot.lastDraw)
 const odds = computed(() => (draw.value.myTickets ? Math.round(draw.value.totalTickets / draw.value.myTickets) : null))
 const waiting = computed(() => ticketsWaiting())
-const burstEl = ref(null)
-let tl = null
+const burstRef = ref(null)
 
 function dismiss () {
   store.flags.seenDraw = draw.value.season   // opened: the card stops being an envelope
   store.overlay = null
 }
 
-/* Stands in for the rank-up burst until step 6 builds the real one; it plays
-   once and stops, like the full-time card it is modelled on.
+/* The same burst the rank-up takeover plays, on the same budget — PRD §6.7.2
+   said this placeholder was waiting for step 6 to build the real one, and a
+   second copy of it would have been the wrong kind of thrift.
 
-   Keyed on the draw rather than on mount: the shards are behind v-if="won",
-   so a component that mounted on a losing draw and then saw a winning one
-   would have run its animation against nothing. That is the same mistake the
-   goal cut-in made — compile first, element second. */
+   Keyed on the draw rather than on mount for the reason above: the component
+   can already be up when the draw arrives. `immediate` is no use, it runs
+   during setup when the shards do not exist yet. */
 function playBurst () {
-  if (tl) { tl.kill(); tl = null }
-  if (!draw.value || !draw.value.won || !props.animate || !burstEl.value) return
-  const bits = burstEl.value.children
-  gsap.set(bits, { clearProps: 'all' })
-  tl = gsap.timeline()
-  tl.fromTo(bits,
-    { scale: 0, opacity: 1 },
-    {
-      scale: 1, opacity: 0, duration: 1.1, ease: 'power2.out', stagger: 0.03,
-      x: i => Math.cos((i / bits.length) * Math.PI * 2) * 150,
-      y: i => Math.sin((i / bits.length) * Math.PI * 2) * 150
-    })
+  if (!draw.value || !draw.value.won || !props.animate || !burstRef.value) return
+  burstRef.value.play()
 }
 
-/* onMounted for the normal case, and a watcher for the case where this
-   component is already up when the draw arrives — `immediate` is no use here,
-   it runs during setup when the shards do not exist yet. */
 onMounted(playBurst)
 watch(() => draw.value && draw.value.won, playBurst, { flush: 'post' })
-onUnmounted(() => { if (tl) tl.kill() })
 </script>
 
 <style scoped>
@@ -143,10 +130,4 @@ onUnmounted(() => { if (tl) tl.kill() })
 .dr-v { font-weight: 700; font-variant-numeric: tabular-nums; }
 .dr-next { font-size: 12px; line-height: 1.5; text-align: center; margin: 18px 4px 12px; color: var(--text-2); }
 .dr-go { margin-top: 22px; flex: 0 0 auto; }
-
-.dr-burst { position: absolute; left: 50%; top: 32%; pointer-events: none; }
-.dr-burst i {
-  position: absolute; width: 8px; height: 8px; margin: -4px;
-  border-radius: 2px; background: var(--cta);
-}
 </style>

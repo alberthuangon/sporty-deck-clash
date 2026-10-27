@@ -60,6 +60,7 @@ function initialState () {
     pendingTier: null,
     upgradeTarget: null,
     cardTarget: null,
+    rankUpView: null,       // which promotion the rank-up takeover is showing
 
     // live match context (built during the betting flow)
     match: null,

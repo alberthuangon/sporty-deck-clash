@@ -34,7 +34,7 @@ Every state is reached the way a player reaches it: real game functions
 keep their stage in local component state, and reaching in to set those refs
 would test a reachability nobody has.
 
-Sixteen assertions:
+Twenty assertions:
 
 | | |
 | --- | --- |
@@ -52,6 +52,10 @@ Sixteen assertions:
 | controls under the 44px tap target | the floor Apple and Google both publish, measured on the PAINTED rect — a button padded out past the edge of its scroll container only counts the part you can reach. Native inputs are exempt: the browser gives a checkbox or a slider thumb a hit area bigger than its box |
 | elements that move between states of one screen | the main one; see below |
 | invariance groups comparing nothing | a check that compares nothing passes for free |
+| UI animations over their time budget | the match has a 30s cap and a solver; the five UI animations (`src/ui/motion.js`) had nothing, and they are the ones on the repeated path — one match per bet, but dozens of pack openings and reward claims in a session. A stagger silently added 0.46s to a 1.22s burst and put it over its cap |
+| long UI animations with no way to interrupt | anything over a second has to be skippable, with the match's Skip semantics: one tap and you are at the END state |
+| interrupt surfaces left behind | that exit covers the whole frame, bars included, so it is exempt from the chrome assertion — and the price of the exemption is that it must be gone the moment the animation ends. An overlay dismissed mid-burst left one behind and every tap after it, on every screen, went nowhere |
+| interrupt surfaces that hide what is under them | the other half of that price: an exit, not a scrim |
 
 The last two are the point. States are put in a **group** when a player
 sitting still on one screen can watch it turn into the other — mid-reveal in a
@@ -85,7 +89,13 @@ hide something, and what can be *blamed* for hiding it. A takeover or a toast
 legitimately puts the screen behind it out of play, so content under one is
 skipped — but neither is ever named as the thing that ate a row.
 
-Four things about headless Chrome that each produced a confident lie first:
+"A skip lands on the end state" is not in that table on purpose. It is a
+claim about layout, so it is made in the layout gate's own language: the
+`rankup-end` group holds the same takeover interrupted at 0.3s and finished
+normally, and every shared element has to measure identical. Replace the skip
+with a `kill()` and the group goes red by 7.2px.
+
+Five things about headless Chrome that each produced a confident lie first:
 
 * `requestAnimationFrame` fires **once** under `--virtual-time-budget` and
   never again. gsap's ticker runs on it, App.vue's screen transition is
@@ -118,6 +128,12 @@ Four things about headless Chrome that each produced a confident lie first:
   never exits and never dumps — no output, no timeout. Progress also goes to
   `console.log`, because Chrome's stderr survives being killed, and the runner
   turns "froze" into a named failure.
+* gsap's **lag smoothing** clamps any frame longer than 500ms down to 33ms,
+  and under virtual time every frame is longer than that. A 1.22s animation
+  advanced 0.31s while the harness waited 1.8s, so a state that had finished
+  measured mid-flight. Turned off in the harness; it exists to protect a real
+  user from a stalled tab, and there is no user. Waiting for an animation is
+  the weaker move anyway — `?at=<seconds>` names the frame instead.
 
 `window.__skd` on the real build (`store`, `go`, `game`) and `window.__match`
 on the match screen are the same hatch by hand: `currentScreen` is

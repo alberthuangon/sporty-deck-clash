@@ -21,6 +21,7 @@
            above the tab bar on purpose — a takeover that leaves the tabs
            tappable is not a takeover (PRD §6.7.2). -->
       <DrawResult v-if="store.overlay === 'draw'" />
+      <RankUp v-else-if="store.overlay === 'rankup'" />
     </div>
   </div>
 </template>
@@ -33,6 +34,7 @@ import { canUpgrade, CATALOGUE } from './game.js'
 import TopBar from './components/TopBar.vue'
 import TabBar from './components/TabBar.vue'
 import DrawResult from './overlays/DrawResult.vue'
+import RankUp from './overlays/RankUp.vue'
 
 import Home from './screens/Home.vue'
 import Tasks from './screens/Tasks.vue'

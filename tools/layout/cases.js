@@ -13,6 +13,7 @@
 
 import { store, resetStore } from '../../src/store.js'
 import * as game from '../../src/game.js'
+import { uiRunning } from '../../src/ui/motion.js'
 
 /* The engine is deterministic given its rng, but the game layer reaches for
    Math.random (toss assignment, draw, script). Seeding it makes every case
@@ -233,6 +234,65 @@ export const CASES = [
     setup () { reset(); richCollection(); store.tickets = 0; game.runSeasonDraw(false); store.overlay = 'draw' }
   },
 
+  /* ------------------------------------------------ Rank-up takeover
+     (step 6 item 1, the promotion burst)
+
+     Three states, for three different questions. The first photographs the
+     burst mid-flight, which is the only way to see whether it is animating
+     anything at all — this repo has shipped three animations pointed at
+     elements that did not exist, and every one of them read fine in the
+     source. The other two are an invariance group, which is how "a skip lands
+     on the END state" becomes a fact: interrupt it at 0.3s and finish it
+     normally, and the two have to measure identical. */
+  {
+    id: 'rankup/burst',
+    screen: 'home',
+    scope: '.ru',
+    setup () {
+      reset(); richCollection()
+      store.rankUpView = { label: 'Bronze II', reward: { tickets: 2 } }
+      store.overlay = 'rankup'
+    },
+    async act ({ raf, at }) {
+      const run = uiRunning()
+      if (!run) throw new Error('the rank-up takeover played nothing')
+      run.timeline.pause(at === null ? 0.3 : at)   // a frame, not a settled state
+      await raf()
+    }
+  },
+  {
+    id: 'rankup/settled',
+    screen: 'home',
+    group: 'rankup-end',
+    scope: '.ru',
+    wait: 1800,
+    setup () {
+      reset(); richCollection()
+      store.rankUpView = { label: 'Bronze I', reward: { diamonds: 50 } }
+      store.overlay = 'rankup'
+    }
+  },
+  {
+    /* interrupted at 0.3s of 1.22s. Paused first, so the click is exercised
+       for real rather than racing the animation to the finish line. */
+    id: 'rankup/skipped',
+    screen: 'home',
+    group: 'rankup-end',
+    scope: '.ru',
+    setup () {
+      reset(); richCollection()
+      store.rankUpView = { label: 'Bronze I', reward: { diamonds: 50 } }
+      store.overlay = 'rankup'
+    },
+    async act ({ click, raf }) {
+      const run = uiRunning()
+      if (!run) throw new Error('the rank-up takeover played nothing to interrupt')
+      run.timeline.pause(0.3)
+      await raf()
+      await click('[data-skip="rankUp"]')
+    }
+  },
+
   /* ------------------------------------------------ Cards */
   { id: 'cards/sparse', screen: 'cards', setup () { reset() } },
   {
@@ -426,6 +486,14 @@ export const CASES = [
   { id: 'result/win-no-pk', screen: 'result', setup () { reset(); richCollection(); resultLike({ wantPk: false, wantWin: true }) } },
   { id: 'result/lose-no-pk', screen: 'result', setup () { reset(); richCollection(); resultLike({ wantPk: false, wantWin: false }) } },
   { id: 'result/reward-tickets', screen: 'result', setup () { reset(); richCollection(); resultLike({ wantWin: true, reward: 'tickets' }) } },
+  {
+    /* the promotion block is the door into the rank-up takeover, and it is a
+       button now — so it has to be tappable at 44px and open what it says */
+    id: 'result/promo-opened',
+    screen: 'result',
+    setup () { reset(); richCollection(); resultLike({ wantWin: true, reward: 'tickets' }) },
+    act: ({ click }) => click('[data-sfx="rankup"]')
+  },
   { id: 'result/reward-diamonds', screen: 'result', setup () { reset(); richCollection(); resultLike({ wantWin: true, reward: 'diamonds' }) } },
 
   /* ------------------------------------------------ Squad */

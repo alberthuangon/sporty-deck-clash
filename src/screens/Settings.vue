@@ -30,6 +30,17 @@
         </div>
         <input type="checkbox" v-model="store.settings.fastMatch" />
       </label>
+      <label class="row">
+        <div>
+          <div class="rt">Reduced motion</div>
+          <div class="rs muted">
+            Lands every UI animation on its end state instead of playing it —
+            pack tear, radar morph, payout roll, promotion burst, fly-in.
+            Starts from the OS setting; this overrides it for the session.
+          </div>
+        </div>
+        <input type="checkbox" :checked="reduced" @change="setReduced($event.target.checked)" />
+      </label>
 
       <!-- the draw happens at season end, which nobody reaches in a demo -->
       <div class="row col">
@@ -74,6 +85,7 @@
 <script setup>
 import { store, resetStore, go } from '../store.js'
 import { sealNextDraw } from '../game.js'
+import { reduced, setReduced } from '../ui/motion.js'
 
 const build = import.meta.env.MODE
 const DRAW_MODES = [{ id: 'random', label: 'Random' }, { id: 'lost', label: 'No win' }, { id: 'won', label: 'Grand prize' }]

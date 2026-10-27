@@ -15,12 +15,18 @@ const TOL = 0.75          // subpixel noise from fractional layout
    with an obligation, checked below: a declared takeover has to actually
    cover the whole frame. An exemption with nothing asked in return is a hole
    in the gate, not an exception to it. */
-const TAKEOVERS = ['.dr']
+const TAKEOVERS = ['.dr', '.ru']
 
 /* Allowed to cover the chrome bars: the takeovers above, plus a bottom sheet
    with a scrim and a toast. Anything else that reaches the TopBar or the
-   TabBar is a bug. */
-const CHROME_OVERLAYS = ['.sheet', '.toast', ...TAKEOVERS]
+   TabBar is a bug.
+
+   `[data-skip]` is the interrupt surface src/ui/motion.js installs over an
+   animation that runs longer than a second. It covers the frame, bars
+   included, because a tap anywhere has to be the way out. Its obligation is
+   asserted in run.mjs: transparent, so it hides nothing, and gone the moment
+   the animation ends. */
+const CHROME_OVERLAYS = ['.sheet', '.toast', '[data-skip]', ...TAKEOVERS]
 
 /* Boxes that are MEANT to be bigger than their container and cropped by it:
    a full-bleed texture is drawn oversized on purpose. Everything else that

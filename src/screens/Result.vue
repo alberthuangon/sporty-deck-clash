@@ -40,13 +40,21 @@
       <div class="rk-sub muted">{{ store.rank.score }} / {{ step }} to next tier</div>
     </div>
 
-    <div v-for="p in matchView.promotions" :key="p.id" class="promo">
+    <!-- Tappable, not automatic. The promotion and its reward are already
+         readable right here; the takeover is the celebration, and a
+         celebration that interrupts the ledger the player came to read is the
+         same mistake as a PK light that comes on before the ball is kicked
+         (§2.1). The jackpot draw was moved to "the player opens it" for this
+         reason, so this follows it. -->
+    <button v-for="p in matchView.promotions" :key="p.id" class="promo"
+            data-sfx="rankup" @click="celebrate(p)">
       <div class="pt">PROMOTED — {{ p.label }}</div>
       <div class="pr">
         <span v-if="p.reward.diamonds">◆ {{ p.reward.diamonds }}</span>
         <span v-if="p.reward.tickets">🎟 {{ p.reward.tickets }} jackpot tickets</span>
       </div>
-    </div>
+      <div class="ph">tap to celebrate</div>
+    </button>
 
     <div class="scorers card" v-if="goals.length">
       <div class="sec-title" style="margin-bottom:8px">Goals</div>
@@ -75,6 +83,10 @@ const raw = computed(() => (matchView.stake * matchView.myOdds).toFixed(2))
 const step = computed(() => RANK_TIERS[store.rank.tierIndex].step || 100)
 const rankPct = computed(() => Math.min(100, (store.rank.score / step.value) * 100))
 const goals = computed(() => ctx.script ? ctx.script.events.filter(e => e.type === 'GOAL') : [])
+function celebrate (p) {
+  store.rankUpView = { label: p.label, reward: p.reward }
+  store.overlay = 'rankup'
+}
 function home () { abandonMatch(); go('home') }
 function again () { abandonMatch(); go('tierselect') }
 </script>
@@ -99,9 +111,10 @@ function again () { abandonMatch(); go('tierselect') }
 .bar { height: 7px; background: var(--surface-hi); border-radius: 999px; overflow: hidden; margin: 8px 0 5px; }
 .bar i { display: block; height: 100%; background: var(--green); }
 .rk-sub { font-size: 11px; }
-.promo { background: var(--cta-deep); border-radius: var(--r-md); padding: 12px; text-align: center; }
+.promo { background: var(--cta-deep); border-radius: var(--r-md); padding: 12px; text-align: center; width: 100%; display: block; }
 .pt { font-weight: 800; font-size: 13px; letter-spacing: .05em; }
 .pr { display: flex; gap: 14px; justify-content: center; margin-top: 6px; font-size: 13px; font-weight: 700; }
+.ph { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; opacity: .75; margin-top: 7px; }
 .scorers { padding: 12px; }
 .grow { display: flex; gap: 10px; font-size: 12px; padding: 5px 0; }
 .grow span:nth-child(2) { flex: 1; font-weight: 700; }
