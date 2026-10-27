@@ -14,6 +14,16 @@ import {
 
 function pos (el) { return { left: el[0] + '%', top: el[1] + '%' } }
 
+/* Every beat in this file is compiled before a single frame plays (PRD §14.2).
+   gsap renders a fromTo's START state the moment it is created, so a beat that
+   has not happened yet still paints its "before" look — the scoreboard spent
+   every match at 1.9x and bright green because the goal cut-in's digit punch
+   had been compiled. Use this instead of tl.fromTo: the start state lands when
+   the beat does, not when the timeline is built. */
+function fromTo (tl, target, from, to, at) {
+  return tl.fromTo(target, from, { ...to, immediateRender: false }, at)
+}
+
 /* ---------------------------------------------------------------- *
  * Ambient off-ball motion.
  * Runs on its own clock, independent of the match timeline, so players are
@@ -63,7 +73,7 @@ function trail (tl, stage, from, to, at, duration) {
   tl.call(() => {
     path.setAttribute('d', `M ${from[0]} ${from[1]} L ${to[0]} ${to[1]}`)
   }, null, at)
-  tl.fromTo(path, { opacity: .7 }, { opacity: 0, duration: duration + .22, ease: 'power2.out' }, at)
+  fromTo(tl, path, { opacity: .7 }, { opacity: 0, duration: duration + .22, ease: 'power2.out' }, at)
 }
 
 function sfx (tl, at, label, onSfx) {
@@ -129,8 +139,8 @@ function highlight (tl, stage, side, slot, at) {
   const el = stage.token(side, slot)
   if (!el) return
   const ring = el.querySelector('.ring')
-  tl.fromTo(ring, { opacity: .9, scale: .7 }, { opacity: 0, scale: 1.5, duration: .45, ease: 'power2.out' }, at)
-  tl.fromTo(el, { scale: 1 }, { scale: 1.22, duration: .12, yoyo: true, repeat: 1, ease: 'power2.out' }, at)
+  fromTo(tl, ring, { opacity: .9, scale: .7 }, { opacity: 0, scale: 1.5, duration: .45, ease: 'power2.out' }, at)
+  fromTo(tl, el, { scale: 1 }, { scale: 1.22, duration: .12, yoyo: true, repeat: 1, ease: 'power2.out' }, at)
 }
 
 /* ---------------------------------------------------------------- *
@@ -216,7 +226,7 @@ export function buildWave (stage, opts, beat = BEAT, onSfx = null, onRate = null
     tl.to(stage.flash(), { opacity: .55, duration: .07 }, t)
     tl.to(stage.flash(), { opacity: 0, duration: .32 }, t + .07)
     tl.set(stage.shock(), { ...pos(target) }, t)
-    tl.fromTo(stage.shock(), { opacity: .9, scale: .3 },
+    fromTo(tl, stage.shock(), { opacity: .9, scale: .3 },
       { opacity: 0, scale: 3.4, duration: .52, ease: 'power2.out' }, t)
     t += beat.goalHang
     if (onRate) tl.call(() => onRate(1), null, t)
@@ -259,21 +269,21 @@ export function buildGoalCutIn (stage, { card, scoreSide, scoreHome, scoreAway, 
 
   tl.call(() => stage.setCutIn(card, 'GOAL!', subtitle || `${card.name} scores`, scoreSide, team))
   tl.set(ci.root, { visibility: 'visible' })
-  tl.fromTo(ci.bg, { opacity: 0 }, { opacity: 1, duration: .16, ease: 'power2.out' }, 0)
+  fromTo(tl, ci.bg, { opacity: 0 }, { opacity: 1, duration: .16, ease: 'power2.out' }, 0)
   // the colour wash arrives first — which side scored should land before any
   // name is legible
-  tl.fromTo(ci.tint, { opacity: 0 }, { opacity: 1, duration: .13, ease: 'power2.out' }, 0)
-  tl.fromTo(ci.streaks, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: .5, ease: 'power2.out' }, 0)
+  fromTo(tl, ci.tint, { opacity: 0 }, { opacity: 1, duration: .13, ease: 'power2.out' }, 0)
+  fromTo(tl, ci.streaks, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: .5, ease: 'power2.out' }, 0)
   tl.to(ci.streaks, { x: 40, duration: beat.cutIn, ease: 'none' }, .1)
 
   /* every transform the OTHER cut-in touches has to be named here too: all of
      these timelines are compiled up front, gsap renders a fromTo's start state
      immediately, and both cut-ins drive the same slot */
-  tl.fromTo(ci.card,
+  fromTo(tl, ci.card,
     { x: -110, y: 0, opacity: 0, rotate: -9, scale: .82 },
     { x: 0, y: 0, opacity: 1, rotate: 0, scale: 1, duration: .42, ease: 'back.out(1.5)' }, .04)
 
-  tl.fromTo(ci.text,
+  fromTo(tl, ci.text,
     { scale: 2.1, opacity: 0, letterSpacing: '0.3em' },
     { scale: 1, opacity: 1, letterSpacing: '0.04em', duration: .34, ease: 'back.out(2.2)' }, .2)
   sfx(tl, .2, 'goal_shout', onSfx)
@@ -282,7 +292,7 @@ export function buildGoalCutIn (stage, { card, scoreSide, scoreHome, scoreAway, 
   tl.call(() => stage.setScore(scoreHome, scoreAway), null, .36)
   const digit = stage.scoreEl(scoreSide)
   if (digit) {
-    tl.fromTo(digit, { scale: 1.9, color: '#33EA6A' },
+    fromTo(tl, digit, { scale: 1.9, color: '#33EA6A' },
       { scale: 1, color: '#ffffff', duration: .5, ease: 'back.out(2)' }, .36)
   }
 
@@ -298,11 +308,11 @@ export function buildSaveCutIn (stage, { card, subtitle, side, team }, beat = BE
   const tl = gsap.timeline()
   tl.call(() => stage.setCutIn(card, 'SAVED', subtitle || `${card.name} keeps it out`, side, team))
   tl.set(ci.root, { visibility: 'visible' })
-  tl.fromTo(ci.bg, { opacity: 0 }, { opacity: 1, duration: .14 }, 0)
-  tl.fromTo(ci.tint, { opacity: 0 }, { opacity: .85, duration: .12 }, 0)
-  tl.fromTo(ci.card, { x: 0, y: 70, opacity: 0, rotate: 0, scale: .9 },
+  fromTo(tl, ci.bg, { opacity: 0 }, { opacity: 1, duration: .14 }, 0)
+  fromTo(tl, ci.tint, { opacity: 0 }, { opacity: .85, duration: .12 }, 0)
+  fromTo(tl, ci.card, { x: 0, y: 70, opacity: 0, rotate: 0, scale: .9 },
     { x: 0, y: 0, opacity: 1, rotate: 0, scale: 1, duration: .34, ease: 'back.out(1.4)' }, .03)
-  tl.fromTo(ci.text, { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: .26, ease: 'back.out(2)' }, .14)
+  fromTo(tl, ci.text, { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: .26, ease: 'back.out(2)' }, .14)
   sfx(tl, .14, 'save_shout', onSfx)
   tl.to([ci.bg, ci.body, ci.tint], { opacity: 0, duration: .22, ease: 'power2.in' }, beat.saveCutIn)
   tl.set(ci.root, { visibility: 'hidden' })
@@ -330,13 +340,13 @@ export function buildFinalWhistle (stage, { winSide, winText, pk }, beat = BEAT,
   if (pkOv && pkOv.root) tl.set(pkOv.root, { visibility: 'hidden' })
   if (ciOv && ciOv.root) tl.set(ciOv.root, { visibility: 'hidden' })
   tl.set(fi.root, { visibility: 'visible' })
-  tl.fromTo(fi.bg, { opacity: 0 }, { opacity: 1, duration: .3, ease: 'power2.out' }, 0)
-  tl.fromTo(fi.body, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .34, ease: 'power2.out' }, .08)
-  tl.fromTo(fi.score, { scale: 1.5 }, { scale: 1, duration: .4, ease: 'back.out(2)' }, .18)
+  fromTo(tl, fi.bg, { opacity: 0 }, { opacity: 1, duration: .3, ease: 'power2.out' }, 0)
+  fromTo(tl, fi.body, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .34, ease: 'power2.out' }, .08)
+  fromTo(tl, fi.score, { scale: 1.5 }, { scale: 1, duration: .4, ease: 'back.out(2)' }, .18)
   sfxAt(tl, 0, 'whistle_full', onSfx)
 
   // the winner lands last and hardest
-  tl.fromTo(fi.win,
+  fromTo(tl, fi.win,
     { scale: 2.2, opacity: 0, letterSpacing: '0.34em' },
     { scale: 1, opacity: 1, letterSpacing: '0.04em', duration: .42, ease: 'back.out(2.4)' },
     beat.final * 0.42)
@@ -447,7 +457,7 @@ function pkCommon (stage, tl, opts, beat, onSfx, at) {
       left: ((ball.x - FRAME.x) / FRAME.w * 100) + '%',
       top: ((ball.y - FRAME.y) / FRAME.h * 100) + '%'
     }, r)
-    tl.fromTo(pk.ripple, { opacity: .95, scale: .3 },
+    fromTo(tl, pk.ripple, { opacity: .95, scale: .3 },
       { opacity: 0, scale: 2.2, duration: .46, ease: 'power2.out' }, r)
     tl.call(() => stage.setPkStamp('GOAL'), null, r)
     sfx(tl, r, 'pk_goal', onSfx)
@@ -469,7 +479,7 @@ function pkCommon (stage, tl, opts, beat, onSfx, at) {
     tl.call(() => stage.setPkStamp(outcome === 'POST' ? 'OFF THE POST' : 'MISSED'), null, r)
     sfx(tl, r, 'pk_miss', onSfx)
   }
-  tl.fromTo(pk.stamp, { opacity: 0, scale: scored ? 1.9 : 1.6, color: scored ? '#33EA6A' : '#9CA0AB' },
+  fromTo(tl, pk.stamp, { opacity: 0, scale: scored ? 1.9 : 1.6, color: scored ? '#33EA6A' : '#9CA0AB' },
     { opacity: 1, scale: 1, duration: .28, ease: 'back.out(2.1)' }, r + .04)
   return r + reveal
 }
@@ -493,11 +503,11 @@ export function buildPkShowdown (stage, opts, beat = BEAT, onSfx = null, onRate 
   tl.set(pk.faceoff, { opacity: 1 })
 
   /* ---- beat 1: the face-off -------------------------------------- */
-  if (standalone) tl.fromTo(pk.bg, { opacity: 0 }, { opacity: 1, duration: .20, ease: 'power2.out' }, 0)
-  tl.fromTo(pk.head, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: .26 }, .06)
-  tl.fromTo(pk.shooter, { x: -150, opacity: 0 }, { x: 0, opacity: 1, duration: .34, ease: 'power3.out' }, .04)
-  tl.fromTo(pk.keeper, { x: 150, opacity: 0 }, { x: 0, opacity: 1, duration: .34, ease: 'power3.out' }, .04)
-  tl.fromTo(pk.vig, { opacity: .55 },
+  if (standalone) fromTo(tl, pk.bg, { opacity: 0 }, { opacity: 1, duration: .20, ease: 'power2.out' }, 0)
+  fromTo(tl, pk.head, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: .26 }, .06)
+  fromTo(tl, pk.shooter, { x: -150, opacity: 0 }, { x: 0, opacity: 1, duration: .34, ease: 'power3.out' }, .04)
+  fromTo(tl, pk.keeper, { x: 150, opacity: 0 }, { x: 0, opacity: 1, duration: .34, ease: 'power3.out' }, .04)
+  fromTo(tl, pk.vig, { opacity: .55 },
     { opacity: 1, duration: beat.pkShowdown / 2.4, ease: 'sine.inOut', yoyo: true, repeat: 1 }, .12)
   // he is guessing, and you can see him guess
   tl.to(pk.keeper, { x: 7, duration: beat.pkShowdown / 3, ease: 'sine.inOut' }, .34)
@@ -508,7 +518,7 @@ export function buildPkShowdown (stage, opts, beat = BEAT, onSfx = null, onRate 
   let t = beat.pkShowdown
   const cut = .16
   tl.to(pk.faceoff, { opacity: 0, scale: 1.08, duration: cut, ease: 'power2.in' }, t)
-  tl.fromTo(pk.goal, { opacity: 0, scale: 1.1 },
+  fromTo(tl, pk.goal, { opacity: 0, scale: 1.1 },
     { opacity: 1, scale: 1, duration: cut * 1.6, ease: 'power2.out' }, t + cut * .6)
   tl.to(pk.vig, { opacity: .7, duration: cut }, t)
   t += cut
@@ -539,7 +549,7 @@ export function buildPkKick (stage, opts, beat = BEAT, onSfx = null) {
 
   tl.call(() => { stage.setPk(shooter, keeper, label, board, side); stage.setPkStamp('') })
   tl.set(pk.faceoff, { opacity: 0 })
-  tl.fromTo(pk.goal, { opacity: .35 }, { opacity: 1, duration: duration * .2 }, 0)
+  fromTo(tl, pk.goal, { opacity: .35 }, { opacity: 1, duration: duration * .2 }, 0)
 
   const lead = duration * .2
   pkCommon(stage, tl, { ...opts, strike: duration * .5, reveal: duration * .3 }, beat, onSfx, lead)
