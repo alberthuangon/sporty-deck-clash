@@ -133,7 +133,7 @@
              setCutIn has run, so a tween aimed at the v-if'd CardFace gets
              null and the card ends up popping in with no animation at all -->
         <div class="ci-card-slot" ref="ciCardEl">
-          <CardFace v-if="cutCard" :card="cutCard" size="lg" class="ci-card" />
+          <CardFace v-if="cutCard" :card="cutCard" size="md" class="ci-card" />
         </div>
         <div class="ci-team" :class="cutSide" v-if="cutTeam">
           <i class="ci-jersey"></i>{{ cutTeam }}
@@ -546,7 +546,7 @@ onMounted(() => { /* refs are live from here on */ })
   position: absolute; left: 0; right: 0; top: 62px; bottom: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
 }
-.ci-card-slot { width: 122px; flex: 0 0 auto; }
+.ci-card-slot { width: 112px; flex: 0 0 auto; }
 .ci-card { width: 100%; }
 .ci-text {
   font-size: 36px; font-weight: 900; letter-spacing: .04em; line-height: 1;
