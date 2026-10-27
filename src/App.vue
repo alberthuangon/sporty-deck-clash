@@ -15,17 +15,24 @@
       </Transition>
 
       <TabBar v-if="isTabScreen" :tabs="tabs" :current="store.currentScreen" @nav="navTab" />
+
+      <!-- Takeover layer. store.overlay has been declared since the first
+           commit and never read; this is what it was waiting for. It sits
+           above the tab bar on purpose — a takeover that leaves the tabs
+           tappable is not a takeover (PRD §6.7.2). -->
+      <DrawResult v-if="store.overlay === 'draw'" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import gsap from 'gsap'
 import { store, go, isTab, screenBack } from './store.js'
 import { canUpgrade, CATALOGUE } from './game.js'
 import TopBar from './components/TopBar.vue'
 import TabBar from './components/TabBar.vue'
+import DrawResult from './overlays/DrawResult.vue'
 
 import Home from './screens/Home.vue'
 import Tasks from './screens/Tasks.vue'
@@ -87,6 +94,14 @@ function back () {
   if (screenBack.value) { screenBack.value(); return }   // leave a detail view first
   if (screenTarget.value) go(screenTarget.value)
 }
+
+/* A season whose draw the player has not been shown takes the screen as soon
+   as there is a screen to take. seenDraw is persisted, so a reload does not
+   replay it (PRD §6.7.1: the event happens once). */
+watchEffect(() => {
+  const d = store.jackpot.lastDraw
+  if (d && store.flags.seenDraw !== d.season) store.overlay = 'draw'
+})
 
 /* GSAP-driven screen transition (also proves the GSAP wiring) */
 function onEnter (el, done) {

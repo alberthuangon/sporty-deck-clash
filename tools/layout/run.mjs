@@ -124,6 +124,7 @@ const truncated = gather('truncated')
 const ellipsised = gather('ellipsised')
 const overChrome = gather('overChrome')
 const covered = gather('covered')
+const leaky = gather('leakyTakeover')
 const ragged = gather('ragged')
 const small = gather('smallTargets')
 
@@ -132,6 +133,7 @@ check('elements laid out past the 430px frame', offFrame.length, !offFrame.lengt
 check('text cut off with nothing to show for it', truncated.length, !truncated.length)
 check('things painting over the TopBar / TabBar', overChrome.length, !overChrome.length)
 check('content hidden behind something on top of it', covered.length, !covered.length)
+check('takeovers that do not take the whole frame', leaky.length, !leaky.length)
 check('grid cells whose contents are ragged', ragged.length, !ragged.length)
 check('controls under the 44px tap target', small.length, !small.length)
 
@@ -188,6 +190,7 @@ if (fail.length) {
   offFrame.forEach(c => console.log(`  off-frame: ${c.state}  ${c.key} sticks out ${c.over}px (width ${c.width})  "${c.text}"`))
   truncated.forEach(c => console.log(`  cut text: ${c.state}  ${c.key} needs ${c.over}px more  "${c.text}"`))
   overChrome.forEach(c => console.log(`  over ${c.bar}: ${c.state}  ${c.key} by ${c.over}px  "${c.text}"`))
+  leaky.forEach(l => console.log(`  leaky takeover: ${l.state}  ${l.key} leaves ${l.short}px of the frame showing`))
   covered.forEach(c => console.log(`  hidden: ${c.state}  ${c.key} is ${c.over}px behind ${c.behind}  "${c.text}"`))
   ragged.forEach(r => console.log(`  ragged: ${r.state}  ${r.grid} row at ${r.row} spreads ${r.spread}px — ${r.cells}`))
   const byTarget = new Map()

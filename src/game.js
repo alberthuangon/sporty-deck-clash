@@ -211,6 +211,87 @@ export function buyPack (pack) {
 
 export function commitPull (pull) { return grantCard(pull.id) }
 
+/* ---------- jackpot (PRD §6.7) ---------- */
+
+/* Grand prize odds ONLY — never blended with the diamond prizes. A combined
+   "chance of any prize" reads better and is a worse number to publish, which
+   is the opposite of what this product is for (§6.7.3). */
+export function grandPrizeOdds () {
+  const { totalTickets } = store.jackpot
+  if (!store.tickets || !totalTickets) return null
+  return Math.round(totalTickets / store.tickets)
+}
+
+/* What the new season's reward road is holding. The soft reset clears
+   peakNodes, so every ticket node on the road is unclaimed again — the road
+   pays on arrival, so there is no "earned but unclaimed" state (§6.4.3). */
+export function ticketsWaiting () {
+  return REWARD_ROAD.reduce((n, node) => n + (node.reward.tickets || 0), 0)
+}
+
+export function timeToDraw (now = Date.now()) {
+  const ms = store.jackpot.drawAt - now
+  if (ms <= 0) return 'Drawing now'
+  const days = Math.round(ms / 86400000)
+  if (days >= 2) return `Draw in ${days} days`
+  const hours = Math.round(ms / 3600000)
+  if (hours >= 2) return `Draw in ${hours} hours`
+  return `Draw in ${Math.max(1, Math.round(ms / 60000))} minutes`
+}
+
+/* Run the season draw and roll the season over. The figures shown on the
+   result screen are the season that just ENDED, so they are captured before
+   anything resets. Demo only: a real draw happens server-side from a seed
+   published in advance. */
+export function runSeasonDraw (won) {
+  const j = store.jackpot
+  const seed = seasonSeed(j.season)
+  const rng = mulberry(hashCode(seed))
+  const myTickets = store.tickets
+  /* a winning ticket the player holds when they won, somebody else's when
+     they did not — the number has to be consistent with the headline */
+  const winningTicket = won
+    ? 1 + Math.floor(rng() * Math.max(1, myTickets))
+    : Math.max(myTickets + 1, 1 + Math.floor(rng() * j.totalTickets))
+
+  j.lastDraw = {
+    season: j.season,
+    won,
+    prize: j.pool,
+    myTickets,
+    totalTickets: j.totalTickets,
+    winningTicket,
+    seed
+  }
+  if (won) store.cash += j.pool
+
+  // season N+1 starts now: soft reset, fresh pool, fresh road
+  j.season += 1
+  j.pool = Math.round(j.pool * 0.12)
+  j.drawAt = Date.now() + 6 * 86400000
+  store.tickets = 0
+  store.rank = { ...store.rank, peakNodes: [] }
+  store.flags.seenDraw = j.lastDraw.season - 1      // not seen yet: takes over on the next render
+}
+
+function seasonSeed (season) {
+  /* a published seed is a fixed string, not something generated per viewer */
+  return `skd-s${season}-` + 'b7e3a1f94c2d8e05'.slice(0, 16)
+}
+function hashCode (str) {
+  let h = 2166136261
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) }
+  return h >>> 0
+}
+function mulberry (a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 /* ---------- match flow ---------- */
 
 export function startMatchmaking (tierFee) {

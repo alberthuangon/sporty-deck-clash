@@ -30,6 +30,23 @@
         </div>
         <input type="checkbox" v-model="store.settings.fastMatch" />
       </label>
+
+      <!-- the draw happens at season end, which nobody reaches in a demo -->
+      <div class="row col">
+        <div>
+          <div class="rt">Season draw</div>
+          <div class="rs muted">
+            Runs the Jackpot draw and shows its takeover on the next screen.
+            Winning credits the pool to your balance and starts season N+1,
+            which clears the reward road and your tickets.
+          </div>
+        </div>
+        <div class="opts">
+          <button v-for="o in DRAW_MODES" :key="o.id"
+                  :class="{ on: store.settings.jackpotDemo === o.id }"
+                  @click="pickDraw(o.id)">{{ o.label }}</button>
+        </div>
+      </div>
     </div>
 
     <h2 class="sec-title" style="margin-top:18px">Tools</h2>
@@ -55,13 +72,32 @@
 
 <script setup>
 import { store, resetStore, go } from '../store.js'
+import { runSeasonDraw } from '../game.js'
+
 const build = import.meta.env.MODE
+const DRAW_MODES = [{ id: 'none', label: 'Off' }, { id: 'lost', label: 'No win' }, { id: 'won', label: 'Grand prize' }]
+
+function pickDraw (id) {
+  store.settings.jackpotDemo = id
+  if (id === 'none') return
+  runSeasonDraw(id === 'won')
+  go('home')                 // the takeover lands on the next screen
+}
+
 function doReset () { resetStore(); go('home') }
 </script>
 
 <style scoped>
 .rows { display: flex; flex-direction: column; gap: 14px; }
 .row { display: flex; align-items: flex-start; gap: 12px; }
+.row.col { flex-direction: column; gap: 10px; }
+.opts { display: flex; gap: 6px; width: 100%; }
+.opts button {
+  flex: 1; min-height: 44px; border-radius: var(--r-sm);
+  background: var(--surface-hi); color: var(--text-2);
+  font-size: 12px; font-weight: 700;
+}
+.opts button.on { background: var(--cta); color: #06240F; }
 .row input { margin-left: auto; width: 20px; height: 20px; accent-color: var(--cta); flex: 0 0 auto; }
 .rt { font-weight: 700; margin-bottom: 2px; }
 .rs { font-size: 12px; line-height: 1.4; }

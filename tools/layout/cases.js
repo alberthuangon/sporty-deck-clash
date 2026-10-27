@@ -180,6 +180,50 @@ export const CASES = [
     setup () { reset(); richCollection(); settledMatch({ seed: 3 }); settledMatch({ wantPk: false, wantWin: false, seed: 5 }) }
   },
 
+  {
+    /* the draw's only lasting trace, on the screen that is opened every time */
+    id: 'home/after-draw',
+    screen: 'home',
+    setup () {
+      reset(); richCollection(); store.tickets = 2
+      game.runSeasonDraw(false)
+      store.flags.seenDraw = store.jackpot.lastDraw.season
+      store.overlay = null
+    }
+  },
+
+  /* ------------------------------------------------ Jackpot draw takeover
+
+     PRD §6.7.2 says winning and losing share one template and differ only in
+     the headline and the celebration. That is exactly an invariance group:
+     every element the two states have in common has to sit at the same
+     height, which is what makes "mirror design" a fact rather than a claim.
+     Scoped to the takeover because it lives outside .screen. */
+  {
+    id: 'draw/lost',
+    screen: 'home',
+    group: 'draw-mirror',
+    scope: '.dr',
+    wait: 1800,
+    setup () { reset(); richCollection(); store.tickets = 2; game.runSeasonDraw(false) }
+  },
+  {
+    id: 'draw/won',
+    screen: 'home',
+    group: 'draw-mirror',
+    scope: '.dr',
+    wait: 1800,
+    setup () { reset(); richCollection(); store.tickets = 2; game.runSeasonDraw(true) }
+  },
+  {
+    /* nobody holds a ticket in their first season: the odds row has to say
+       something, and "1 in Infinity" is not it (§6.7.3 edge, PRD v0.26) */
+    id: 'draw/no-tickets',
+    screen: 'home',
+    wait: 1800,
+    setup () { reset(); richCollection(); store.tickets = 0; game.runSeasonDraw(false) }
+  },
+
   /* ------------------------------------------------ Cards */
   { id: 'cards/sparse', screen: 'cards', setup () { reset() } },
   {

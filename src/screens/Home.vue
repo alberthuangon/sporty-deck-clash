@@ -47,23 +47,15 @@
       </div>
     </div>
 
-    <div class="jp card">
-      <div>
-        <div class="muted lbl">Season Jackpot</div>
-        <div class="jp-v">₦{{ jackpot.toLocaleString() }}</div>
-      </div>
-      <div class="jp-t">
-        <div class="muted lbl">Your tickets</div>
-        <div class="jp-n">{{ store.tickets }}</div>
-      </div>
-    </div>
+    <JackpotPanel variant="home" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import CardFace from '../components/CardFace.vue'
 import PowerStars from '../components/PowerStars.vue'
+import JackpotPanel from '../components/JackpotPanel.vue'
 import { store, go, cardOf, deckPower, venueLean, collectionPower, TIERS } from '../game.js'
 
 const SLOTS = [
@@ -80,11 +72,6 @@ const leanLabel = computed(() => {
 })
 const colPower = computed(() => collectionPower())
 function unlocked (t) { return colPower.value >= t.unlockPower }
-
-const jackpot = ref(2847310)
-let timer
-onMounted(() => { timer = setInterval(() => { jackpot.value += 1 + Math.floor(Math.random() * 40) }, 900) })
-onUnmounted(() => clearInterval(timer))
 </script>
 
 <style scoped>
@@ -116,8 +103,4 @@ onUnmounted(() => clearInterval(timer))
 .rc-opp { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rc-net { font-weight: 700; font-variant-numeric: tabular-nums; }
 .rc-net.up { color: var(--green); } .rc-net.down { color: var(--red); }
-.jp { display: flex; justify-content: space-between; align-items: center; padding: 12px; }
-.jp-v { font-size: 19px; font-weight: 800; color: var(--r-l); font-variant-numeric: tabular-nums; }
-.jp-t { text-align: right; }
-.jp-n { font-size: 19px; font-weight: 800; }
 </style>

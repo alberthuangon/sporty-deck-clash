@@ -10,10 +10,17 @@
 
 const TOL = 0.75          // subpixel noise from fractional layout
 
-/* Elements that are allowed to cover the chrome bars: a bottom sheet with a
-   scrim and a toast are meant to sit above everything. Anything else that
-   reaches the TopBar or the TabBar is a bug. */
-const CHROME_OVERLAYS = ['.sheet', '.toast']
+/* Full-screen takeovers. These are allowed over the chrome bars — a takeover
+   that leaves the tabs tappable is not a takeover — but the licence comes
+   with an obligation, checked below: a declared takeover has to actually
+   cover the whole frame. An exemption with nothing asked in return is a hole
+   in the gate, not an exception to it. */
+const TAKEOVERS = ['.dr']
+
+/* Allowed to cover the chrome bars: the takeovers above, plus a bottom sheet
+   with a scrim and a toast. Anything else that reaches the TopBar or the
+   TabBar is a bug. */
+const CHROME_OVERLAYS = ['.sheet', '.toast', ...TAKEOVERS]
 
 /* Boxes that are MEANT to be bigger than their container and cropped by it:
    a full-bleed texture is drawn oversized on purpose. Everything else that
@@ -186,6 +193,7 @@ export function measure (scope) {
 
   const out = {
     covered: [],        // content hidden behind something painted on top of it
+    leakyTakeover: [],  // a declared takeover that does not cover the frame
     ragged: [],         // grid cells in one row whose contents are different heights
     smallTargets: [],   // tappable things under the published 44px minimum
     clipped: [],        // content cut off by an overflow:hidden ancestor
@@ -197,8 +205,8 @@ export function measure (scope) {
   }
 
   const bars = [
-    topbar && { name: 'TopBar', rect: topbar.getBoundingClientRect() },
-    tabbar && { name: 'TabBar', rect: tabbar.getBoundingClientRect() }
+    topbar && { name: 'TopBar', el: topbar, rect: topbar.getBoundingClientRect() },
+    tabbar && { name: 'TabBar', el: tabbar, rect: tabbar.getBoundingClientRect() }
   ].filter(Boolean)
 
   /* A grid stretches its cells, but not necessarily what is INSIDE them: a
@@ -233,10 +241,24 @@ export function measure (scope) {
      top of it. The match stage puts the scoreboard and the clock ABOVE the
      cut-in on purpose, so a cut-in that reaches too far up does not overflow
      or get cropped: it just quietly disappears behind them. */
-  const covers = [...phone.querySelectorAll('*')]
-    .filter(el => !invisible(el) && opaque(getComputedStyle(el)) && paintLayer(el) > 0 &&
-      !CHROME_OVERLAYS.some(sel => el.matches(sel)))
-    .map(el => ({ el, z: paintLayer(el), rect: el.getBoundingClientRect(), name: label(el) }))
+  /* Two lists, because "what can hide something" and "what can be BLAMED for
+     hiding it" are different questions. A takeover or a toast legitimately
+     puts the screen out of play — content behind one is not a layout mistake
+     — but neither should ever be named as the thing that ate a row. */
+  const layered = [...phone.querySelectorAll('*')]
+    .filter(el => !invisible(el) && opaque(getComputedStyle(el)) && paintLayer(el) > 0)
+    .map(el => ({ el, z: paintLayer(el), rect: el.getBoundingClientRect(), name: label(el),
+      declared: CHROME_OVERLAYS.some(sel => el.matches(sel)) }))
+
+  for (const sel of TAKEOVERS) {
+    for (const el of phone.querySelectorAll(sel)) {
+      if (invisible(el)) continue
+      const r = el.getBoundingClientRect()
+      const short = Math.max(r.top - frame.top, frame.bottom - r.bottom,
+        r.left - frame.left, frame.right - r.right)
+      if (short > TOL) out.leakyTakeover.push({ key: label(el), short: +short.toFixed(1) })
+    }
+  }
 
   const seen = new Map()
   const anchorSeen = new Map()
@@ -276,7 +298,7 @@ export function measure (scope) {
     if (own || cs.borderTopWidth !== '0px') {
       const pr = paintedRect(el, rect)
       const z = paintLayer(el)
-      const above = covers.filter(c =>
+      const above = layered.filter(c =>
         c.z > z && c.el !== el && !c.el.contains(el) && !el.contains(c.el) && overlaps(pr, c.rect))
       /* One of them swallows this box whole: that is an OVERLAY doing its job,
          and everything under it is out of play. Only a partial eclipse is a
@@ -286,6 +308,7 @@ export function measure (scope) {
         c.rect.left <= pr.left + TOL && c.rect.right >= pr.right - TOL)
       if (!buried) {
         for (const c of above) {
+          if (c.declared) continue
           const by = Math.min(pr.bottom, c.rect.bottom) - Math.max(pr.top, c.rect.top)
           /* a nick off the edge is not "hidden" — a decorative ball clipping a
              pitch token by a pixel is noise. A row that has lost a quarter of
@@ -314,7 +337,10 @@ export function measure (scope) {
       if (w > 0 && h > 0 && (w < 44 || h < 44)) out.smallTargets.push({ key, w, h, text: textOf(el) })
     }
 
-    if (screen && screen.contains(el) && !CHROME_OVERLAYS.some(sel => el.closest(sel))) {
+    /* anything inside the frame, not just screen content — an element that
+       sits outside .screen can paint on the bars just as easily */
+    const isChrome = bars.some(b => b.el && (b.el === el || b.el.contains(el)))
+    if (!isChrome && !CHROME_OVERLAYS.some(sel => el.closest(sel))) {
       const pr = paintedRect(el, rect)
       for (const bar of bars) {
         const ov = Math.min(pr.bottom, bar.rect.bottom) - Math.max(pr.top, bar.rect.top)

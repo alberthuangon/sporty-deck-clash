@@ -20,7 +20,7 @@
       </div>
     </div>
 
-    <div class="sec-title">Reward road</div>
+    <div class="sec-title" ref="roadEl">Reward road</div>
     <div class="road">
       <div v-for="(n,i) in REWARD_ROAD" :key="n.id" class="node" :class="{ got: claimedIds.includes(n.id), big: n.big }">
         <div class="dot2">{{ claimedIds.includes(n.id) ? '✓' : (n.big ? '★' : '●') }}</div>
@@ -32,14 +32,10 @@
       </div>
     </div>
 
-    <div class="jack card">
-      <div class="jrow"><span class="muted">Your tickets</span><span class="jv">{{ store.tickets }}</span></div>
-      <div class="jrow"><span class="muted">Tickets in the draw</span><span>184,207</span></div>
-      <div class="jrow"><span class="muted">Season ends in</span><span>23d 04h</span></div>
-      <div class="muted fine">
-        Tickets come only from the reward road. They cannot be bought or traded.
-        The draw algorithm is published.
-      </div>
+    <JackpotPanel variant="rank" @earn-more="toRoad" />
+    <div class="muted fine jack-note">
+      Tickets come only from the reward road. They cannot be bought or traded.
+      The draw algorithm is published.
     </div>
 
     <div class="stats card">
@@ -51,7 +47,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import JackpotPanel from '../components/JackpotPanel.vue'
 import { store, rankLabel, REWARD_ROAD } from '../game.js'
 import { RANK_TIERS, SUBTIER_LABEL } from '../engine/economy.js'
 
@@ -60,6 +57,12 @@ const sub = computed(() => SUBTIER_LABEL[store.rank.subtier] || '')
 const step = computed(() => tier.value.step || 100)
 const pct = computed(() => Math.min(100, (store.rank.score / step.value) * 100))
 const claimedIds = computed(() => store.rank.peakNodes || [])
+
+/* "Earn more" points at the tickets already on offer, not at a purchase */
+const roadEl = ref(null)
+function toRoad () {
+  if (roadEl.value) roadEl.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 </script>
 
 <style scoped>
@@ -86,7 +89,8 @@ const claimedIds = computed(() => store.rank.peakNodes || [])
 .node.big .dot2 { color: var(--r-l); }
 .nl { flex: 1; }
 .nr { display: flex; gap: 8px; font-weight: 700; }
-.jack, .stats { padding: 12px; }
+.stats { padding: 12px; }
+.jack-note { margin-top: -4px; }
 .jrow, .srow { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
 .jv { font-weight: 800; }
 </style>

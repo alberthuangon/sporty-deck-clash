@@ -33,6 +33,18 @@ function initialState () {
 
     stats: { played: 0, won: 0, pkWon: 0 },
 
+    /* Jackpot, PRD §6.7. Two lifecycles that must not be merged into one
+       card: the standing state (pool / countdown / my tickets) is always
+       there, and the draw is an event that happens once.
+       Demo figures — there is no season scheduler here, just a date. */
+    jackpot: {
+      season: 1,
+      pool: 2850182,
+      totalTickets: 48310,
+      drawAt: Date.now() + 6 * 86400000,
+      lastDraw: null          // { season, won, prize, myTickets, totalTickets, winningTicket, seed }
+    },
+
     /* Settled matches, newest first, capped at 20 for localStorage's sake.
        Each row carries its own script and deck snapshots, which is what makes
        replay free: the match was always "decide, then perform", so replaying
@@ -64,10 +76,13 @@ function initialState () {
     settings: {
       forcePkScenario: true,   // demo: condition the draw on a regular-time tie so PK always shows
       forceWin: false,         // presenter only: rig the player to win (see Settings)
-      fastMatch: false
+      fastMatch: false,
+      jackpotDemo: 'none'      // 'none' | 'won' | 'lost' — the draw is at season end, so the demo needs a way in
     },
 
-    flags: { packOpened: false, seenRankUp: false }
+    /* seenDraw holds the season whose draw has already taken over the screen.
+       Without it the takeover fires again on every reload. */
+    flags: { packOpened: false, seenRankUp: false, seenDraw: 0 }
   }
 }
 
@@ -79,6 +94,12 @@ function load () {
     const base = initialState()
     // shallow-merge so new fields added during development don't break saves
     const merged = { ...base, ...saved, settings: { ...base.settings, ...(saved.settings || {}) } }
+
+    merged.jackpot = { ...base.jackpot, ...(merged.jackpot || {}) }
+    /* the draw date is a fixed demo value, so a save left alone for a week
+       would count down past zero. Roll it forward rather than show "Draw in
+       -3 days" — there is no season scheduler to do it properly. */
+    if (merged.jackpot.drawAt <= Date.now()) merged.jackpot.drawAt = Date.now() + 6 * 86400000
 
     // a match was paid for but never settled (reload mid-flow): refund and reset
     if (merged.pendingBet) {
@@ -99,7 +120,7 @@ watch(
     diamonds: store.diamonds, cash: store.cash, tickets: store.tickets,
     ownedCards: store.ownedCards, deck: store.deck, rank: store.rank,
     tasks: store.tasks, stats: store.stats, settings: store.settings, flags: store.flags,
-    pendingBet: store.pendingBet, history: store.history
+    pendingBet: store.pendingBet, history: store.history, jackpot: store.jackpot
   }),
   (v) => { try { localStorage.setItem(KEY, v) } catch (e) {} }
 )
