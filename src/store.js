@@ -80,8 +80,8 @@ function initialState () {
       jackpotDemo: 'random'    // 'random' | 'won' | 'lost' — what the next unopened draw turns out to be
     },
 
-    /* seenDraw holds the season whose draw has already taken over the screen.
-       Without it the takeover fires again on every reload. */
+    /* seenDraw holds the season whose draw has already been opened. A draw
+       the player has not opened is sealed, and stays sealed across reloads. */
     flags: { packOpened: false, seenRankUp: false, seenDraw: 0 }
   }
 }

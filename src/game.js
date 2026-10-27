@@ -323,7 +323,7 @@ export function runSeasonDraw (won) {
   j.drawAt = Date.now() + 6 * 86400000
   store.tickets = 0
   store.rank = { ...store.rank, peakNodes: [] }
-  store.flags.seenDraw = j.lastDraw.season - 1      // not seen yet: takes over on the next render
+  store.flags.seenDraw = j.lastDraw.season - 1      // this one has not been opened yet
 }
 
 /* A number in [1, total] that is not one of the player's: drawn from the

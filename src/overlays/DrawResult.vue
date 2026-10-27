@@ -67,7 +67,7 @@ const burstEl = ref(null)
 let tl = null
 
 function dismiss () {
-  store.flags.seenDraw = draw.value.season   // seen: it does not take the screen again
+  store.flags.seenDraw = draw.value.season   // opened: the card stops being an envelope
   store.overlay = null
 }
 
