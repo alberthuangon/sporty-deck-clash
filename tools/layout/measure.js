@@ -162,7 +162,6 @@ export function measure (scope) {
 
   const out = {
     ragged: [],         // grid cells in one row whose contents are different heights
-    tinyTargets: [],    // tappable things too small to hit at all
     smallTargets: [],   // tappable things under the published 44px minimum
     clipped: [],        // content cut off by an overflow:hidden ancestor
     offFrame: [],       // laid out past the edge of the 430px phone
@@ -241,21 +240,18 @@ export function measure (scope) {
     const t = truncation(el, cs)
     if (t) (t.ellipsis ? out.ellipsised : out.truncated).push({ key, over: t.over, text: textOf(el) })
 
-    /* Anything you are meant to tap has to be big enough to tap. 44px is the
-       floor Apple and Google both publish, and most of this app's controls sit
-       under it — that is a step 7 conversation, so it is a note. What fails is
-       TINY: below 20px a control is not reliably hittable at all, and when it
-       is the only way out of a screen the screen reads as a dead end.
+    /* Anything you are meant to tap has to be big enough to tap: 44px, the
+       floor Apple and Google both publish. Measured on the PAINTED rect, so a
+       target padded out past the edge of its scroll container counts only the
+       part you can actually reach — which is how a 44px button turned out to
+       be 41px of reachable button.
        Native inputs are left out: the browser gives a checkbox or a slider
        thumb a hit area bigger than its box. */
     const tappable = el.matches('button, a[href], [role="button"]') && !el.disabled
     if (tappable) {
       const pr = paintedRect(el, rect)
       const w = +(pr.right - pr.left).toFixed(1), h = +(pr.bottom - pr.top).toFixed(1)
-      if (w > 0 && h > 0 && (w < 44 || h < 44)) {
-        ;(Math.min(w, h) < 20 ? out.tinyTargets : out.smallTargets)
-          .push({ key, w, h, text: textOf(el) })
-      }
+      if (w > 0 && h > 0 && (w < 44 || h < 44)) out.smallTargets.push({ key, w, h, text: textOf(el) })
     }
 
     if (screen && screen.contains(el) && !CHROME_OVERLAYS.some(sel => el.closest(sel))) {

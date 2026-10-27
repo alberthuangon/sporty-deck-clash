@@ -74,7 +74,11 @@ function buy (p) {
 .pk-body { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .pk-name { font-weight: 700; font-size: 15px; }
 .pk-guar { font-size: 11px; margin: 2px 0 8px; line-height: 1.35; }
-.odds-link { color: var(--green); font-size: 11px; text-decoration: underline; text-align: left; margin-bottom: auto; padding-bottom: 10px; }
+/* padded to a real tap target and pulled back, so the pack card is unchanged */
+.odds-link {
+  color: var(--green); font-size: 11px; text-decoration: underline; text-align: left;
+  align-self: flex-start; padding: 16px 10px; margin: -16px -10px auto;
+}
 .buy { gap: 6px; }
 .gem { color: #6EE7FF; font-style: normal; }
 .short { font-size: 10px; line-height: 14px; min-height: 14px; text-align: center; margin-top: 5px; }

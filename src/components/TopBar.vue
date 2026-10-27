@@ -25,7 +25,12 @@ defineEmits(['back', 'title'])
   padding: 0 8px; gap: 6px;
   position: relative; z-index: 20;
 }
-.tb-back { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; color: #fff; }
+/* 44px of hit area, pulled back to the 30px it used to occupy so the title
+   does not move. The icon inside stays 22px. */
+.tb-back {
+  width: 44px; height: 44px; margin: 0 -7px;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+}
 .tb-back.hidden { visibility: hidden; }
 .tb-title { font-size: 15px; font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
 .tb-wallet { margin-left: auto; display: flex; align-items: center; gap: 6px; }

@@ -294,9 +294,11 @@ onUnmounted(() => { if (tl) tl.kill(); stopIdle() })
 .lbl { font-size: 11px; color: var(--text-2); width: 112px; flex: 0 0 112px; }
 .opts { display: flex; gap: 5px; flex: 1; }
 .opts.wrap { flex-wrap: wrap; }
+/* these are rehearsal controls, tapped on a phone during a run-through */
 .opts button {
   background: var(--surface-hi); border-radius: var(--r-sm);
-  padding: 5px 9px; font-size: 11px; font-weight: 700; color: var(--text-2);
+  min-height: 44px; min-width: 44px; padding: 5px 9px;
+  font-size: 11px; font-weight: 700; color: var(--text-2);
 }
 .opts button.on { background: var(--cta); color: #06240F; }
 .seg input[type=range] { flex: 1; accent-color: var(--cta); }

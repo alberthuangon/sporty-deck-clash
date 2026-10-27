@@ -47,7 +47,7 @@ Fourteen assertions:
 | text cut off with nothing to show for it | an ellipsis is reported as a note, not a failure — it is truncation that says so |
 | things painting over the TopBar / TabBar | |
 | grid cells whose contents are ragged | a grid stretches its cells but not necessarily what is in them: owned cards sat 14px shorter than the locked placeholders beside them |
-| controls too small to hit | under 20px nothing is reliably tappable. The 44px both Apple and Google publish is printed as a note instead — most of this app is under it, and that is step 7's conversation |
+| controls under the 44px tap target | the floor Apple and Google both publish, measured on the PAINTED rect — a button padded out past the edge of its scroll container only counts the part you can reach. Native inputs are exempt: the browser gives a checkbox or a slider thumb a hit area bigger than its box |
 | elements that move between states of one screen | the main one; see below |
 | invariance groups comparing nothing | a check that compares nothing passes for free |
 

@@ -124,7 +124,6 @@ const truncated = gather('truncated')
 const ellipsised = gather('ellipsised')
 const overChrome = gather('overChrome')
 const ragged = gather('ragged')
-const tiny = gather('tinyTargets')
 const small = gather('smallTargets')
 
 check('content cropped by its container', clipped.length, !clipped.length)
@@ -132,7 +131,7 @@ check('elements laid out past the 430px frame', offFrame.length, !offFrame.lengt
 check('text cut off with nothing to show for it', truncated.length, !truncated.length)
 check('things painting over the TopBar / TabBar', overChrome.length, !overChrome.length)
 check('grid cells whose contents are ragged', ragged.length, !ragged.length)
-check('controls too small to hit', tiny.length, !tiny.length)
+check('controls under the 44px tap target', small.length, !small.length)
 
 /* The main event. Within a group, every element the states have in common has
    to sit at the same height — a group is a set of states a player can watch
@@ -170,13 +169,6 @@ const groupSummary = [...groups].map(([n, st]) => `${n}:${st.length}`).join(' ')
 check('elements that move between states of one screen', shifts.length, !shifts.length)
 check('invariance groups comparing nothing', emptyGroups.length, !emptyGroups.length)
 
-if (small.length) {
-  const byKey = new Map()
-  small.forEach(t => byKey.set(`${t.key} ${t.w}x${t.h} "${t.text}"`, (byKey.get(`${t.key} ${t.w}x${t.h} "${t.text}"`) || 0) + 1))
-  console.log(`\n  note: ${byKey.size} control(s) under the published 44px tap target:`)
-  ;[...byKey].forEach(([k, n]) => console.log(`    ${k}${n > 1 ? `  (${n} states)` : ''}`))
-}
-
 if (ellipsised.length) {
   console.log(`\n  note: ${ellipsised.length} label(s) ellipsised — truncated, but visibly so:`)
   ellipsised.forEach(e => console.log(`    ${e.state}  ${e.key}  -${e.over}px  "${e.text}"`))
@@ -195,7 +187,12 @@ if (fail.length) {
   truncated.forEach(c => console.log(`  cut text: ${c.state}  ${c.key} needs ${c.over}px more  "${c.text}"`))
   overChrome.forEach(c => console.log(`  over ${c.bar}: ${c.state}  ${c.key} by ${c.over}px  "${c.text}"`))
   ragged.forEach(r => console.log(`  ragged: ${r.state}  ${r.grid} row at ${r.row} spreads ${r.spread}px — ${r.cells}`))
-  tiny.forEach(t => console.log(`  too small to hit: ${t.state}  ${t.key} is ${t.w}x${t.h}  "${t.text}"`))
+  const byTarget = new Map()
+  small.forEach(t => {
+    const k = `${t.key} is ${t.w}x${t.h}  "${t.text}"`
+    byTarget.set(k, (byTarget.get(k) || 0) + 1)
+  })
+  ;[...byTarget].forEach(([k, n]) => console.log(`  too small to tap: ${k}${n > 1 ? `  (${n} states)` : ''}`))
   shifts.forEach(sh => console.log(`  moved: [${sh.group}] ${sh.key} by ${sh.spread}px — ${sh.detail}`))
   emptyGroups.forEach(g => console.log(`  compares nothing: ${g}`))
   console.log('')
