@@ -153,6 +153,30 @@ function truncation (el, cs) {
   return { over, ellipsis: cs.textOverflow === 'ellipsis' }
 }
 
+/* Is this box painted solid enough to hide what is behind it? */
+function opaque (cs) {
+  if (cs.backgroundImage !== 'none') return true
+  const m = cs.backgroundColor.match(/rgba?\(([^)]+)\)/)
+  if (!m) return false
+  const parts = m[1].split(',').map(v => parseFloat(v))
+  return parts.length < 4 || parts[3] >= 0.9
+}
+
+/* The z-index this element is painted at, as far as its siblings are
+   concerned: its own if it has one, otherwise the nearest ancestor's. */
+function paintLayer (el) {
+  for (let n = el; n && n !== document.body; n = n.parentElement) {
+    const z = getComputedStyle(n).zIndex
+    if (z !== 'auto') return +z
+  }
+  return 0
+}
+
+function overlaps (a, b) {
+  return Math.min(a.right, b.right) - Math.max(a.left, b.left) > TOL &&
+    Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > TOL
+}
+
 export function measure (scope) {
   const phone = document.querySelector('.phone')
   const screen = document.querySelector('.screen')
@@ -161,6 +185,7 @@ export function measure (scope) {
   const frame = phone.getBoundingClientRect()
 
   const out = {
+    covered: [],        // content hidden behind something painted on top of it
     ragged: [],         // grid cells in one row whose contents are different heights
     smallTargets: [],   // tappable things under the published 44px minimum
     clipped: [],        // content cut off by an overflow:hidden ancestor
@@ -203,6 +228,16 @@ export function measure (scope) {
     }
   }
 
+  /* Content can be perfectly laid out, inside its container, not cropped by
+     anything — and still invisible, because something opaque is painted on
+     top of it. The match stage puts the scoreboard and the clock ABOVE the
+     cut-in on purpose, so a cut-in that reaches too far up does not overflow
+     or get cropped: it just quietly disappears behind them. */
+  const covers = [...phone.querySelectorAll('*')]
+    .filter(el => !invisible(el) && opaque(getComputedStyle(el)) && paintLayer(el) > 0 &&
+      !CHROME_OVERLAYS.some(sel => el.matches(sel)))
+    .map(el => ({ el, z: paintLayer(el), rect: el.getBoundingClientRect(), name: label(el) }))
+
   const seen = new Map()
   const anchorSeen = new Map()
   for (const el of phone.querySelectorAll('*')) {
@@ -235,6 +270,31 @@ export function measure (scope) {
 
       const off = Math.max(frame.left - rect.left, rect.right - frame.right)
       if (off > TOL) out.offFrame.push({ key, over: +off.toFixed(1), width: +rect.width.toFixed(1), text: textOf(el) })
+    }
+
+    const own = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())
+    if (own || cs.borderTopWidth !== '0px') {
+      const pr = paintedRect(el, rect)
+      const z = paintLayer(el)
+      const above = covers.filter(c =>
+        c.z > z && c.el !== el && !c.el.contains(el) && !el.contains(c.el) && overlaps(pr, c.rect))
+      /* One of them swallows this box whole: that is an OVERLAY doing its job,
+         and everything under it is out of play. Only a partial eclipse is a
+         layout mistake — the box was placed somewhere it half fits. */
+      const buried = above.some(c =>
+        c.rect.top <= pr.top + TOL && c.rect.bottom >= pr.bottom - TOL &&
+        c.rect.left <= pr.left + TOL && c.rect.right >= pr.right - TOL)
+      if (!buried) {
+        for (const c of above) {
+          const by = Math.min(pr.bottom, c.rect.bottom) - Math.max(pr.top, c.rect.top)
+          /* a nick off the edge is not "hidden" — a decorative ball clipping a
+             pitch token by a pixel is noise. A row that has lost a quarter of
+             itself, or 4px, has lost something you needed to read. */
+          if (by < 4 || by < (pr.bottom - pr.top) * 0.25) continue
+          out.covered.push({ key, behind: c.name, over: +by.toFixed(1), text: textOf(el) })
+          break
+        }
+      }
     }
 
     const t = truncation(el, cs)

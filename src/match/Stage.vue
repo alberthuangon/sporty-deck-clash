@@ -22,35 +22,59 @@
       <span v-if="phaseLabel" class="phase">{{ phaseLabel }}</span>
     </div>
 
-    <!-- pitch -->
-    <div class="pitch" ref="pitchEl">
-      <div class="turf"></div>
-      <div class="line half"></div>
-      <div class="circle"></div>
-      <div class="box left"></div>
-      <div class="box right"></div>
-      <div class="six left"></div>
-      <div class="six right"></div>
-      <div class="net left"></div>
-      <div class="net right"></div>
+    <!-- pitch, and everything the cut-in may cover. The board and the clock sit ABOVE
+         the cut-in on purpose, so the cut-in gets its own box below them
+         rather than a hand-measured top offset that rots when they resize -->
+    <div class="arena">
+      <div class="pitch" ref="pitchEl">
+        <div class="turf"></div>
+        <div class="line half"></div>
+        <div class="circle"></div>
+        <div class="box left"></div>
+        <div class="box right"></div>
+        <div class="six left"></div>
+        <div class="six right"></div>
+        <div class="net left"></div>
+        <div class="net right"></div>
 
-      <svg class="trail" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <path ref="trailEl" d="" />
-      </svg>
+        <svg class="trail" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path ref="trailEl" d="" />
+        </svg>
 
-      <div
-        v-for="t in tokenList" :key="t.key"
-        class="token" :class="[t.side, { keeper: t.slot === 'gk' }]"
-        :ref="el => setToken(t.key, el)"
-        :style="{ left: t.x + '%', top: t.y + '%' }"
-      >
-        <span>{{ t.label }}</span>
-        <i class="ring"></i>
+        <div
+          v-for="t in tokenList" :key="t.key"
+          class="token" :class="[t.side, { keeper: t.slot === 'gk' }]"
+          :ref="el => setToken(t.key, el)"
+          :style="{ left: t.x + '%', top: t.y + '%' }"
+        >
+          <span>{{ t.label }}</span>
+          <i class="ring"></i>
+        </div>
+
+        <div class="ball" ref="ballEl"></div>
+        <div class="flash" ref="flashEl"></div>
+        <div class="shock" ref="shockEl"></div>
       </div>
 
-      <div class="ball" ref="ballEl"></div>
-      <div class="flash" ref="flashEl"></div>
-      <div class="shock" ref="shockEl"></div>
+      <!-- cut-in overlay -->
+      <div class="cutin" ref="cutinEl">
+        <div class="ci-bg" ref="ciBgEl"></div>
+        <div class="ci-tint" :class="cutSide" ref="ciTintEl"></div>
+        <div class="ci-streaks" ref="ciStreakEl"></div>
+        <div class="ci-body" ref="ciBodyEl">
+          <!-- the slot is always mounted: the card entrance is compiled before
+               setCutIn has run, so a tween aimed at the v-if'd CardFace gets
+               null and the card ends up popping in with no animation at all -->
+          <div class="ci-card-slot" ref="ciCardEl">
+            <CardFace v-if="cutCard" :card="cutCard" size="md" :radar="false" class="ci-card" />
+          </div>
+          <div class="ci-team" :class="cutSide" v-if="cutTeam">
+            <i class="ci-jersey"></i>{{ cutTeam }}
+          </div>
+          <div class="ci-text" ref="ciTextEl">{{ cutText }}</div>
+          <div class="ci-sub">{{ cutSub }}</div>
+        </div>
+      </div>
     </div>
 
     <!-- penalty showdown: the decisive kick leaves the pitch entirely and
@@ -123,25 +147,6 @@
       </div>
     </div>
 
-    <!-- cut-in overlay -->
-    <div class="cutin" ref="cutinEl">
-      <div class="ci-bg" ref="ciBgEl"></div>
-      <div class="ci-tint" :class="cutSide" ref="ciTintEl"></div>
-      <div class="ci-streaks" ref="ciStreakEl"></div>
-      <div class="ci-body" ref="ciBodyEl">
-        <!-- the slot is always mounted: the card entrance is compiled before
-             setCutIn has run, so a tween aimed at the v-if'd CardFace gets
-             null and the card ends up popping in with no animation at all -->
-        <div class="ci-card-slot" ref="ciCardEl">
-          <CardFace v-if="cutCard" :card="cutCard" size="md" class="ci-card" />
-        </div>
-        <div class="ci-team" :class="cutSide" v-if="cutTeam">
-          <i class="ci-jersey"></i>{{ cutTeam }}
-        </div>
-        <div class="ci-text" ref="ciTextEl">{{ cutText }}</div>
-        <div class="ci-sub">{{ cutSub }}</div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -330,6 +335,7 @@ onMounted(() => { /* refs are live from here on */ })
 .clk { font-size: 12px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .phase { font-size: 10px; font-weight: 800; letter-spacing: .08em; color: var(--r-l); }
 
+.arena { position: relative; }
 .pitch { position: relative; margin: 10px 12px; height: 186px; border-radius: 6px; overflow: hidden; }
 .turf {
   position: absolute; inset: 0;
@@ -542,8 +548,10 @@ onMounted(() => { /* refs are live from here on */ })
   background: repeating-linear-gradient(104deg, rgba(255,255,255,.07) 0 3px, transparent 3px 26px);
   opacity: 0;
 }
+/* padded so the column has somewhere to breathe, and so overflow shows up as
+   overflow rather than as content touching the chrome */
 .ci-body {
-  position: absolute; left: 0; right: 0; top: 62px; bottom: 0;
+  position: absolute; inset: 0; padding: 8px 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
 }
 .ci-card-slot { width: 112px; flex: 0 0 auto; }
