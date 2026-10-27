@@ -12,8 +12,10 @@
         <button class="btn btn-cta buy" :disabled="store.diamonds < p.price" @click="buy(p)">
           <i class="gem">◆</i> {{ p.price }}
         </button>
-        <div v-if="store.diamonds < p.price" class="short muted">
-          Need {{ p.price - store.diamonds }} more
+        <!-- always present: the buy button is bottom-anchored in this column,
+             so a line appearing under it lifts the button 18px -->
+        <div class="short muted">
+          {{ store.diamonds < p.price ? `Need ${p.price - store.diamonds} more` : '' }}
         </div>
       </div>
     </div>
@@ -75,7 +77,7 @@ function buy (p) {
 .odds-link { color: var(--green); font-size: 11px; text-decoration: underline; text-align: left; margin-bottom: auto; padding-bottom: 10px; }
 .buy { gap: 6px; }
 .gem { color: #6EE7FF; font-style: normal; }
-.short { font-size: 10px; text-align: center; margin-top: 5px; }
+.short { font-size: 10px; line-height: 14px; min-height: 14px; text-align: center; margin-top: 5px; }
 .pity .bar { height: 6px; background: var(--surface-hi); border-radius: 999px; overflow: hidden; }
 .pity .bar i { display: block; height: 100%; background: var(--green); }
 .sheet { position: absolute; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; z-index: 40; }
