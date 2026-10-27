@@ -34,7 +34,7 @@ Every state is reached the way a player reaches it: real game functions
 keep their stage in local component state, and reaching in to set those refs
 would test a reachability nobody has.
 
-Twenty-six assertions:
+Twenty-seven assertions:
 
 | | |
 | --- | --- |
@@ -59,6 +59,7 @@ Twenty-six assertions:
 | flying tokens left behind | a diamond on its way to the wallet crosses the TopBar, because the chip it is flying to is in the TopBar — same exemption, same price. One frame held mid-flight by the gate leaked 12 tokens into every state measured after it |
 | flying tokens that could eat a tap | `pointer-events: none`, checked rather than assumed |
 | UI animations that ignore their dial | a timeline shorter than the duration it was asked for is worse than one over its cap: the number stops describing the animation, so the cap stops bounding it and the motion lab stops controlling it. The first tear draft compiled to 0.70s for a 0.92s dial, and raising that dial past its cap did not even fail |
+| declared animations the sweep never played | a budget nothing exercises passes for free, which is the hole described further down. Every animation with a published cap has to be played by at least one state |
 | content revealed before its animation finished | the tear is the one animation here allowed to gate information — a sealed pack you can already read was never sealed |
 | shapes that animate without moving | the radar morph's geometry mid-animation against its geometry at rest. A tween wired to nothing looks identical from the outside AND in the source — which is how three dead animations shipped here. The invariance check deliberately ignores SVG internals, since a radar's vertices are the card's stats rather than layout, so this is the only thing that can tell a morph from a still picture |
 
@@ -126,6 +127,14 @@ Five things about headless Chrome that each produced a confident lie first:
     --headless --disable-gpu --hide-scrollbars --window-size=430,932 \
     --virtual-time-budget=4000 --screenshot=out.png http://localhost:5173/
   ```
+
+  To photograph a state the gate measured rather than one you posed by hand,
+  point the same command at `screens.html?shot=<case id>`: it runs that one
+  case, leaves it standing and hides the harness's own output. `&at=<seconds>`
+  picks a frame of whatever timeline the case parked on, and
+  `&scroll=<selector>` brings something below the fold into the picture.
+  Naming a frame beats waiting for one — under virtual time gsap's clock is
+  not the wall clock.
 * `mode="out-in"` leaves the **outgoing** screen as the only `.screen` in the
   DOM, settled and opaque. Waiting for "a screen that looks ready" measured
   the previous one, and reported 20 identical copies of Home as a pass.

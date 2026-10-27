@@ -89,6 +89,44 @@
         <span v-for="(s,i) in sfxLog" :key="i" class="tag">{{ s }}</span>
       </div>
 
+      <!-- ---------------- the five UI animations ----------------
+           These sit on the REPEATED path — one match per bet, but dozens of
+           pack openings, reward claims and upgrades in a session — so they
+           need a dial here for the same reason the match beats do, and more
+           urgently. Each slider tops out at that animation's published cap,
+           which is why the cap and the dial are separate numbers: the control
+           cannot be moved into a state the gate would fail. -->
+      <div class="sec-title" style="margin-top:18px">UI animations</div>
+      <div class="uistage">
+        <!-- v-show, never v-if: every preview stays mounted so a Play button
+             can never aim at an element that is not there -->
+        <Burst ref="burstRef" :count="18" :radius="92" />
+        <div v-show="demo === 'tear'" class="uiseal">
+          <SealTear ref="sealRef" title="Standard Pack" :price="100" hint="tap to tear" @torn="tearDone = true" />
+        </div>
+        <RadarChart v-show="demo === 'radar'" ref="radarRef" :axis-keys="RADAR_AXES"
+                    :values="radarNow" :ghost="RADAR_HI" :size="170" labels />
+        <div v-show="demo === 'payout'" class="uinum">
+          <CountUp :value="payoutTo" :from="799" prefix="₦" />
+        </div>
+        <div v-show="demo === 'flyIn'" ref="flySrc" class="uisrc">◆</div>
+        <div v-show="demo === 'rankUp'" class="uinum small">promotion burst</div>
+      </div>
+
+      <div v-for="u in UI_KEYS" :key="u" class="beat ui">
+        <button class="uiplay" :class="{ on: demo === u }" @click="playUi(u)">▶</button>
+        <span class="bk">{{ u }}</span>
+        <input type="range" min="0.1" :max="UI_BUDGET[u]" step="0.01" v-model.number="UI_TIME[u]" />
+        <span class="bv">{{ UI_TIME[u].toFixed(2) }}</span>
+        <span class="cap muted">/{{ UI_BUDGET[u].toFixed(2) }}</span>
+      </div>
+
+      <label class="seg" style="margin-top:6px">
+        <span class="lbl">Reduced motion</span>
+        <input type="checkbox" :checked="reduced" @change="setReduced($event.target.checked)" />
+        <span class="muted" style="font-size:11px">land every UI animation on its end state</span>
+      </label>
+
       <div class="btn-row" style="margin-top:14px">
         <button class="btn" @click="resetBeats">Reset beats</button>
         <button class="btn" @click="go('settings')">Back</button>
@@ -105,6 +143,12 @@ import { go, BY_ID } from '../game.js'
 import { buildTeam } from '../engine/model.js'
 import { buildWave, buildGoalCutIn, buildSaveCutIn, buildPkShowdown, resetStage, startIdle, stopIdle, idleTimeline } from '../match/player.js'
 import { BEAT, waveDuration, matchDuration, pkDuration } from '../match/stageModel.js'
+import Burst from '../components/Burst.vue'
+import SealTear from '../components/SealTear.vue'
+import RadarChart from '../components/RadarChart.vue'
+import CountUp from '../components/CountUp.vue'
+import { UI_BUDGET, UI_TIME, reduced, setReduced } from '../ui/motion.js'
+import { flyTo } from '../ui/flyIn.js'
 
 const OUTCOMES = [
   { id: 'GOAL', label: 'Goal' },
@@ -275,6 +319,40 @@ function range (k) {
 }
 function resetBeats () { Object.assign(beat, BEAT) }
 
+/* ---------------- the five UI animations ---------------- */
+const UI_KEYS = ['tear', 'radar', 'payout', 'rankUp', 'flyIn']
+const RADAR_AXES = ['SHO', 'DRI', 'PAS', 'DEF', 'HOM', 'AWY']
+const RADAR_LO = { SHO: 41, DRI: 52, PAS: 60, DEF: 38, HOM: 55, AWY: 48 }
+const RADAR_HI = { SHO: 62, DRI: 71, PAS: 66, DEF: 38, HOM: 74, AWY: 69 }
+
+const demo = ref('rankUp')
+const burstRef = ref(null)
+const sealRef = ref(null)
+const radarRef = ref(null)
+const flySrc = ref(null)
+const tearDone = ref(false)
+const payoutTo = ref(1230)
+const radarNow = reactive({ ...RADAR_LO })
+
+/* Each preview puts its animation back where it started before replaying it,
+   so the slider can be dragged and the same beat watched again. */
+async function playUi (k) {
+  demo.value = k
+  await nextTick()
+  if (k === 'rankUp') { burstRef.value.play(); return }
+  if (k === 'tear') { sealRef.value.reset(); tearDone.value = false; await nextTick(); sealRef.value.tear(); return }
+  if (k === 'radar') {
+    const from = { ...radarNow }
+    const toHi = radarNow.SHO === RADAR_LO.SHO
+    Object.assign(radarNow, toHi ? RADAR_HI : RADAR_LO)
+    await nextTick()
+    radarRef.value.morph(from)
+    return
+  }
+  if (k === 'payout') { payoutTo.value = payoutTo.value === 1230 ? 4870 : 1230; return }
+  if (k === 'flyIn') { flyTo(flySrc.value, 'diamonds') }
+}
+
 onMounted(() => {
   nextTick(() => { const a = stageApi(); if (a) { resetStage(a); startIdle(a, beat.idle) } })
 })
@@ -313,5 +391,27 @@ onUnmounted(() => { if (tl) tl.kill(); stopIdle() })
 .budget.ok b { color: var(--cta); }
 .budget.low b, .budget.high b { color: var(--r-l); }
 .sfxlog { background: var(--surface-lo); border-radius: var(--r-md); padding: 10px 12px; }
+/* preview stage for the five UI animations: fixed height so the sliders
+   below it never move when the preview changes */
+.uistage {
+  position: relative; height: 180px; border-radius: var(--r-md);
+  background: var(--surface-lo); border: 1px solid var(--divider);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+/* the real seal is 190x260 — shown at 0.58 so the lab keeps one screenful */
+.uiseal { transform: scale(.58); }
+.uinum { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--cta); }
+.uinum.small { font-size: 13px; font-weight: 700; color: var(--text-2); letter-spacing: .06em; }
+.uisrc { font-size: 26px; color: #6EE7FF; }
+.beat.ui { gap: 7px; }
+.uiplay {
+  width: 44px; height: 44px; flex: 0 0 44px; border-radius: var(--r-sm);
+  background: var(--surface-hi); color: var(--text-2); font-size: 12px;
+}
+.uiplay.on { background: var(--cta); color: #06240F; }
+.beat.ui .bk { width: 54px; flex: 0 0 54px; }
+.cap { font-size: 10px; width: 30px; flex: 0 0 30px; }
+
 .tag { display: inline-block; background: var(--surface-hi); border-radius: 3px; padding: 2px 6px; font-size: 10px; margin: 0 4px 4px 0; color: var(--text-2); }
 </style>

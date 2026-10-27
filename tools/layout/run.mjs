@@ -194,6 +194,11 @@ const noExit = motion.filter(m => m.needsExit && !m.interruptible)
    stops describing the animation, so the cap stops bounding it and MotionLab
    stops controlling it. */
 const offDial = motion.filter(m => Math.abs(m.duration - m.spend) > 0.02)
+/* A budget nothing exercises is a budget that passes for free — the same hole
+   this gate's own README warns about. Every declared animation has to be
+   played by at least one state in the sweep, or the cap on it means nothing. */
+const played = new Set(motion.map(m => m.name))
+const unplayed = Object.keys(screens.budgets || {}).filter(k => !played.has(k))
 /* The interrupt surface covers the frame, bars included, and is exempt from
    the chrome assertion for it. The price of that exemption: it must hide
    nothing, and it must be gone the moment the animation ends. */
@@ -243,6 +248,7 @@ console.log(`\nUI animations stay inside the budget  (${motion.length} play(s) a
 check('UI animations over their time budget', overBudget.length, !overBudget.length)
 check('long UI animations with no way to interrupt', noExit.length, !noExit.length)
 check('UI animations that ignore their dial', offDial.length, !offDial.length)
+check('declared animations the sweep never played', unplayed.length, !unplayed.length && !!Object.keys(screens.budgets || {}).length)
 check('interrupt surfaces left behind', skipLeaks.length, !skipLeaks.length)
 check('interrupt surfaces that hide what is under them', skipOpaque.length, !skipOpaque.length)
 check('rolling figures that start unreadable', unreadable.length, !unreadable.length)
@@ -282,6 +288,7 @@ if (fail.length) {
   overBudget.forEach(m => console.log(`  over budget: ${m.state}  ${m.name} is ${m.duration}s against a ${m.budget}s cap`))
   noExit.forEach(m => console.log(`  no way out: ${m.state}  ${m.name} runs ${m.duration}s with no interrupt surface`))
   offDial.forEach(m => console.log(`  ignores its dial: ${m.state}  ${m.name} compiled to ${m.duration}s for a ${m.spend}s dial`))
+  unplayed.forEach(k => console.log(`  never played: "${k}" has a budget and no state in the sweep exercises it`))
   skipLeaks.forEach(l => console.log(`  interrupt surface left behind: ${l.state}  [data-skip="${l.name}"]`))
   skipOpaque.forEach(l => console.log(`  interrupt surface is painted: ${l.state}  [data-skip="${l.name}"] bg ${l.bg} ${l.bgImage}`))
   unreadable.forEach(u => console.log(`  unreadable at frame zero: starts "${u.start}", lands "${u.end}"`))

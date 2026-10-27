@@ -25,7 +25,7 @@ import '../../src/styles/base.css'
 import { store, go } from '../../src/store.js'
 import { CASES } from './cases.js'
 import { measure } from './measure.js'
-import { uiResetReport, uiReport, uiCancelAll } from '../../src/ui/motion.js'
+import { uiResetReport, uiReport, uiCancelAll, UI_BUDGET } from '../../src/ui/motion.js'
 
 gsap.ticker.lagSmoothing(0)
 
@@ -107,7 +107,11 @@ window.__screens = async () => {
      ?at=<seconds> moves a case that parks on a timeline to a different frame
      of it. Naming the frame beats waiting for it: under virtual time rAF
      fires on a shim and gsap's clock is not the wall clock, so "wait 0.6s and
-     photograph" lands wherever it lands. */
+     photograph" lands wherever it lands.
+     ?scroll=<selector> brings something below the fold into the picture. It
+     only applies while photographing: the sweep itself measures every state
+     unscrolled, because where a thing sits before anyone touches it is the
+     question the geometry checks are asking. */
   const shot = q.get('shot')
   const at = q.has('at') ? +q.get('at') : null
   const only = shot || q.get('only')
@@ -178,13 +182,21 @@ window.__screens = async () => {
     }
     rec.errors = [...errors, ...new Set(window.__warns || [])]
     results.push(rec)
-    if (shot) return { shot: rec.id }        // leave the screen up to be photographed
+    if (shot) {
+      const want = q.get('scroll')
+      const el = want && document.querySelector(want)
+      if (el) { el.scrollIntoView({ block: 'center' }); await raf() }
+      return { shot: rec.id }      // leave the screen up to be photographed
+    }
     trace(`done  ${String(rec.id).padEnd(26)} rendered=${rec.rendered} nodes=${String(rec.nodes).padStart(4)} ` +
       `settle=${rec.settle} bounce=${rec.bounce} err=${rec.errors.length}`)
   }
 
   const phone = document.querySelector('.phone').getBoundingClientRect()
   return {
+    /* what the app DECLARES a budget for, so run.mjs can fail on any of them
+       that no state in the sweep ever played */
+    budgets: { ...UI_BUDGET },
     viewport: { w: innerWidth, h: innerHeight },
     frame: { w: +phone.width.toFixed(1), h: +phone.height.toFixed(1) },
     results

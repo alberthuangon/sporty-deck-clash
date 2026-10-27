@@ -741,5 +741,24 @@ export const CASES = [
 
   /* ------------------------------------------------ dev screens, shipped */
   { id: 'settings/open', screen: 'settings', setup () { reset() } },
-  { id: 'motionlab/open', screen: 'motionlab', setup () { reset() } }
+  { id: 'motionlab/open', screen: 'motionlab', group: 'motionlab-preview', scope: '.ctrl', setup () { reset() } },
+  {
+    /* the lab is the hand-off: its sliders are how the rhythm gets retuned
+       without a rebuild, so at least one of its Play buttons is exercised
+       for real. Grouped on the controls — swapping the preview must not
+       move the sliders underneath it. */
+    id: 'motionlab/preview-tear',
+    screen: 'motionlab',
+    group: 'motionlab-preview',
+    scope: '.ctrl',
+    setup () { reset() },
+    async act ({ click, raf, at }) {
+      await click('.uiplay', 0)
+      await raf()
+      const run = uiLast('tear')
+      if (!run) throw new Error('the lab did not play the tear')
+      run.timeline.pause(at === null ? 0.5 : at)
+      await raf()
+    }
+  }
 ]
