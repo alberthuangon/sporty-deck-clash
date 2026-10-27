@@ -14,7 +14,9 @@
     <!-- stage 2: reveal cards one at a time -->
     <div v-else-if="stage === 'reveal'" class="stage">
       <div class="counter muted">{{ index + 1 }} / {{ pulls.length }}</div>
-      <div class="glow" v-if="index === pulls.length - 1">✦ final card ✦</div>
+      <!-- always present, empty until the last card: appearing mid-reveal used
+           to drop the card, the verdict and the button 31px down the screen -->
+      <div class="glow">{{ index === pulls.length - 1 ? '✦ final card ✦' : '' }}</div>
 
       <CardFace :card="currentCard" size="lg" class="reveal-card" />
 
@@ -115,7 +117,7 @@ function goUpgrade (id) { store.upgradeTarget = id; go('upgrade') }
 .seal-mid { color: #6EE7FF; font-weight: 700; }
 .seal-hint { font-size: 11px; }
 .counter { font-size: 12px; }
-.glow { color: var(--r-l); font-weight: 700; font-size: 13px; letter-spacing: .08em; }
+.glow { color: var(--r-l); font-weight: 700; font-size: 13px; letter-spacing: .08em; line-height: 18px; min-height: 18px; }
 .reveal-card { width: 190px; }
 .verdict { text-align: center; font-size: 12px; }
 .new-tag { color: var(--cta); font-weight: 800; letter-spacing: .08em; margin-bottom: 3px; }
