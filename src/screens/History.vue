@@ -49,7 +49,7 @@
       <div class="sec-title">Your squad that match</div>
       <div class="deck">
         <CardFace v-for="s in SLOTS" :key="s" :card="snapCard(detail.decks.you[s])"
-                  size="sm" :radar="false" />
+                  size="sm" />
       </div>
 
       <div class="money card">

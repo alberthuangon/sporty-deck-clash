@@ -4,7 +4,7 @@
       <div class="cnt muted">{{ ownedCount }} / {{ CATALOGUE.length }} collected</div>
       <div class="grid">
         <div v-for="c in CATALOGUE" :key="c.id" class="slot" @click="open(c.id)">
-          <CardFace v-if="isOwned(c.id)" :card="cardOf(c.id)" size="sm" :radar="false" />
+          <CardFace v-if="isOwned(c.id)" :card="cardOf(c.id)" size="sm" />
           <div v-else class="locked" :class="'r-'+c.rarity">
             <div class="lk">🔒</div>
             <div class="ln">{{ c.name }}</div>
@@ -19,7 +19,7 @@
       <button class="back muted" @click="detail = null">‹ All cards</button>
       <CardFace :card="cardOf(detail)" size="lg" class="hero" :radar="false" />
       <RadarChart :axis-keys="cardOf(detail).axisKeys" :values="cardOf(detail).axes"
-                  :size="260" labels class="rad" />
+                  :size="260" labels class="rad" :class="'r-' + BY_ID[detail].rarity" />
       <div class="meta">
         <div class="mrow"><span class="muted">Rarity</span><span>{{ RARITY[BY_ID[detail].rarity].label }}</span></div>
         <div class="mrow"><span class="muted">Level</span><span>{{ entry(detail).level || '—' }} / 10</span></div>

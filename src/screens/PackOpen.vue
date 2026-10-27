@@ -38,7 +38,7 @@
     <div v-else class="stage">
       <h3 class="sum-h">Pack summary</h3>
       <div class="sum-grid">
-        <CardFace v-for="(p,i) in pulls" :key="i" :card="cardFor(p)" size="sm" :radar="false">
+        <CardFace v-for="(p,i) in pulls" :key="i" :card="cardFor(p)" size="sm">
           <span class="tag" :class="p.isNew ? 'tn' : 'td'">{{ p.isNew ? 'NEW' : '+1' }}</span>
         </CardFace>
       </div>

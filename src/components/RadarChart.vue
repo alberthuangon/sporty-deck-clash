@@ -103,9 +103,14 @@ defineExpose({ poly, morph })
 .radar { display: block; overflow: visible; }
 .ring { fill: none; stroke: rgba(255,255,255,.09); stroke-width: 1; }
 .spoke { stroke: rgba(255,255,255,.09); stroke-width: 1; }
-.shape { fill: rgba(50,206,98,.26); stroke: var(--green); stroke-width: 1.6; stroke-linejoin: round; }
+/* The shape takes its colour from the context it sits in — CardFace sets
+   --radar-c / --radar-fill per rarity. Defaults keep every other caller
+   exactly as it was. Green is this product's "win / positive / CTA" colour, so
+   spending it on a stat chart was spending a semantic colour on decoration. */
+.shape { fill: var(--radar-fill, rgba(50,206,98,.26)); stroke: var(--radar-c, var(--green)); stroke-width: 1.6; stroke-linejoin: round; }
 .ghost { fill: none; stroke: var(--cta); stroke-width: 1.4; stroke-dasharray: 3 3; opacity: .85; }
-.node { fill: var(--green); }
+/* the ghost KEEPS mint: rarity says what you are, green says what you gain */
+.node { fill: var(--radar-c, var(--green)); }
 .lbl { font-size: 8px; fill: var(--text-2); font-weight: 700; letter-spacing: .03em; }
 .val { font-size: 9px; fill: #fff; font-weight: 700; }
 </style>

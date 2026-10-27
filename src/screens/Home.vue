@@ -14,7 +14,7 @@
       <div class="lineup">
         <div v-for="s in SLOTS" :key="s.key" class="lu">
           <div class="lu-lbl">{{ s.short }}</div>
-          <CardFace :card="cardOf(store.deck[s.key])" size="sm" :radar="false" />
+          <CardFace :card="cardOf(store.deck[s.key])" size="sm" />
         </div>
       </div>
       <button class="btn edit" @click="go('deckedit')">Edit squad</button>

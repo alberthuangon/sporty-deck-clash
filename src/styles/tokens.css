@@ -42,3 +42,56 @@
   --r-md: 8px;
   --r-lg: 12px;
 }
+
+/* ---------- the rarity ladder ----------
+
+   Lives here rather than inside CardFace because more than the card face reads
+   it: the collection's locked placeholders and the detail page's big radar
+   chart carry the same `r-<rarity>` class, and a second copy of these values in
+   a screen's scoped CSS is a copy that drifts.
+
+   Four steps, and three channels climb together so the ladder does not depend
+   on hue alone — a colour-blind viewer, or a projector that mangles hue, still
+   reads it:
+     hue              grey -> blue -> purple -> gold
+     top-left bright   C darkest -> L brightest
+     glow radius       0 -> 10 -> 16 -> 22px
+   E and L add a fourth channel that costs no layout at all: texture. */
+.r-C {
+  --rc: #5A606D;
+  --cf-body: linear-gradient(160deg, #3B404B 0%, #2A2E37 58%);
+  --cf-shadow: 0 1px 3px rgba(0,0,0,.35);
+  --cf-deco: none;
+  --radar-c: #AEB3BE;
+  --radar-fill: rgba(174,179,190,.18);
+}
+.r-R {
+  --rc: #4C9BFF;
+  --cf-body: linear-gradient(160deg, rgba(76,155,255,.28) 0%, #262B36 58%);
+  --cf-shadow: 0 1px 3px rgba(0,0,0,.35), 0 0 10px rgba(76,155,255,.22);
+  --cf-deco: radial-gradient(120px 90px at 12% 0%, rgba(76,155,255,.20), transparent 70%);
+  --radar-c: #4C9BFF;
+  --radar-fill: rgba(76,155,255,.22);
+}
+.r-E {
+  --rc: #B069F8;
+  --cf-body: linear-gradient(160deg, rgba(176,105,248,.34) 0%, #2A2439 58%);
+  --cf-shadow: 0 1px 3px rgba(0,0,0,.35), 0 0 16px rgba(176,105,248,.38);
+  --cf-deco:
+    radial-gradient(140px 110px at 12% 0%, rgba(176,105,248,.30), transparent 72%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 1px, transparent 1px 7px);
+  --radar-c: #B069F8;
+  --radar-fill: rgba(176,105,248,.24);
+}
+.r-L {
+  --rc: #F5A524;
+  --cf-body: linear-gradient(160deg, rgba(245,165,36,.38) 0%, #332714 58%);
+  --cf-shadow: 0 1px 3px rgba(0,0,0,.35), 0 0 22px rgba(245,165,36,.45),
+    inset 0 0 0 1px rgba(255,215,130,.25);
+  --cf-deco:
+    linear-gradient(118deg, transparent 38%, rgba(255,255,255,.11) 46%, transparent 54%),
+    radial-gradient(150px 120px at 12% 0%, rgba(255,205,110,.34), transparent 72%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.045) 0 1px, transparent 1px 6px);
+  --radar-c: #F5A524;
+  --radar-fill: rgba(245,165,36,.26);
+}

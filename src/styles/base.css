@@ -55,7 +55,12 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; }
 }
 .btn {
   display: flex; align-items: center; justify-content: center;
-  height: 44px; border-radius: var(--r-md);
+  /* min-height as well as height: a .btn is a flex item on most screens, and
+     flex-shrink would quietly take it under the published 44px tap floor as
+     soon as its column filled up — which also stopped .scroll from scrolling,
+     because a column that shrinks to fit never overflows. The floor has to be
+     a floor. Clamping height (not width) leaves .btn-row free to share a row. */
+  height: 44px; min-height: 44px; border-radius: var(--r-md);
   font-size: 15px; font-weight: 700;
   background: var(--surface-hi); color: var(--text);
   width: 100%;
