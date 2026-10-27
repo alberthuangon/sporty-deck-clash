@@ -83,6 +83,15 @@ export function uiRunning () { return current }
    frame is not reliable under virtual time; naming it is. */
 export function uiLast (name) { return REGISTER.get(name) || null }
 export function uiSkip () { if (current) current.skip() }
+/* Cancel anything still in the air. Nothing in the app needs this — nothing
+   there pauses a UI animation — but the gate parks timelines mid-flight to
+   photograph a frame, and a parked flight never reaches the onComplete that
+   takes its tokens away. Without it one held frame leaked 12 tokens into
+   every state measured after it. */
+export function uiCancelAll () {
+  REGISTER.forEach(api => api.cancel())
+  current = null
+}
 
 /* Build and play one UI animation.
 
@@ -168,5 +177,5 @@ export function uiPlay (name, build, { interruptible = false, onEnd = null } = {
    how it reads back what every animation cost. MotionLab ships for the same
    reason. */
 if (typeof window !== 'undefined') {
-  window.__motion = { report: uiReport, reset: uiResetReport, running: uiRunning, last: uiLast, skip: uiSkip, budget: UI_BUDGET, time: UI_TIME, reduced }
+  window.__motion = { report: uiReport, reset: uiResetReport, running: uiRunning, last: uiLast, skip: uiSkip, cancelAll: uiCancelAll, budget: UI_BUDGET, time: UI_TIME, reduced }
 }

@@ -87,3 +87,15 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; }
    is an exit, not a scrim — it must never hide what is underneath it. Above
    the takeovers, which sit at 60. */
 .ui-skip { position: absolute; inset: 0; z-index: 90; background: none; }
+
+/* A diamond / ticket / shard in flight (src/ui/flyIn.js). Parented to .phone
+   rather than to the component that launched it, so it outlives its own
+   source — the rank-up takeover closes while its rewards are still in the
+   air. Never takes a tap, and the timeline that made it takes it away again;
+   `npm run layout` checks both. */
+.fly {
+  position: absolute; z-index: 80; pointer-events: none;
+  margin: -8px 0 0 -7px; line-height: 1;
+  font-style: normal; font-size: 14px; font-weight: 800;
+  color: #6EE7FF;
+}

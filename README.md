@@ -34,7 +34,7 @@ Every state is reached the way a player reaches it: real game functions
 keep their stage in local component state, and reaching in to set those refs
 would test a reachability nobody has.
 
-Twenty assertions:
+Twenty-three assertions:
 
 | | |
 | --- | --- |
@@ -56,6 +56,8 @@ Twenty assertions:
 | long UI animations with no way to interrupt | anything over a second has to be skippable, with the match's Skip semantics: one tap and you are at the END state |
 | interrupt surfaces left behind | that exit covers the whole frame, bars included, so it is exempt from the chrome assertion — and the price of the exemption is that it must be gone the moment the animation ends. An overlay dismissed mid-burst left one behind and every tap after it, on every screen, went nowhere |
 | interrupt surfaces that hide what is under them | the other half of that price: an exit, not a scrim |
+| flying tokens left behind | a diamond on its way to the wallet crosses the TopBar, because the chip it is flying to is in the TopBar — same exemption, same price. One frame held mid-flight by the gate leaked 12 tokens into every state measured after it |
+| flying tokens that could eat a tap | `pointer-events: none`, checked rather than assumed |
 
 The last two are the point. States are put in a **group** when a player
 sitting still on one screen can watch it turn into the other — mid-reveal in a

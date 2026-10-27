@@ -19,7 +19,7 @@
         <div class="rw"><i class="gem">◆</i> {{ t.reward }}</div>
         <div v-if="!t.done" class="m-prog muted">{{ t.progress || 'In progress' }}</div>
       </div>
-      <button v-if="t.done && !t.claimed" class="btn btn-cta claim" data-sfx="claim" @click="claim(t)">Claim</button>
+      <button v-if="t.done && !t.claimed" class="btn btn-cta claim" data-sfx="claim" @click="claim(t, $event)">Claim</button>
       <button v-else-if="t.claimed" class="btn done" disabled>Claimed</button>
       <button v-else class="btn" disabled>Not complete</button>
     </div>
@@ -31,10 +31,15 @@
 <script setup>
 import { ref } from 'vue'
 import { store, claimTask } from '../game.js'
+import { flyTo } from '../ui/flyIn.js'
 const justClaimed = ref(0)
-function claim (t) {
+function claim (t, ev) {
   const n = claimTask(t.id)
-  if (n) { justClaimed.value = n; setTimeout(() => { justClaimed.value = 0 }, 2200) }
+  if (!n) return
+  justClaimed.value = n
+  /* from the button that was tapped to the chip that just went up */
+  flyTo(ev.currentTarget, 'diamonds')
+  setTimeout(() => { justClaimed.value = 0 }, 2200)
 }
 </script>
 

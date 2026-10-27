@@ -25,7 +25,7 @@ import '../../src/styles/base.css'
 import { store, go } from '../../src/store.js'
 import { CASES } from './cases.js'
 import { measure } from './measure.js'
-import { uiResetReport, uiReport } from '../../src/ui/motion.js'
+import { uiResetReport, uiReport, uiCancelAll } from '../../src/ui/motion.js'
 
 gsap.ticker.lagSmoothing(0)
 
@@ -121,6 +121,10 @@ window.__screens = async () => {
 
   for (const c of cases) {
     errors.length = 0
+    /* before the reset, not after: cancelling needs the register that is
+       about to be cleared, and the previous case may have left a flight
+       parked in mid-air with its tokens still on screen */
+    uiCancelAll()
     uiResetReport()
     if (window.__warns) window.__warns.length = 0
     trace(`start ${c.id}`)
@@ -143,6 +147,9 @@ window.__screens = async () => {
          decorate the answer, never withhold it — so the gate compares the
          digits on screen at frame zero against the digits at rest. */
       rec.counters = [...document.querySelectorAll('.count-up')].map(el => el.textContent.trim())
+      rec.flyTokens = [...document.querySelectorAll('.fly')].map(el => ({
+        pointer: getComputedStyle(el).pointerEvents
+      }))
       rec.skipLayers = [...document.querySelectorAll('[data-skip]')].map(el => ({
         name: el.getAttribute('data-skip'),
         bg: getComputedStyle(el).backgroundColor,

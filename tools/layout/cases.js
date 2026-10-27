@@ -162,6 +162,17 @@ function timeline () {
    three payout states showing whatever natural playback had happened to
    leave behind — three cases that looked like they were measuring a frame
    each and were measuring the same accident. */
+/* Catch a flight in mid-air. It has to be paused IMMEDIATELY after the click
+   that starts it: the tokens remove themselves when they land, and a frame
+   that has already been cleaned up cannot be seeked back to — unlike the
+   payout roll, whose timeline survives its own end. */
+function holdFlight (at) {
+  const run = uiLast('flyIn')
+  if (!run) throw new Error('nothing flew')
+  if (run.record.done) throw new Error('the flight landed before it could be held')
+  run.timeline.pause(at === null ? 0.25 : at)
+}
+
 function seekPayout (progress) {
   const run = uiLast('payout')
   if (!run) throw new Error('the payout figure did not roll')
@@ -310,6 +321,23 @@ export const CASES = [
     }
   },
 
+  {
+    /* the reward chips leaving the takeover as it closes. The tokens outlive
+       their own source on purpose — the overlay is already unmounting. */
+    id: 'rankup/reward-flying',
+    screen: 'home',
+    setup () {
+      reset(); richCollection()
+      store.rankUpView = { label: 'Bronze I', reward: { diamonds: 50 } }
+      store.overlay = 'rankup'
+    },
+    async act ({ click, raf, at }) {
+      await click('.ru-go')
+      holdFlight(at)
+      await raf()
+    }
+  },
+
   /* ------------------------------------------------ Cards */
   { id: 'cards/sparse', screen: 'cards', setup () { reset() } },
   {
@@ -367,6 +395,20 @@ export const CASES = [
     group: 'tasks-claim',
     setup () { reset() },
     act: ({ click }) => click('.btn-cta.claim')
+  },
+
+  {
+    /* mid-flight, in the same group as the two states above: the diamonds
+       crossing the screen may not move the mission card they came from */
+    id: 'tasks/claim-flying',
+    screen: 'tasks',
+    group: 'tasks-claim',
+    setup () { reset() },
+    async act ({ click, raf, at }) {
+      await click('.btn-cta.claim')
+      holdFlight(at)
+      await raf()
+    }
   },
 
   /* ------------------------------------------------ Rank */
@@ -566,6 +608,20 @@ export const CASES = [
     group: 'packopen-reveal',
     setup () { reset(); richCollection(); store.pendingPack = 'standard' },
     act: ({ click }) => click('.btn-cta')
+  },
+  {
+    /* the first card is a duplicate, so a shard is on its way to the count
+       below it. Same group: a shard in the air may not move the card. */
+    id: 'packopen/shard-flying',
+    screen: 'packopen',
+    group: 'packopen-reveal',
+    setup () { reset(); richCollection(); store.pendingPack = 'standard' },
+    async act ({ click, raf, at }) {
+      await click('.btn-cta')
+      await raf()          // the flight is launched inside a nextTick
+      holdFlight(at)
+      await raf()
+    }
   },
   {
     id: 'packopen/reveal-3',

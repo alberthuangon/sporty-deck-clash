@@ -25,8 +25,13 @@ const TAKEOVERS = ['.dr', '.ru']
    animation that runs longer than a second. It covers the frame, bars
    included, because a tap anywhere has to be the way out. Its obligation is
    asserted in run.mjs: transparent, so it hides nothing, and gone the moment
-   the animation ends. */
-const CHROME_OVERLAYS = ['.sheet', '.toast', '[data-skip]', ...TAKEOVERS]
+   the animation ends.
+
+   `.fly` is a diamond or a shard in flight (src/ui/flyIn.js). It crosses the
+   TopBar because the wallet chip it is flying to is IN the TopBar. Same
+   bargain: pointer-events none so it can never eat a tap, and removed when
+   it lands. */
+const CHROME_OVERLAYS = ['.sheet', '.toast', '[data-skip]', '.fly', ...TAKEOVERS]
 
 /* Boxes that are MEANT to be bigger than their container and cropped by it:
    a full-bleed texture is drawn oversized on purpose. Everything else that

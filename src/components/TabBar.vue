@@ -2,7 +2,7 @@
   <nav class="tabbar">
     <button
       v-for="t in tabs" :key="t.id"
-      class="tab" :class="{ active: current === t.id }"
+      class="tab" :class="{ active: current === t.id }" :data-tab="t.id"
       @click="$emit('nav', t.id)"
     >
       <span class="ic" v-html="t.icon"></span>

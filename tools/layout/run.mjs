@@ -214,12 +214,22 @@ const unreadable = (rollStart && rollEnd)
       .map((t, i) => ({ start: t, end: (rollEnd.counters || [])[i] }))
   : [{ start: '(state missing)', end: '(state missing)' }]
 
+/* Same bargain as the interrupt surface: a token allowed over the chrome
+   bars must never take a tap, and must be gone once it has landed. */
+const flyDone = new Map(motion.map(m => [`${m.state}/${m.name}`, m.done]))
+const flyLeaks = screens.results.filter(r => (r.flyTokens || []).length && flyDone.get(`${r.id}/flyIn`) !== false)
+  .map(r => ({ state: r.id, n: r.flyTokens.length }))
+const flyTappable = screens.results.flatMap(r => (r.flyTokens || [])
+  .filter(t => t.pointer !== 'none').map(t => ({ state: r.id, ...t })))
+
 console.log(`\nUI animations stay inside the budget  (${motion.length} play(s) across the sweep)\n`)
 check('UI animations over their time budget', overBudget.length, !overBudget.length)
 check('long UI animations with no way to interrupt', noExit.length, !noExit.length)
 check('interrupt surfaces left behind', skipLeaks.length, !skipLeaks.length)
 check('interrupt surfaces that hide what is under them', skipOpaque.length, !skipOpaque.length)
 check('rolling figures that start unreadable', unreadable.length, !unreadable.length)
+check('flying tokens left behind', flyLeaks.length, !flyLeaks.length)
+check('flying tokens that could eat a tap', flyTappable.length, !flyTappable.length)
 
 if (ellipsised.length) {
   console.log(`\n  note: ${ellipsised.length} label(s) ellipsised — truncated, but visibly so:`)
@@ -254,6 +264,8 @@ if (fail.length) {
   skipLeaks.forEach(l => console.log(`  interrupt surface left behind: ${l.state}  [data-skip="${l.name}"]`))
   skipOpaque.forEach(l => console.log(`  interrupt surface is painted: ${l.state}  [data-skip="${l.name}"] bg ${l.bg} ${l.bgImage}`))
   unreadable.forEach(u => console.log(`  unreadable at frame zero: starts "${u.start}", lands "${u.end}"`))
+  flyLeaks.forEach(f => console.log(`  flying tokens left behind: ${f.state}  ${f.n} token(s) still on .phone`))
+  flyTappable.forEach(f => console.log(`  flying token takes taps: ${f.state}  pointer-events: ${f.pointer}`))
   console.log('')
   process.exit(1)
 }

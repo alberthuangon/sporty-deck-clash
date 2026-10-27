@@ -34,6 +34,7 @@ import gsap from 'gsap'
 import Burst from '../components/Burst.vue'
 import { store } from '../game.js'
 import { uiPlay, UI_TIME } from '../ui/motion.js'
+import { flyTo } from '../ui/flyIn.js'
 
 const view = computed(() => store.rankUpView || { label: '', reward: {} })
 const burstRef = ref(null)
@@ -41,8 +42,18 @@ const tierEl = ref(null)
 const rewardEl = ref(null)
 let anim = null
 
+/* The rewards were credited by finishMatch long before this screen opened —
+   this is the player being shown where they went, not the transfer itself.
+   Launched BEFORE the overlay closes, so the chips still have a rect to
+   leave from; the tokens live on .phone, so they survive the unmount.
+   Tickets fly to the Rank tab rather than the wallet: the top bar has no
+   ticket chip, and the reward road is where a ticket actually goes. */
 function dismiss () {
   if (anim) anim.skip()
+  const chip = rewardEl.value && rewardEl.value.querySelector('.rw')
+  const r = view.value.reward
+  if (chip && r.diamonds) flyTo(chip, 'diamonds', { glyph: '◆' })
+  else if (chip && r.tickets) flyTo(chip, '[data-tab="rank"]', { glyph: '🎟', count: 5 })
   store.overlay = null
   store.rankUpView = null
 }

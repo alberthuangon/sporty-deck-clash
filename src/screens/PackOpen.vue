@@ -18,7 +18,7 @@
            to drop the card, the verdict and the button 31px down the screen -->
       <div class="glow">{{ index === pulls.length - 1 ? '✦ final card ✦' : '' }}</div>
 
-      <CardFace :card="currentCard" size="lg" class="reveal-card" />
+      <CardFace ref="cardRef" :card="currentCard" size="lg" class="reveal-card" />
 
       <div class="verdict">
         <template v-if="current.isNew">
@@ -27,7 +27,7 @@
         </template>
         <template v-else>
           <div class="dup-tag">DUPLICATE → +1 SHARD</div>
-          <div class="muted">
+          <div class="muted" ref="shardLine">
             {{ currentCard.name }} {{ shardText }}
           </div>
         </template>
@@ -58,8 +58,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import CardFace from '../components/CardFace.vue'
+import { flyTo } from '../ui/flyIn.js'
 import { store, go, buyPack, commitPull, entry, canUpgrade, upgradeCost, BY_ID } from '../game.js'
 import { buildCard } from '../engine/cards.js'
 import { PACKS } from '../engine/economy.js'
@@ -69,6 +70,8 @@ const stage = ref('sealed')
 const index = ref(0)
 const pulls = ref([])
 const upgradable = ref([])
+const cardRef = ref(null)
+const shardLine = ref(null)
 
 onMounted(() => {
   const res = buyPack(pack)
@@ -86,10 +89,23 @@ const shardText = computed(() => {
 
 function cardFor (p) { return buildCard(p.def, Math.max(1, entry(p.id).level)) }
 
+/* A duplicate pays a shard, and the count on the line below is where it
+   lands. nextTick first: on the very first card the reveal stage has not
+   rendered yet, and an animation built against an element that does not
+   exist is the mistake this repo has shipped three times. */
+function shardFlight () {
+  if (current.value.isNew) return
+  nextTick(() => {
+    const card = cardRef.value && cardRef.value.$el
+    if (card && shardLine.value) flyTo(card, shardLine.value, { glyph: '◈', count: 4, colour: 'var(--text-2)' })
+  })
+}
+
 function tear () {
   stage.value = 'reveal'
   index.value = 0
   commitPull(pulls.value[0])
+  shardFlight()
 }
 function next () {
   if (index.value === pulls.value.length - 1) {
@@ -100,6 +116,7 @@ function next () {
   }
   index.value += 1
   commitPull(pulls.value[index.value])
+  shardFlight()
 }
 function goUpgrade (id) { store.upgradeTarget = id; go('upgrade') }
 </script>
