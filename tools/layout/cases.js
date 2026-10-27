@@ -13,7 +13,7 @@
 
 import { store, resetStore } from '../../src/store.js'
 import * as game from '../../src/game.js'
-import { uiRunning } from '../../src/ui/motion.js'
+import { uiRunning, uiLast, UI_TIME } from '../../src/ui/motion.js'
 
 /* The engine is deterministic given its rng, but the game layer reaches for
    Math.random (toss assignment, draw, script). Seeding it makes every case
@@ -93,12 +93,12 @@ function settledMatch ({ fee = 50, stake = 50, wantPk = true, wantWin = true, re
 /* Settle a match and STAY on the result screen, with the shape the case wants.
    finishMatch is single-shot, so this replays the flow until the draw lands
    the right way and only then leaves matchView standing. */
-function resultLike ({ wantPk = true, wantWin = true, reward = null, seed = 11 } = {}) {
+function resultLike ({ wantPk = true, wantWin = true, reward = null, seed = 11, fee = 50, stake = null } = {}) {
   if (reward === 'tickets') store.rank = { score: 49, tierIndex: 0, subtier: 3, peakNodes: [] }
   if (reward === 'diamonds') store.rank = { score: 49, tierIndex: 0, subtier: 2, peakNodes: [] }
   for (let attempt = 0; attempt < 400; attempt++) {
     const rankBefore = { ...store.rank }
-    flow('result', { wantPk, seed: seed + attempt * 7 })
+    flow('result', { wantPk, seed: seed + attempt * 7, fee, stake })
     const ok = game.matchView.wentToPk === wantPk && game.matchView.won === wantWin &&
       (!reward || game.matchView.promotions.some(p => p.reward[reward]))
     if (ok) return
@@ -150,6 +150,23 @@ function timeline () {
   const tl = window.__match && window.__match.timeline
   if (!tl) throw new Error('match screen exposed no compiled timeline')
   return tl
+}
+
+/* Seek the payout roll to a named point. uiLast keeps the timeline alive
+   after it lands, so this works whether or not the roll already finished —
+   which is the only way to get a reproducible frame under virtual time.
+
+   suppressEvents MUST be false. A count-up has no animated property on the
+   element: the number only reaches the DOM through the tween's onUpdate, and
+   gsap suppresses callbacks when you seek. Seeking with the default left all
+   three payout states showing whatever natural playback had happened to
+   leave behind — three cases that looked like they were measuring a frame
+   each and were measuring the same accident. */
+function seekPayout (progress) {
+  const run = uiLast('payout')
+  if (!run) throw new Error('the payout figure did not roll')
+  run.timeline.pause()          // or settle()'s own frames play it forward again
+  run.timeline.progress(Math.max(0, Math.min(1, progress)), false)
 }
 
 const overlayUp = (sel, text) => () => {
@@ -486,6 +503,42 @@ export const CASES = [
   { id: 'result/win-no-pk', screen: 'result', setup () { reset(); richCollection(); resultLike({ wantPk: false, wantWin: true }) } },
   { id: 'result/lose-no-pk', screen: 'result', setup () { reset(); richCollection(); resultLike({ wantPk: false, wantWin: false }) } },
   { id: 'result/reward-tickets', screen: 'result', setup () { reset(); richCollection(); resultLike({ wantWin: true, reward: 'tickets' }) } },
+  /* The payout roll (step 6 item 2). A figure that grows from ₦50 to ₦2,850,182
+     is a figure whose width changes under the reader, and the ledger around it
+     is not allowed to move — so the money card mid-roll and the money card at
+     rest go in one invariance group. Both cases SEEK the timeline rather than
+     waiting for it: uiLast() keeps the timeline alive after it lands, and
+     naming the frame is the only reliable way to get one under virtual time. */
+  /* The top arena at a ₦799 stake on purpose: these three states are the only
+     place in the sweep where the payout figure changes WIDTH as it rolls, and
+     a group that compares ₦50 turning into ₦77 would pass for free. */
+  {
+    /* frame zero. §2.1 says the roll may not make the player wait to read the
+       answer, so it starts at the stake — the magnitude is right immediately.
+       run.mjs compares the digits here against the digits at rest. */
+    id: 'result/payout-start',
+    screen: 'result',
+    group: 'payout-figure',
+    scope: '.money',
+    setup () { reset(); richCollection(); resultLike({ wantWin: true, fee: 200, stake: 799 }) },
+    async act ({ raf }) { seekPayout(0); await raf() }
+  },
+  {
+    id: 'result/payout-rolling',
+    screen: 'result',
+    group: 'payout-figure',
+    scope: '.money',
+    setup () { reset(); richCollection(); resultLike({ wantWin: true, fee: 200, stake: 799 }) },
+    async act ({ raf, at }) { seekPayout(at === null ? 0.5 : at / UI_TIME.payout); await raf() }
+  },
+  {
+    id: 'result/payout-settled',
+    screen: 'result',
+    group: 'payout-figure',
+    scope: '.money',
+    setup () { reset(); richCollection(); resultLike({ wantWin: true, fee: 200, stake: 799 }) },
+    async act ({ raf }) { seekPayout(1); await raf() }
+  },
   {
     /* the promotion block is the door into the rank-up takeover, and it is a
        button now — so it has to be tappable at 44px and open what it says */

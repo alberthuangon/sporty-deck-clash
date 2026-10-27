@@ -11,7 +11,7 @@
            the edge of the near-miss framing this product refuses. -->
       <h2 class="dr-title">{{ draw.won ? 'You won the grand prize' : 'Not this time' }}</h2>
       <div class="dr-prize">
-        <CountUp v-if="draw.won" :value="draw.prize" :animate="animate" prefix="₦" :duration="1.1" />
+        <CountUp v-if="draw.won" :value="draw.prize" :animate="animate" prefix="₦" />
       </div>
 
       <div class="dr-rows card">

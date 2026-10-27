@@ -139,6 +139,10 @@ window.__screens = async () => {
          and those five animations sit on the repeated path where an extra
          second is felt dozens of times a session. */
       rec.motion = uiReport()
+      /* what every rolling figure READS at this frame. §2.1: the roll may
+         decorate the answer, never withhold it — so the gate compares the
+         digits on screen at frame zero against the digits at rest. */
+      rec.counters = [...document.querySelectorAll('.count-up')].map(el => el.textContent.trim())
       rec.skipLayers = [...document.querySelectorAll('[data-skip]')].map(el => ({
         name: el.getAttribute('data-skip'),
         bg: getComputedStyle(el).backgroundColor,

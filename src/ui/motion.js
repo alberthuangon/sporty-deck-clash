@@ -70,12 +70,18 @@ const REGISTER = new Map()
 let current = null
 
 export function uiReport () {
-  return [...REGISTER.values()].map(r => ({ ...r }))
+  return [...REGISTER.values()].map(a => ({ ...a.record }))
 }
 export function uiResetReport () {
   REGISTER.clear()
 }
+/* The one PLAYING, or null the moment it lands. */
 export function uiRunning () { return current }
+/* The most recent play of a name, running or not — its timeline survives
+   completion, so the gate's camera can seek back into an animation that has
+   already finished and photograph the frame it wants. Waiting for a specific
+   frame is not reliable under virtual time; naming it is. */
+export function uiLast (name) { return REGISTER.get(name) || null }
 export function uiSkip () { if (current) current.skip() }
 
 /* Build and play one UI animation.
@@ -101,8 +107,6 @@ export function uiPlay (name, build, { interruptible = false, onEnd = null } = {
     skipped: false,
     done: false
   }
-  REGISTER.set(name, rec)
-
   /* The way out, installed by the player rather than by every call site that
      might forget it. Transparent on purpose: this is an exit, not a scrim, so
      it must never hide what is underneath — and it is removed the moment the
@@ -152,6 +156,7 @@ export function uiPlay (name, build, { interruptible = false, onEnd = null } = {
   }
 
   tl.eventCallback('onComplete', finish)
+  REGISTER.set(name, api)
   current = api
 
   if (reduced.value) { tl.progress(1, false); return api }
@@ -163,5 +168,5 @@ export function uiPlay (name, build, { interruptible = false, onEnd = null } = {
    how it reads back what every animation cost. MotionLab ships for the same
    reason. */
 if (typeof window !== 'undefined') {
-  window.__motion = { report: uiReport, reset: uiResetReport, running: uiRunning, skip: uiSkip, budget: UI_BUDGET, time: UI_TIME, reduced }
+  window.__motion = { report: uiReport, reset: uiResetReport, running: uiRunning, last: uiLast, skip: uiSkip, budget: UI_BUDGET, time: UI_TIME, reduced }
 }

@@ -20,8 +20,14 @@
       </div>
       <div class="mrow big">
         <span>{{ matchView.won ? 'Payout' : 'Lost' }}</span>
+        <!-- Rolls up from the STAKE, not from zero. The figure is readable in
+             the first frame either way, and starting at the stake makes the
+             roll mean something — this is what the money on the line became.
+             A loss does not roll: the stake has not gone anywhere, and
+             counting it up would be a flourish over bad news. -->
         <span :class="matchView.won ? 'green' : ''">
-          ₦{{ matchView.won ? matchView.payout.toLocaleString() : matchView.stake }}
+          <CountUp :value="matchView.won ? matchView.payout : matchView.stake"
+                   :from="matchView.stake" prefix="₦" :animate="matchView.won" />
         </span>
       </div>
       <div v-if="matchView.won" class="fine muted">
@@ -74,6 +80,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import CountUp from '../components/CountUp.vue'
 import { store, go, ctx, matchView, abandonMatch, rankLabel } from '../game.js'
 import { RANK_TIERS } from '../engine/economy.js'
 

@@ -201,11 +201,25 @@ const skipOpaque = screens.results.flatMap(r => (r.skipLayers || [])
   .filter(l => l.bgImage !== 'none' || !/rgba\(0, 0, 0, 0\)|transparent/.test(l.bg))
   .map(l => ({ state: r.id, ...l })))
 
+/* §2.1 for a rolling figure: the player may not have to wait out the roll to
+   learn the answer. The payout starts at the STAKE rather than at zero, so
+   the magnitude is right in the first frame — which is a claim about what is
+   on screen, so it is checked against what is on screen. Missing either state
+   fails too: a comparison with nothing to compare passes for free. */
+const digits = t => (String(t).match(/\d/g) || []).length
+const rollStart = screens.results.find(r => r.id === 'result/payout-start')
+const rollEnd = screens.results.find(r => r.id === 'result/payout-settled')
+const unreadable = (rollStart && rollEnd)
+  ? (rollStart.counters || []).filter((t, i) => digits(t) < digits((rollEnd.counters || [])[i] || '') - 1)
+      .map((t, i) => ({ start: t, end: (rollEnd.counters || [])[i] }))
+  : [{ start: '(state missing)', end: '(state missing)' }]
+
 console.log(`\nUI animations stay inside the budget  (${motion.length} play(s) across the sweep)\n`)
 check('UI animations over their time budget', overBudget.length, !overBudget.length)
 check('long UI animations with no way to interrupt', noExit.length, !noExit.length)
 check('interrupt surfaces left behind', skipLeaks.length, !skipLeaks.length)
 check('interrupt surfaces that hide what is under them', skipOpaque.length, !skipOpaque.length)
+check('rolling figures that start unreadable', unreadable.length, !unreadable.length)
 
 if (ellipsised.length) {
   console.log(`\n  note: ${ellipsised.length} label(s) ellipsised — truncated, but visibly so:`)
@@ -239,6 +253,7 @@ if (fail.length) {
   noExit.forEach(m => console.log(`  no way out: ${m.state}  ${m.name} runs ${m.duration}s with no interrupt surface`))
   skipLeaks.forEach(l => console.log(`  interrupt surface left behind: ${l.state}  [data-skip="${l.name}"]`))
   skipOpaque.forEach(l => console.log(`  interrupt surface is painted: ${l.state}  [data-skip="${l.name}"] bg ${l.bg} ${l.bgImage}`))
+  unreadable.forEach(u => console.log(`  unreadable at frame zero: starts "${u.start}", lands "${u.end}"`))
   console.log('')
   process.exit(1)
 }
