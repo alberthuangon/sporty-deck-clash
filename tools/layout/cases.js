@@ -84,6 +84,28 @@ function settledMatch ({ fee = 50, stake = 50, wantPk = true, wantWin = true, se
   throw new Error(`could not draw a match with pk=${wantPk} won=${wantWin}`)
 }
 
+/* Walk the compiled timeline forward until the named cut-in is on screen and
+   its entrance has landed, then leave it parked there to be measured. */
+async function seekToCutIn (want, raf) {
+  const tl = window.__match && window.__match.timeline
+  if (!tl) throw new Error('match screen exposed no compiled timeline')
+  tl.pause(0)
+  const dur = tl.duration()
+  let visibleSince = null
+  for (let t = 0; t <= dur; t += 0.04) {
+    tl.time(t, false)
+    await raf()
+    const ci = document.querySelector('.cutin')
+    const txt = document.querySelector('.ci-text')
+    const up = ci && getComputedStyle(ci).visibility === 'visible' && txt && txt.textContent === want
+    if (!up) { visibleSince = null; continue }
+    if (visibleSince === null) visibleSince = t
+    // give the entrance tweens time to land before measuring
+    if (t - visibleSince > 0.6) return
+  }
+  throw new Error(`no ${want} cut-in in this match`)
+}
+
 /* ---------- the matrix ---------- */
 
 export const CASES = [
@@ -135,6 +157,22 @@ export const CASES = [
     id: 'match/open',
     screen: 'match',
     setup () { reset(); richCollection(); flow('match') }
+  },
+  /* The overlays park at visibility:hidden between beats, so a sweep that only
+     looks at a freshly mounted match screen never sees them at all. These two
+     drive the real compiled timeline forward to the frame where each cut-in is
+     up — forward only, never scrubbed backwards. */
+  {
+    id: 'match/goal-cutin',
+    screen: 'match',
+    setup () { reset(); richCollection(); flow('match') },
+    act: ({ raf }) => seekToCutIn('GOAL!', raf)
+  },
+  {
+    id: 'match/save-cutin',
+    screen: 'match',
+    setup () { reset(); richCollection(); flow('match') },
+    act: ({ raf }) => seekToCutIn('SAVED', raf)
   },
   {
     id: 'result/win-pk',

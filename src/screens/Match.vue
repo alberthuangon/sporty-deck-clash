@@ -98,9 +98,11 @@ onMounted(async () => {
   capScale.value = compiled.timeline.timeScale()
   compiled.timeline.timeScale(baseRate.value)
   compiled.timeline.play()
+  /* the compiled timeline is the hatch tools/layout drives to reach a cut-in,
+     and the one Claude in Chrome scrubs by hand — same reasoning as __skd */
+  window.__match = compiled
+  window.__ctx = ctx
   if (import.meta.env.DEV) {
-    window.__match = compiled
-    window.__ctx = ctx
     console.log('[skd] compiled match: timeline %ss, expected wall %ss, played %ss, cap scale %s',
       compiled.rawDuration.toFixed(2), compiled.expectedDuration.toFixed(2),
       compiled.playedDuration.toFixed(2), capScale.value.toFixed(3))

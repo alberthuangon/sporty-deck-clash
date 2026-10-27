@@ -17,6 +17,7 @@ import '../../src/styles/tokens.css'
 import '../../src/styles/base.css'
 import { store, go } from '../../src/store.js'
 import { CASES } from './cases.js'
+import { measure } from './measure.js'
 
 const errors = []
 const app = createApp(App)
@@ -99,6 +100,7 @@ window.__screens = async () => {
       const el = document.querySelector(`.screen[data-screen="${c.screen}"]`)
       rec.rendered = !!el && el.getBoundingClientRect().height > 0
       rec.nodes = el ? el.querySelectorAll('*').length : 0
+      if (rec.rendered) Object.assign(rec, measure())
     } catch (e) {
       rec.rendered = false
       errors.push('setup: ' + (e && e.message))

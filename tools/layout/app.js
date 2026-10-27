@@ -47,6 +47,37 @@ createApp(App).mount('#app')
 let compiled = null
 window.__seek = t => compiled.timeline.progress(t / compiled.timeline.duration(), false)
 
+/* Everything gsap can park on an element just by COMPILING a timeline.
+   fromTo renders its start state immediately, so a beat that never plays can
+   still leave its "before" look on screen for the whole match — which is how
+   the scoreboard spent every match at 1.9x and bright green. */
+function styleSnapshot () {
+  const out = {}
+  document.querySelectorAll('.stage *').forEach((el, i) => {
+    const cs = getComputedStyle(el)
+    out[tag(el, i)] = {
+      look: [cs.transform, cs.opacity, cs.color].join('|'),
+      /* an overlay parks between beats at visibility:hidden and sets its own
+         start state on the way in, so only what is ON SCREEN counts */
+      onScreen: !inHiddenBox(el)
+    }
+  })
+  return out
+}
+function inHiddenBox (el) {
+  for (let a = el.parentElement; a; a = a.parentElement) {
+    const cs = getComputedStyle(a)
+    if (cs.visibility === 'hidden' || cs.display === 'none') return true
+  }
+  return false
+}
+function tag (el, i) {
+  const cls = typeof el.className === 'string'
+    ? el.className.trim().split(/\s+/).filter(c => c && !c.startsWith('data-v')).slice(0, 2).join('.')
+    : ''
+  return `${i}:${el.tagName.toLowerCase()}${cls ? '.' + cls : ''}`
+}
+
 window.__probe = async () => {
   await nextTick()
   let s = 42 >>> 0
@@ -58,8 +89,17 @@ window.__probe = async () => {
   const script = buildScript(res, rng)
   const api = stageRef.value.api
   resetStage(api)
+  await nextTick()
+  const before = styleSnapshot()
+
   compiled = compileMatch(api, script, res)
   compiled.timeline.pause(0)
+  await nextTick()
+
+  const after = styleSnapshot()
+  const parked = Object.keys(before)
+    .filter(k => after[k] && after[k].onScreen && after[k].look !== before[k].look)
+    .map(k => ({ el: k.replace(/^\d+:/, ''), was: before[k].look, now: after[k].look }))
 
   const stageEl = document.querySelector('.stage')
   const feedEl = document.querySelector('#feed')
@@ -81,6 +121,7 @@ window.__probe = async () => {
     duration: +dur.toFixed(2),
     stageHeights: [...stageH],
     feedTops: [...feedTop],
-    stageClips: getComputedStyle(stageEl).overflow
+    stageClips: getComputedStyle(stageEl).overflow,
+    parkedByCompile: parked
   }
 }

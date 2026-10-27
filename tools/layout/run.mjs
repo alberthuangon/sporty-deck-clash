@@ -105,6 +105,7 @@ console.log('\nMatch screen holds still for a whole match\n')
 check('distinct stage heights during a match', match.stageHeights.length, match.stageHeights.length === 1)
 check('distinct feed positions during a match', match.feedTops.length, match.feedTops.length === 1)
 check('stage clips its overlays', match.stageClips, match.stageClips === 'hidden')
+check('on-screen things parked by compiling', match.parkedByCompile.length, !match.parkedByCompile.length)
 
 /* ---------- every screen, every state ---------- */
 console.log(`\nEvery screen renders  (${screens.results.length} states in a ${screens.frame.w}x${screens.frame.h} frame)\n`)
@@ -114,12 +115,37 @@ const noisy = screens.results.filter(r => r.errors.length)
 check('states that rendered', `${screens.results.length - broken.length}/${screens.results.length}`, !broken.length)
 check('states that logged an error or warning', noisy.length, !noisy.length)
 
+/* Every finding below is counted per state, so one broken component on one
+   screen cannot hide behind a total. */
+const gather = kind => screens.results.flatMap(r => (r[kind] || []).map(v => ({ state: r.id, ...v })))
+const clipped = gather('clipped')
+const offFrame = gather('offFrame')
+const truncated = gather('truncated')
+const ellipsised = gather('ellipsised')
+const overChrome = gather('overChrome')
+
+check('content cropped by its container', clipped.length, !clipped.length)
+check('elements laid out past the 430px frame', offFrame.length, !offFrame.length)
+check('text cut off with nothing to show for it', truncated.length, !truncated.length)
+check('things painting over the TopBar / TabBar', overChrome.length, !overChrome.length)
+
+if (ellipsised.length) {
+  console.log(`\n  note: ${ellipsised.length} label(s) ellipsised — truncated, but visibly so:`)
+  ellipsised.forEach(e => console.log(`    ${e.state}  ${e.key}  -${e.over}px  "${e.text}"`))
+}
+
 if (fail.length) {
   console.log(`\nLAYOUT CHECK FAILED — ${fail.length} assertion(s)\n`)
   if (match.stageHeights.length > 1) console.log('  stage heights seen:', match.stageHeights.join(', '))
   if (match.feedTops.length > 1) console.log('  feed tops seen:', match.feedTops.join(', '))
+  match.parkedByCompile.forEach(p =>
+    console.log(`  parked by compile: ${p.el}\n      ${p.was}  ->  ${p.now}`))
   broken.forEach(r => console.log(`  did not render: ${r.id} (settle: ${r.settle})`))
   noisy.forEach(r => r.errors.forEach(e => console.log(`  ${r.id}: ${e.split('\n')[0]}`)))
+  clipped.forEach(c => console.log(`  cropped: ${c.state}  ${c.key} is ${c.over}px outside ${c.by} (${c.axis})  "${c.text}"`))
+  offFrame.forEach(c => console.log(`  off-frame: ${c.state}  ${c.key} sticks out ${c.over}px (width ${c.width})  "${c.text}"`))
+  truncated.forEach(c => console.log(`  cut text: ${c.state}  ${c.key} needs ${c.over}px more  "${c.text}"`))
+  overChrome.forEach(c => console.log(`  over ${c.bar}: ${c.state}  ${c.key} by ${c.over}px  "${c.text}"`))
   console.log('')
   process.exit(1)
 }
