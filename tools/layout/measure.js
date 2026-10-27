@@ -41,14 +41,39 @@ function invisible (el) {
   return false
 }
 
-/* What of this box actually reaches the screen: its rect cropped by every
-   ancestor that clips. Needed because overflow:hidden crops the paint and not
+/* Which ancestors actually crop this box.
+
+   Not simply "every ancestor with overflow:hidden" — out-of-flow boxes escape.
+   A position:fixed box is laid out against the viewport, so nothing above it
+   clips it at all. A position:absolute box is only clipped from its containing
+   block (its nearest positioned ancestor) upwards; the scroll container it
+   happens to sit inside does not touch it.
+
+   Getting this wrong is not academic: it is why a Rank badge pinned over the
+   TopBar was waved through — the scroll container "cropped" it on paper.
+   (Simplification: a transform on an ancestor also makes a containing block
+   for fixed descendants. Nothing here does that in a settled state.) */
+function clipAncestors (el) {
+  const pos = getComputedStyle(el).position
+  if (pos === 'fixed') return []
+  const out = []
+  let reachedBlock = pos !== 'absolute'
+  for (let a = el.parentElement; a; a = a.parentElement) {
+    const cs = getComputedStyle(a)
+    if (!reachedBlock && cs.position !== 'static') reachedBlock = true
+    if (!reachedBlock) continue
+    if (clips(cs, 'x') || clips(cs, 'y') || scrolls(cs, 'x') || scrolls(cs, 'y')) out.push({ el: a, cs })
+  }
+  return out
+}
+
+/* What of this box actually reaches the screen: its rect cropped by everything
+   above that crops it. Needed because overflow:hidden crops the paint and not
    the geometry — a scoreboard digit whose rect pokes into the TopBar is not
    painting on the TopBar if the stage cropped it first. */
 function paintedRect (el, rect) {
-  let r = { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right }
-  for (let a = el.parentElement; a; a = a.parentElement) {
-    const cs = getComputedStyle(a)
+  const r = { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right }
+  for (const { el: a, cs } of clipAncestors(el)) {
     const ar = a.getBoundingClientRect()
     if (clips(cs, 'x') || scrolls(cs, 'x')) { r.left = Math.max(r.left, ar.left); r.right = Math.min(r.right, ar.right) }
     if (clips(cs, 'y') || scrolls(cs, 'y')) { r.top = Math.max(r.top, ar.top); r.bottom = Math.min(r.bottom, ar.bottom) }
@@ -71,8 +96,7 @@ function textOf (el) {
    container only scrolls vertically IS cut, which is the common case here —
    .scroll is overflow-y:auto / overflow-x:hidden. */
 function clippedBy (el, rect, axis) {
-  for (let a = el.parentElement; a; a = a.parentElement) {
-    const cs = getComputedStyle(a)
+  for (const { el: a, cs } of clipAncestors(el)) {
     if (scrolls(cs, axis)) return null
     if (!clips(cs, axis)) continue
     const ar = a.getBoundingClientRect()
