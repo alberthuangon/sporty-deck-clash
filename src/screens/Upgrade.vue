@@ -16,8 +16,8 @@
       </div>
 
       <div class="radwrap">
-        <RadarChart :axis-keys="now.axisKeys" :values="now.axes" :ghost="next ? next.axes : null"
-                    :size="280" labels />
+        <RadarChart ref="radarRef" :axis-keys="now.axisKeys" :values="now.axes"
+                    :ghost="next ? next.axes : null" :size="280" labels />
         <div class="legend">
           <span><i class="sw solid"></i>Now</span>
           <span><i class="sw dash"></i>Next level</span>
@@ -58,12 +58,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import CardFace from '../components/CardFace.vue'
 import RadarChart from '../components/RadarChart.vue'
 import { store, go, cardOf, entry, canUpgrade, upgradeCost, upgradeCard, BY_ID, deckPower, deckPowerWith, powerScore } from '../game.js'
 import { buildCard, AXIS_LABEL } from '../engine/cards.js'
 
+const radarRef = ref(null)
 const target = ref(store.upgradeTarget || null)
 const done = ref(false)
 const tick = ref(0)
@@ -90,7 +91,15 @@ const powerAfter = computed(() => {
 })
 function fmt (q) { return powerScore(q) }
 function doUpgrade () {
-  if (upgradeCard(target.value)) { done.value = true; tick.value++ }
+  /* snapshot BEFORE the upgrade: afterwards `now` is the new card and the old
+     shape is gone. Every number on this screen — the delta rows, the squad
+     power, the radar's own axis labels — updates in the same tick. Only the
+     polygon takes the scenic route (§2.1). */
+  const before = { ...now.value.axes }
+  if (!upgradeCard(target.value)) return
+  done.value = true
+  tick.value++
+  nextTick(() => { if (radarRef.value) radarRef.value.morph(before) })
 }
 </script>
 

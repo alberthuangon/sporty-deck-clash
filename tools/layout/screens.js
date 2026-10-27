@@ -147,6 +147,14 @@ window.__screens = async () => {
          decorate the answer, never withhold it — so the gate compares the
          digits on screen at frame zero against the digits at rest. */
       rec.counters = [...document.querySelectorAll('.count-up')].map(el => el.textContent.trim())
+      /* The radar's actual geometry, not its props. Three animations have
+         shipped in this repo pointed at elements that did not exist, and
+         every one of them read correctly in the source — all three were
+         caught by looking at what the element was really doing. The
+         invariance check deliberately ignores SVG internals (a radar's
+         vertices are the card's stats, not layout), so this is the only
+         place that can tell a morph from a still picture. */
+      rec.shapePoints = [...document.querySelectorAll('.screen .radar .shape')].map(el => el.getAttribute('points'))
       rec.flyTokens = [...document.querySelectorAll('.fly')].map(el => ({
         pointer: getComputedStyle(el).pointerEvents
       }))

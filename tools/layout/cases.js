@@ -675,8 +675,31 @@ export const CASES = [
   {
     id: 'upgrade/done',
     screen: 'upgrade',
+    group: 'upgrade-after',
     setup () { reset(); richCollection(); store.ownedCards.F2 = { level: 2, shards: 99 }; store.upgradeTarget = 'F2' },
     act: ({ click }) => click('[data-sfx="upgrade"]')
+  },
+  {
+    /* the same screen with the radar half-way through its morph. Grouped with
+       the settled state because that IS the claim §2.1 makes here: the new
+       numbers are already on screen and nothing around the chart moves while
+       the shape catches up. The polygon's own vertices are not compared —
+       measure.js leaves SVG internals out, since a radar's points are the
+       card's stats rather than layout. */
+    id: 'upgrade/radar-morphing',
+    screen: 'upgrade',
+    group: 'upgrade-after',
+    setup () { reset(); richCollection(); store.ownedCards.F2 = { level: 2, shards: 99 }; store.upgradeTarget = 'F2' },
+    async act ({ click, raf, at }) {
+      await click('[data-sfx="upgrade"]')
+      const run = uiLast('radar')
+      if (!run) throw new Error('the radar did not morph')
+      run.timeline.pause()
+      /* suppressEvents false: the shape reaches the DOM through onUpdate,
+         exactly like the payout figure */
+      run.timeline.progress(at === null ? 0.45 : at / UI_TIME.radar, false)
+      await raf()
+    }
   },
 
   /* ------------------------------------------------ dev screens, shipped */

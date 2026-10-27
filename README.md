@@ -34,7 +34,7 @@ Every state is reached the way a player reaches it: real game functions
 keep their stage in local component state, and reaching in to set those refs
 would test a reachability nobody has.
 
-Twenty-three assertions:
+Twenty-four assertions:
 
 | | |
 | --- | --- |
@@ -58,6 +58,7 @@ Twenty-three assertions:
 | interrupt surfaces that hide what is under them | the other half of that price: an exit, not a scrim |
 | flying tokens left behind | a diamond on its way to the wallet crosses the TopBar, because the chip it is flying to is in the TopBar — same exemption, same price. One frame held mid-flight by the gate leaked 12 tokens into every state measured after it |
 | flying tokens that could eat a tap | `pointer-events: none`, checked rather than assumed |
+| shapes that animate without moving | the radar morph's geometry mid-animation against its geometry at rest. A tween wired to nothing looks identical from the outside AND in the source — which is how three dead animations shipped here. The invariance check deliberately ignores SVG internals, since a radar's vertices are the card's stats rather than layout, so this is the only thing that can tell a morph from a still picture |
 
 The last two are the point. States are put in a **group** when a player
 sitting still on one screen can watch it turn into the other — mid-reveal in a

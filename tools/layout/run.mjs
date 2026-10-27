@@ -222,6 +222,17 @@ const flyLeaks = screens.results.filter(r => (r.flyTokens || []).length && flyDo
 const flyTappable = screens.results.flatMap(r => (r.flyTokens || [])
   .filter(t => t.pointer !== 'none').map(t => ({ state: r.id, ...t })))
 
+/* Did the radar actually MOVE? A morph whose tween runs against nothing
+   looks identical to a working one from the outside, and identical in the
+   source — so the shape's geometry mid-morph is compared against its
+   geometry at rest. Same shape in both frames means the animation is dead. */
+const morphMid = screens.results.find(r => r.id === 'upgrade/radar-morphing')
+const morphEnd = screens.results.find(r => r.id === 'upgrade/done')
+const still = (morphMid && morphEnd && (morphMid.shapePoints || []).length && (morphEnd.shapePoints || []).length)
+  ? (morphMid.shapePoints[0] === morphEnd.shapePoints[0]
+      ? [{ what: 'radar', mid: morphMid.shapePoints[0].slice(0, 40) }] : [])
+  : [{ what: 'radar', mid: '(state missing)' }]
+
 console.log(`\nUI animations stay inside the budget  (${motion.length} play(s) across the sweep)\n`)
 check('UI animations over their time budget', overBudget.length, !overBudget.length)
 check('long UI animations with no way to interrupt', noExit.length, !noExit.length)
@@ -230,6 +241,7 @@ check('interrupt surfaces that hide what is under them', skipOpaque.length, !ski
 check('rolling figures that start unreadable', unreadable.length, !unreadable.length)
 check('flying tokens left behind', flyLeaks.length, !flyLeaks.length)
 check('flying tokens that could eat a tap', flyTappable.length, !flyTappable.length)
+check('shapes that animate without moving', still.length, !still.length)
 
 if (ellipsised.length) {
   console.log(`\n  note: ${ellipsised.length} label(s) ellipsised — truncated, but visibly so:`)
@@ -266,6 +278,7 @@ if (fail.length) {
   unreadable.forEach(u => console.log(`  unreadable at frame zero: starts "${u.start}", lands "${u.end}"`))
   flyLeaks.forEach(f => console.log(`  flying tokens left behind: ${f.state}  ${f.n} token(s) still on .phone`))
   flyTappable.forEach(f => console.log(`  flying token takes taps: ${f.state}  pointer-events: ${f.pointer}`))
+  still.forEach(d => console.log(`  did not move: the ${d.what} measures the same mid-animation as at rest — ${d.mid}`))
   console.log('')
   process.exit(1)
 }
