@@ -129,7 +129,12 @@
       <div class="ci-tint" :class="cutSide" ref="ciTintEl"></div>
       <div class="ci-streaks" ref="ciStreakEl"></div>
       <div class="ci-body" ref="ciBodyEl">
-        <CardFace v-if="cutCard" :card="cutCard" size="lg" class="ci-card" />
+        <!-- the slot is always mounted: the card entrance is compiled before
+             setCutIn has run, so a tween aimed at the v-if'd CardFace gets
+             null and the card ends up popping in with no animation at all -->
+        <div class="ci-card-slot" ref="ciCardEl">
+          <CardFace v-if="cutCard" :card="cutCard" size="lg" class="ci-card" />
+        </div>
         <div class="ci-team" :class="cutSide" v-if="cutTeam">
           <i class="ci-jersey"></i>{{ cutTeam }}
         </div>
@@ -193,6 +198,7 @@ const ciBodyEl = ref(null)
 const ciTextEl = ref(null)
 const ciStreakEl = ref(null)
 const ciTintEl = ref(null)
+const ciCardEl = ref(null)
 const scoreHomeEl = ref(null)
 const scoreAwayEl = ref(null)
 const pkEl = ref(null)
@@ -239,7 +245,8 @@ const api = {
   trail: () => trailEl.value,
   cutin: () => ({
     root: cutinEl.value, bg: ciBgEl.value, body: ciBodyEl.value,
-    text: ciTextEl.value, streaks: ciStreakEl.value, tint: ciTintEl.value
+    text: ciTextEl.value, streaks: ciStreakEl.value, tint: ciTintEl.value,
+    card: ciCardEl.value
   }),
   scoreEl: (side) => (side === 'home' ? scoreHomeEl.value : scoreAwayEl.value),
   /* query the card elements rather than unwrapping component refs — CardFace
@@ -539,7 +546,8 @@ onMounted(() => { /* refs are live from here on */ })
   position: absolute; left: 0; right: 0; top: 62px; bottom: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
 }
-.ci-card { width: 122px; flex: 0 0 auto; }
+.ci-card-slot { width: 122px; flex: 0 0 auto; }
+.ci-card { width: 100%; }
 .ci-text {
   font-size: 36px; font-weight: 900; letter-spacing: .04em; line-height: 1;
   color: var(--cta); text-shadow: 0 3px 18px rgba(51,234,106,.5); white-space: nowrap;

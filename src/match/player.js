@@ -266,8 +266,7 @@ export function buildGoalCutIn (stage, { card, scoreSide, scoreHome, scoreAway, 
   tl.fromTo(ci.streaks, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: .5, ease: 'power2.out' }, 0)
   tl.to(ci.streaks, { x: 40, duration: beat.cutIn, ease: 'none' }, .1)
 
-  const cardEl = ci.body.querySelector('.ci-card')
-  tl.fromTo(cardEl,
+  tl.fromTo(ci.card,
     { x: -110, opacity: 0, rotate: -9, scale: .82 },
     { x: 0, opacity: 1, rotate: 0, scale: 1, duration: .42, ease: 'back.out(1.5)' }, .04)
 
@@ -298,8 +297,7 @@ export function buildSaveCutIn (stage, { card, subtitle, side, team }, beat = BE
   tl.set(ci.root, { visibility: 'visible' })
   tl.fromTo(ci.bg, { opacity: 0 }, { opacity: 1, duration: .14 }, 0)
   tl.fromTo(ci.tint, { opacity: 0 }, { opacity: .85, duration: .12 }, 0)
-  const cardEl = ci.body.querySelector('.ci-card')
-  tl.fromTo(cardEl, { y: 70, opacity: 0, scale: .9 },
+  tl.fromTo(ci.card, { y: 70, opacity: 0, scale: .9 },
     { y: 0, opacity: 1, scale: 1, duration: .34, ease: 'back.out(1.4)' }, .03)
   tl.fromTo(ci.text, { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: .26, ease: 'back.out(2)' }, .14)
   sfx(tl, .14, 'save_shout', onSfx)
@@ -379,8 +377,7 @@ export function resetStage (stage) {
   const ci = stage.cutin()
   gsap.set(ci.root, { visibility: 'hidden' })
   gsap.set([ci.bg, ci.body, ci.streaks], { opacity: 1, x: 0, y: 0 })
-  const card = ci.body && ci.body.querySelector('.ci-card')
-  if (card) gsap.set(card, { clearProps: 'all' })
+  if (ci.card) gsap.set(ci.card, { clearProps: 'all' })
   if (ci.text) gsap.set(ci.text, { clearProps: 'all' })
 }
 
