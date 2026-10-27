@@ -1,7 +1,7 @@
 <template>
   <div class="scroll pad up">
     <template v-if="!target">
-      <div class="locked-note">No card selected.</div>
+      <div class="empty"><div class="empty-t">No card selected.</div></div>
       <button class="btn" @click="go('cards')">Open collection</button>
     </template>
 

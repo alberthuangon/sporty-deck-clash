@@ -3,7 +3,7 @@
     <p class="muted intro">
       All arenas use the same model and the same 5% margin — only the stake changes.
     </p>
-    <div v-for="t in TIERS" :key="t.id" class="table" :class="{ locked: !unlocked(t) }"
+    <div v-for="(t, i) in TIERS" :key="t.id" class="table" :class="[`tier-${i}`, { locked: !unlocked(t) }]"
          @click="pick(t)">
       <div class="t-l">
         <div class="t-fee">₦{{ t.fee }}</div>
@@ -43,13 +43,34 @@ function pick (t) {
 <style scoped>
 .ts { display: flex; flex-direction: column; gap: 10px; }
 .intro { font-size: 12px; line-height: 1.45; margin: 0 0 4px; }
+/* The three arenas differed only in their price, but they are a ladder of
+   stakes and this product has already shown it can draw a ladder. Neutral ->
+   playable -> high-value, all three already meanings in use, so no new colour
+   family. Gold is the jackpot's colour and the Pro arena really is the rung
+   nearest the jackpot, so the association is earned rather than borrowed.
+   The bar is absolutely positioned and 3px, so it costs no layout; the
+   information is still carried by the price itself. */
 .table {
+  position: relative; overflow: hidden;
   display: flex; justify-content: space-between; align-items: center;
   background: var(--surface); border: 1px solid var(--divider);
   border-radius: var(--r-md); padding: 14px; cursor: pointer;
 }
-.table.locked { opacity: .62; cursor: not-allowed; }
-.t-fee { font-size: 22px; font-weight: 800; }
+.table::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--tier-accent, var(--divider));
+}
+.tier-0 { --tier-accent: var(--text-3); }
+.tier-1 { --tier-accent: var(--green); }
+.tier-2 { --tier-accent: var(--jackpot); }
+/* Dimming the whole row dimmed the rung marker with it, so a locked arena
+   stopped saying which arena it was. The contents recede; the bar goes
+   neutral instead of fading — locked has to read as "not yours yet", never
+   as "already open". */
+.table.locked { opacity: 1; cursor: not-allowed; }
+.table.locked .t-l, .table.locked .t-r { opacity: .55; }
+.table.locked::before { background: var(--divider); }
+.t-fee { font-size: 22px; font-weight: 800; color: var(--tier-accent); }
 .t-name { font-size: 12px; }
 .t-r { text-align: right; }
 .t-stake { font-size: 11px; }

@@ -204,6 +204,27 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; }
 .goal-row.away .g-team { color: var(--away-on); }
 .goal-row.away .g-jersey { background: var(--away); }
 
+/* An empty screen is a state, not a failure, and it was being drawn as one
+   line of grey text. No illustration — there are no external assets here —
+   just a neutral outlined square to anchor the sentence, and the existing
+   wording split into a heading and a line of explanation with nothing added
+   or removed. The square is a pseudo-element because it carries no
+   information: the text still says everything, so there is nothing here for
+   the layout gate to need to see. */
+.empty {
+  margin: 56px auto 0; max-width: 280px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  color: var(--text-2);
+}
+.empty::before {
+  content: ''; width: 62px; height: 62px; margin-bottom: 16px;
+  border-radius: var(--r-lg);
+  box-shadow: inset 0 0 0 1px var(--divider);
+  background: repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 1px, transparent 1px 7px);
+}
+.empty-t { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.empty-s { font-size: 12.5px; line-height: 1.5; }
+
 .locked-note { color: var(--text-2); font-size: 12px; }
 
 /* The way out of any UI animation over a second (src/ui/motion.js installs

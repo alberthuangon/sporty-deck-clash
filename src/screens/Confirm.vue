@@ -66,7 +66,7 @@
     <div class="fine muted">Stakes lock at the coin toss.</div>
   </div>
   <div v-else class="scroll pad">
-    <div class="locked-note">No active match.</div>
+    <div class="empty"><div class="empty-t">No active match.</div></div>
     <button class="btn" @click="go('home')">Back home</button>
   </div>
 </template>

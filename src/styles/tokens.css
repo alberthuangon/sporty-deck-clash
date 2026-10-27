@@ -75,6 +75,16 @@
      after a loss), so it does not borrow the win green. The rank screen's
      hex badge was already bronze; this just lets the rest of the app say so. */
   --tier-bronze: #C98B4B;
+  /* The wash under the rank-up takeover. Picked to sit at the SAME luminance
+     as --good-glow (0.02353 against 0.02352), so swapping it changes hue and
+     nothing else — the takeover's overall light level, and the texture
+     measurements taken against it, are untouched.
+     A warning for whoever adds the other two tiers: this formula does not
+     generalise. Silver (#C3CAD6) is hue-shifted blue, and pushed to this
+     luminance at that saturation it lands on navy — which is the AWAY team's
+     colour. Silver's wash has to go desaturated (something like #23262E)
+     rather than follow bronze's recipe. */
+  --tier-bronze-glow: #3B2610;
   --tier-silver: #C3CAD6;
   --tier-gold: #F0C04A;
 

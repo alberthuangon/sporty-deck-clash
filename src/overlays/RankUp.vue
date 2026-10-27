@@ -97,11 +97,16 @@ onUnmounted(() => { if (anim) anim.cancel() })
      rather than space waiting to be filled. Margin still has to look
      deliberate though, and measured as luminance spread across the empty
      region a bare radial came out at 1.23 against the draw's 2.69. The stripe
-     is what makes the emptiness read as a lit room rather than as nothing. */
+     is what makes the emptiness read as a lit room rather than as nothing.
+
+     The bottom wash is the TIER's, not --good-glow. Promotion is not winning
+     — it can land on the back of a match you lost — so the takeover had no
+     business sitting on the colour the winning draw uses. Same luminance, so
+     only the hue moved. */
   background:
     repeating-linear-gradient(96deg, rgba(201,139,75,.05) 0 2px, transparent 2px 26px),
     radial-gradient(150% 72% at 50% 6%, rgba(201,139,75,.26), transparent 62%),
-    radial-gradient(120% 60% at 50% 12%, var(--good-glow), var(--bg) 70%);
+    radial-gradient(120% 60% at 50% 12%, var(--tier-bronze-glow), var(--bg) 70%);
   display: flex; flex-direction: column;
   overflow-y: auto;
 }

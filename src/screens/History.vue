@@ -1,9 +1,9 @@
 <template>
   <div class="scroll pad hi">
     <template v-if="!detail">
-      <div v-if="!store.history.length" class="empty muted">
-        No matches yet. Your settled bets appear here, and every one can be
-        played back.
+      <div v-if="!store.history.length" class="empty">
+        <div class="empty-t">No matches yet.</div>
+        <div class="empty-s">Your settled bets appear here, and every one can be played back.</div>
       </div>
 
       <div v-for="m in store.history" :key="m.id" class="row card" @click="detail = m">
@@ -154,7 +154,6 @@ function ago (t) {
 
 <style scoped>
 .hi { display: flex; flex-direction: column; gap: 8px; }
-.empty { font-size: 12px; line-height: 1.5; padding: 20px 4px; text-align: center; }
 .row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; }
 .r-badge {
   width: 26px; height: 26px; flex: 0 0 26px; border-radius: 50%;

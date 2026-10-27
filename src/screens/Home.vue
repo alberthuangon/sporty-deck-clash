@@ -24,8 +24,8 @@
 
     <div class="tiers card">
       <div class="sec-title" style="margin-bottom:8px">Arenas</div>
-      <div v-for="t in TIERS" :key="t.id" class="trow">
-        <span class="tf">₦{{ t.fee }}</span>
+      <div v-for="(t, i) in TIERS" :key="t.id" class="trow" :class="`tier-${i}`">
+        <span class="tf"><i class="tbar"></i>₦{{ t.fee }}</span>
         <span class="tn muted">{{ t.name }}</span>
         <span v-if="unlocked(t)" class="ok">✓</span>
         <span v-else class="lock muted"><Icon name="lock" /> Raise your Power to unlock</span>
@@ -95,7 +95,12 @@ function unlocked (t) { return colPower.value >= t.unlockPower }
 .tiers { padding: 12px; }
 .trow { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--divider); font-size: 13px; }
 .trow:last-child { border-bottom: 0; }
-.tf { font-weight: 700; width: 48px; }
+/* the same rung markers as the arena list, in a narrower row */
+.tier-0 { --tier-accent: var(--text-3); }
+.tier-1 { --tier-accent: var(--green); }
+.tier-2 { --tier-accent: var(--jackpot); }
+.tf { font-weight: 700; width: 56px; display: inline-flex; align-items: center; gap: 7px; color: var(--tier-accent); }
+.tbar { width: 3px; height: 12px; border-radius: 2px; background: var(--tier-accent); flex: none; }
 .tn { flex: 1; font-size: 12px; }
 .ok { color: var(--green); font-weight: 700; }
 .lock { font-size: 10px; text-align: right; }

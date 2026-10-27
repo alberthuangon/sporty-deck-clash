@@ -5,7 +5,7 @@
       <div class="grid">
         <div v-for="c in CATALOGUE" :key="c.id" class="slot" @click="open(c.id)">
           <CardFace v-if="isOwned(c.id)" :card="cardOf(c.id)" size="sm" />
-          <div v-else class="locked" :class="'r-'+c.rarity">
+          <div v-else class="locked" :class="['r-' + c.rarity, { 'has-shards': entry(c.id).shards > 0 }]">
             <div class="lk"><Icon name="lock" /></div>
             <div class="ln">{{ c.name }}</div>
             <div class="ls muted">{{ entry(c.id).shards }} / {{ firstCost(c) }}</div>
@@ -83,14 +83,36 @@ function goUpgrade () { store.upgradeTarget = detail.value; go('upgrade') }
    inside does not, and owned cards render 14px shorter than locked ones */
 .slot { position: relative; cursor: pointer; display: flex; }
 .slot > * { flex: 1; min-width: 0; }
+/* The slot already carried its rarity class; it just never used it. Sixteen
+   of the twenty cells are locked, and they were identical, so nothing on the
+   collection's main screen said which card is worth chasing — which is the
+   collection loop itself. It also squared a contradiction: the same locked
+   Legendary was gold on its detail page and a grey box in the grid.
+
+   Three channels speak at once and two of them disagree on purpose. The
+   border's COLOUR says how rare this is; the border's STYLE (dashed), the
+   absent glow and the darkening layer all say you do not have it. So a locked
+   Legendary reads as gold and still cannot be mistaken for an owned one,
+   which has a solid edge, a glow, and nothing dimming it.
+   Box model is untouched — 1px border, 104 min-height — so the grid's
+   equal-height assertions do not move. */
 .locked {
   height: 100%; min-height: 104px; border-radius: var(--r-md);
-  border: 1px dashed var(--divider); background: var(--surface-lo);
+  border: 1px dashed var(--rc, var(--divider));
+  background:
+    linear-gradient(160deg, rgba(0,0,0,.26), rgba(0,0,0,.26)),
+    var(--cf-body, var(--surface-lo));
+  box-shadow: none;
+  opacity: .78;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
 }
-.lk { font-size: 16px; opacity: .5; }
+.lk { font-size: 16px; color: var(--rc, var(--text-3)); opacity: .55; }
 .ln { font-size: 11px; font-weight: 700; color: var(--text-2); }
-.ls { font-size: 9px; }
+/* the shard count reads as progress rather than as a label, and a card you
+   have already started collecting says so — on cards/sparse exactly one card
+   has a shard, and it was indistinguishable from the fifteen that do not */
+.ls { font-size: 9px; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.locked.has-shards .ls { color: var(--rc); font-weight: 700; }
 .detail { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 /* padded out to a real tap target, pulled back with margin so nothing moves */
 .back { align-self: flex-start; font-size: 12px; padding: 15px 12px; margin: -12px -12px -15px; }
