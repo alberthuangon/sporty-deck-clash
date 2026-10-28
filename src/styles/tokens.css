@@ -168,10 +168,38 @@
 }
 /* no foil for Common — a gloss, and that is the point of the step */
 .r-C { --holo-foil: none; --holo-back: none; }
+/* ACHROMATIC, AND TWO SWEEPS RATHER THAN ONE.
+
+   Rare's foil used to be a sheet of --r-r, which worked on a flat card and
+   stopped working the day real paintings arrived: every illustration carries
+   its own blue rim-burst, so "a colour appears" appeared on a card that
+   already had that colour. Measured on the real art, Rare's hue spread is the
+   lowest of the four steps.
+
+   There is no free hue to move it to. Amber belongs to --r-l and --jackpot,
+   and lending it downward dilutes Legendary — rarity colour may get stronger
+   and never weaker. Violet sits against --r-e, and a Rare misread as an Epic
+   is worse than a flat ladder. Cyan is both the paintings' own colour and
+   inside the forbidden arc for hair and skin. Magenta is Epic's. Colourless
+   is the only part of the wheel nothing has claimed.
+
+   TWO sweeps because one would have collapsed into the gloss. --holo-gloss is
+   already a single white band at 38-62%, so a single white foil reads as "the
+   laminate, brighter" — which is exactly the collapse that kept this step
+   blue for a round. Two bands of unequal brightness, crossing the gloss that
+   travels the other way, is a difference of COUNT and DIRECTION. Brightness
+   is the one axis the illustration supplies for free, so it is the one axis
+   this step does not use.
+
+   The ladder's wording changes with it: no foil, achromatic foil, two hues,
+   the whole spectrum. Common's gloss now has a name — it is the lamination
+   every card gets — and Rare is the first card that is actually foiled. */
 .r-R {
   --holo-foil: linear-gradient(112deg,
-    transparent 30%, rgba(76,155,255,.30) 44%,
-    rgba(150,200,255,.45) 50%, rgba(76,155,255,.30) 56%, transparent 70%);
+    transparent 24%, rgba(226,234,246,.30) 31%, rgba(255,255,255,.50) 35%,
+    rgba(226,234,246,.30) 39%, transparent 46%,
+    transparent 54%, rgba(214,224,240,.22) 60%, rgba(255,255,255,.38) 64%,
+    rgba(214,224,240,.22) 68%, transparent 75%);
   --holo-back: none;
 }
 /* Two hues, not a rainbow: the step up from Rare is "a second colour
@@ -231,10 +259,19 @@
       rgba(255,200,90,.28) 100%);
   /* the counter-reflection rides the gloss layer, which already travels the
      other way — a second sweep against the first is what it physically is,
-     and it is where Legendary's extra moved to when it came out of alpha:
-     overlay does not blow out over a bright body the way color-dodge does */
+     and it is where Legendary's extra lives, because overlay does not blow
+     out over a bright body the way color-dodge does.
+
+     Widened and brightened (36/.22/64 -> 30/.34/70) when the real paintings
+     flattened the top of the ladder: Epic to Legendary fell to +7% of mean
+     and +5% of hue spread, single digits on both channels. The alpha that
+     could not go up is the FOIL's — Legendary has the brightest body in the
+     set and colour-dodge over it runs to white, which is the blow-out that
+     ate the gold two rounds ago. This layer is overlay, so it has room. What
+     Legendary has over Epic is now three things rather than seven per cent:
+     the whole spectrum, the sparkles, and a second light you can see. */
   --holo-back: linear-gradient(-68deg,
-    transparent 36%, rgba(255,255,255,.22) 50%, transparent 64%);
+    transparent 30%, rgba(255,255,255,.34) 50%, transparent 70%);
 }
 
 /* ---------- the rarity ladder ----------

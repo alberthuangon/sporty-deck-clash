@@ -47,6 +47,13 @@ picture rather than from an assumption.
 single capture measures one point. `envelope.mjs` walks the grid, and the
 worst frame is a different one for each rarity.
 
+**The layer's number describing the base.** Hue spread over the difference is
+only about the finish while the finish has a hue. Dodge by a neutral keeps the
+base's hue, so Rare's achromatic foil reports a spread of .556 — identical to
+Epic's two-colour one — and every bit of that is the painting underneath.
+Don't read the hue column for an achromatic step; read the count the ladder
+claims instead.
+
 ## Known blind spots
 
 - The kit selector matches one colour with a tolerance. A two-colour kit needs

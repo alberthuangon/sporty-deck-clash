@@ -369,17 +369,23 @@ check('foil layers painting instead of blending', holoPainting.length, !holoPain
 
      stand-ins, 190x266   mean  C 4.96  R 21.71  E 32.12  L 38.19
                           hue   C .222  R .361   E .694   L .833
-     real art, 280x392    mean  C 2.53  R 14.10  E 20.61  L 22.01
-                          hue   C   --  R .278   E .556   L .583
-                          cov   C .020  R .386   E .497   L .721
+     real art, 280x392    mean  C 2.53  R 20.93  E 20.61  L 25.55
+                          hue   C   --  R   --   E .556   L .611
+                          cov   C .020  R .455   E .497   L .771
      hair hue, lit        C 16.8  R 296.2  E 339.2  L 18.1  (unlit 16.8)
 
-   THE SECOND ROW IS THE REAL ONE, and it is about 40% weaker, because
-   colour-dodge adds less to a bright base than to a dark one and every
-   illustration arrived with a blue rim-burst. Epic to Legendary went from
-   +19% to +7% with it. Size turned out not to matter at all — 280 and 320
-   agree to three figures — so the retune everyone expected after the card
-   grew was never the question; the base did.
+   THE SECOND ROW IS THE REAL ONE. Measured against the stand-ins the whole
+   ladder read about 40% stronger than it is, because colour-dodge adds less
+   to a bright base than to a dark one and every illustration arrived with a
+   blue rim-burst. Size turned out not to matter at all — 280 and 320 agree
+   to three figures — so the retune everyone expected after the card grew was
+   never the question; the base was.
+
+   Rare and Common have no hue figure because Rare's foil is achromatic now
+   and Common has no foil: dodging by a neutral keeps the base's hue, so a
+   spread measured there describes the PAINTING rather than the finish. The
+   ladder's claim is a count — no foil, achromatic, two hues, all of them —
+   and only the last two can be read off that column.
 
    Drift is not a failure — the art is still arriving and these will be
    retuned on purpose. It prints so that the retune is a decision somebody
