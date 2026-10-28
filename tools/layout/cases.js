@@ -245,6 +245,9 @@ const overlayUp = (sel, text) => () => {
 export const CASES = [
   /* ------------------------------------------------ Home */
   { id: 'home/fresh', screen: 'home', setup () { reset() } },
+  { id: 'home/arena-selected', screen: 'home', setup () { reset() }, act () { document.querySelector('.arena:not(:disabled)').click() } },
+  { id: 'home/arenas-unlocked', screen: 'home', setup () { reset(); store.rank = { score: 0, tierIndex: 1, subtier: 3, peakNodes: ['b3', 'b2', 'b1'] }; store.pendingTier = 200 } },
+  { id: 'home/large-jackpot', screen: 'home', setup () { reset(); store.jackpot.pool = 999999999; store.tickets = 48310 } },
   {
     id: 'home/with-history',
     screen: 'home',
