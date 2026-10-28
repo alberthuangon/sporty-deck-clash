@@ -54,6 +54,16 @@ Epic's two-colour one — and every bit of that is the painting underneath.
 Don't read the hue column for an achromatic step; read the count the ladder
 claims instead.
 
+That one was caught by a coincidence, and the coincidence is the lesson. It
+read **exactly** Epic's figure — had the painting under it been slightly
+duller and returned .49, it would have been a tidy "Rare a little below Epic",
+exactly what anyone would expect, and nobody would have looked. Every other
+entry on this list was caught by a number that looked WRONG. This one was
+caught by a number that looked too right.
+
+So there is a second question to ask of a measurement, beside "what does this
+metric lie about": **why is this number so agreeable?**
+
 ## Known blind spots
 
 - The kit selector matches one colour with a tolerance. A two-colour kit needs
