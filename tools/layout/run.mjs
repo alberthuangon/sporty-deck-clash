@@ -8,7 +8,14 @@
 
    This exists because the engine gate (`npm run sim`) runs in node against a
    fake stage: it can see a thrown callback, but it cannot see a scoreboard row
-   that appears at kick-off and shoves the feed down 11px. */
+   that appears at kick-off and shoves the feed down 11px.
+
+   Six ways a measurement in this directory has returned an arithmetically
+   correct number about the wrong thing — wrong window, wrong aggregation,
+   sample too sparse, a layer's metric describing its base, wrong object,
+   wrong statistic — are collected in README.md beside the two questions and
+   the three instruments that caught them. Worth five minutes before adding a
+   check here, because none of the six was predicted by the ones before it. */
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { createServer } from 'node:http'
