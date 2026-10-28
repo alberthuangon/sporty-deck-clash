@@ -14,7 +14,13 @@
            to drop the card, the verdict and the button 31px down the screen -->
       <div class="glow">{{ index === pulls.length - 1 ? '✦ final card ✦' : '' }}</div>
 
-      <CardFace ref="cardRef" :card="currentCard" size="lg" class="reveal-card" />
+      <!-- The reveal is the other place a card is LOOKED AT rather than found
+           (holo spec §261: lg only), so it gets the same finish as the detail
+           hero. The wrapper carries the tilt; the ref stays on the CardFace so
+           the shard flight still measures the card and not the perspective box. -->
+      <HoloCard>
+        <CardFace ref="cardRef" :card="currentCard" size="lg" :radar="false" foil class="reveal-card" />
+      </HoloCard>
 
       <div class="verdict">
         <template v-if="current.isNew">
@@ -57,6 +63,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import CardFace from '../components/CardFace.vue'
 import SealTear from '../components/SealTear.vue'
+import HoloCard from '../components/HoloCard.vue'
 import { flyTo } from '../ui/flyIn.js'
 import { store, go, buyPack, commitPull, entry, canUpgrade, upgradeCost, BY_ID } from '../game.js'
 import { buildCard } from '../engine/cards.js'
