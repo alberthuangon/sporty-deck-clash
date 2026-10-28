@@ -10,19 +10,6 @@
       <PlayerArt v-else-if="size === 'lg'" :card-id="card.id" kind="figure" tier="lg"
                  :rarity="card.rarity" :number="shirtNo" />
       <div v-else class="cf-mono">{{ initials }}</div>
-      <!-- The foil lives INSIDE the art box, and that is the whole reason no
-           gate exemption is needed. getBoundingClientRect ignores masks and
-           clipping alike, so a layer masked to a player's silhouette still
-           reports its full rectangle — what decides whether the gate sees it
-           covering the card's name is which parent it hangs from, not what it
-           paints. Hung here, its box IS .cf-art, and .cf-art touches no text.
-           Both layers render for every rarity, varying only in what they
-           paint: a conditional element would change the anchor indices of a
-           Common against a Legendary and walk the rarity-ladder group. -->
-      <template v-if="foil">
-        <i class="cf-foil" :style="foilMask" aria-hidden="true"></i>
-        <i class="cf-gloss" aria-hidden="true"></i>
-      </template>
     </div>
     <div class="cf-name">{{ card.name }}</div>
     <!-- the venue span is ALWAYS rendered, empty for a neutral card. Measured:
@@ -30,6 +17,22 @@
          the invariance groups — making it a v-if would drop that anchor for the
          six neutral cards only, and shift every later anchor index with it. -->
     <div class="cf-role">{{ roleLabel }}<span class="cf-venue" :class="card.venue">{{ venueMark }}</span></div>
+    <!-- THE WHOLE CARD, not the art box. The earlier version hung these inside
+         .cf-art precisely so their rectangle could never reach the name — a
+         layer's box is decided by which parent it hangs from, not by what it
+         paints, and getBoundingClientRect ignores masks and clipping alike.
+         That was the right answer while the foil was clipped to a silhouette.
+         A full-card finish has no such box to hide in: it is over the name and
+         the rarity stamp by definition, so the gate has to be able to tell a
+         compositing layer from an occluding one instead. It now can — see
+         `content hidden behind something on top of it` in tools/layout.
+         Both layers render for every rarity, varying only in what they paint:
+         a conditional element would change the anchor indices of a Common
+         against a Legendary and walk the rarity-ladder group. -->
+    <template v-if="foil">
+      <i class="cf-foil" aria-hidden="true"></i>
+      <i class="cf-gloss" aria-hidden="true"></i>
+    </template>
     <slot />
   </div>
 </template>
@@ -37,7 +40,6 @@
 <script setup>
 import { computed } from 'vue'
 import PlayerArt from './PlayerArt.vue'
-import { buildFigure } from '../ui/figures.js'
 import { ROLE_LABEL } from '../engine/cards.js'
 
 /* Two-letter stamp per role. Lives here rather than beside ROLE_LABEL in
@@ -65,42 +67,6 @@ const artSize = computed(() => ({ sm: 44, md: 74, lg: 116 }[props.size]))
 const initials = computed(() => props.card.name.slice(0, 2).toUpperCase())
 const shirtNo = computed(() => (props.card.seed % 29) + 1)
 
-/* Clip the foil to the PLAYER, so the shine belongs to the person rather than
-   to a rectangle sitting over them. Real foil never has a straight border
-   across the subject, and the mask is what buys that.
-
-   Serialised to a data URI rather than referencing an inline <mask> by id:
-   the mask is stroked paths, which a clip-path cannot use at all (it reads
-   fill geometry only), and a data URI needs no id to be unique per card and
-   no bet on how this browser resolves url(#...) from CSS. Scaled from the
-   74-unit drawing space to the box the foil actually occupies. */
-const foilMask = computed(() => {
-  if (!props.foil || props.radar || props.size !== 'lg') return null
-  const fig = buildFigure(props.card.id, 'lg', { number: shirtNo.value })
-  if (!fig.mask || !fig.mask.length) return null
-  const draw = ([tag, attrs]) =>
-    `<${tag} ${Object.entries(attrs).map(([k, v]) => `${k}="${v}"`).join(' ')}/>`
-  /* The disc as well as the player. Masking to the silhouette ALONE was
-     measured and it halved the effect: hue spread fell from 0.427 to 0.199,
-     because a foil needs area to read as a rainbow and a 60x70 body only
-     exposes a single slice of the gradient. The disc restores the area
-     without touching the gradient's scale, so the four rarity steps keep
-     their tuning — and its edge is a circle, so the rectangle that made the
-     earlier version look cheap does not come back. It is also what the disc
-     was drawn for: the figure layer exists to give the foil something to
-     sweep across. */
-  const disc = fig.bg.map(([tag, attrs]) =>
-    draw([tag, { ...attrs, fill: '#fff', 'fill-opacity': 1 }])).join('')
-  const body = fig.mask.map(draw).join('')
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 74 74">` +
-    `${disc}<g fill="none">${body}</g></svg>`
-  const url = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`
-  return {
-    maskImage: url, WebkitMaskImage: url,
-    maskSize: '100% 100%', WebkitMaskSize: '100% 100%',
-    maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat'
-  }
-})
 const roleLabel = computed(() => ROLE_LABEL[props.card.role])
 const roleCode = computed(() => ROLE_CODE[props.card.role] || '')
 const venueMark = computed(() =>
@@ -180,10 +146,17 @@ const venueMark = computed(() =>
 /* flex: 1 so a card stretched by its grid cell grows around the art rather
    than leaving a gap under the role line */
 .cf-art { position: relative; display: flex; flex: 1; align-items: center; justify-content: center; margin: 2px 0; }
+/* z-index 3, over everything including the rarity bar at 2 and the four
+   content layers at 1 — a laminate is the outermost thing on a real card, and
+   a finish that stops politely at the edge of the artwork is a sticker.
+   Both carry mix-blend-mode, pointer-events: none and no background-colour,
+   which is exactly the three-part test the gate uses to tell a compositing
+   layer from one that is hiding something. */
 .cf-foil, .cf-gloss {
   position: absolute; inset: 0;
   pointer-events: none;
-  border-radius: var(--r-sm);
+  border-radius: inherit;
+  z-index: 3;
   opacity: var(--holo-on, 0);
 }
 /* The foil travels WITH the light. */

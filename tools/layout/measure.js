@@ -43,7 +43,18 @@ const CHROME_OVERLAYS = ['.sheet', '.toast', '[data-skip]', '.fly', ...TAKEOVERS
    because of its SIZE, and nothing anywhere asks whether you can still see
    through it. Raise a colour stop to .95 and the card vanishes with the gate
    still green. So the foil is bounded directly instead (see run.mjs). */
-const HOLO = ['.cf-foil', '.cf-gloss']
+/* NOT a selector list. It used to be ['.cf-foil', '.cf-gloss'], and that was
+   a hole: the two obligations below — stay see-through, never eat a tap —
+   were owed by a NAME rather than by a KIND, so the next compositing layer
+   anyone adds would owe nothing until someone remembered to come back here.
+   A layer that blends instead of painting is recognisable by what it is, so
+   it is recognised by what it is. Found layers are printed by the gate even
+   when they pass, because a check that only speaks when it is unhappy leaves
+   no way to notice it has stopped looking at anything. */
+function blends (el, cs) {
+  return cs.mixBlendMode !== 'normal' && (cs.backgroundImage || 'none') !== 'none' &&
+    !el.closest('svg')
+}
 
 const DECORATIONS = ['.ci-streaks', '.ci-bg', '.ci-tint', '.pk-bg', '.pk-vig', '.fi-bg', '.turf', '.sweep']
 const decorative = el => DECORATIONS.some(sel => el.matches(sel))
@@ -284,9 +295,10 @@ export function measure (scope) {
   /* max alpha of any colour stop in a background-image, scaled by the
      element's own opacity — i.e. the most of the card this layer can hide */
   out.holoLayers = []
-  for (const sel of HOLO) {
-    for (const el of phone.querySelectorAll(sel)) {
+  for (const el of phone.querySelectorAll('*')) {
+    {
       const cs = getComputedStyle(el)
+      if (invisible(el) || !blends(el, cs)) continue
       /* Per LAYER, not per colour stop, and specks do not count.
 
          The first version took the loudest alpha anywhere in the shorthand
@@ -316,7 +328,12 @@ export function measure (scope) {
       }
       out.holoLayers.push({
         key: label(el),
+        blend: cs.mixBlendMode,
         pointer: cs.pointerEvents,
+        /* an opaque background-colour under a blend mode is a layer that is
+           painting, not compositing, however well it blends on top of that */
+        solidBg: !/rgba\([^)]*,\s*0\s*\)/.test(cs.backgroundColor) &&
+          cs.backgroundColor !== 'transparent',
         opacity: +(+cs.opacity).toFixed(3),
         maxStopAlpha: +maxA.toFixed(3),
         effective: +(maxA * (+cs.opacity)).toFixed(3)

@@ -300,6 +300,11 @@ for (const [name, states] of barStates) {
 const holo = screens.results.flatMap(r => (r.holoLayers || []).map(h => ({ state: r.id, ...h })))
 const holoSolid = holo.filter(h => h.effective > 0.5)
 const holoTappable = holo.filter(h => h.pointer !== 'none')
+/* A blend mode on top of an opaque background-colour is a layer that PAINTS
+   and blends the paint — the content under it is gone either way. This is the
+   third leg of the bargain, and it is the one the full-card finish made
+   necessary: a foil clipped to the artwork could only ever hide artwork. */
+const holoPainting = holo.filter(h => h.solidBg)
 
 const early = screens.results.filter(r => r.tooEarly).map(r => ({ state: r.id }))
 
@@ -319,6 +324,24 @@ check('chrome that changes between screens', chromeShifts.length, !chromeShifts.
 check('chrome that does not match its token', chromeDrift.length, !chromeDrift.length)
 check('foil layers you cannot see through', holoSolid.length, !holoSolid.length && !!holo.length)
 check('foil layers that could eat a tap', holoTappable.length, !holoTappable.length)
+check('foil layers painting instead of blending', holoPainting.length, !holoPainting.length)
+
+/* Printed even when every one of them passes. The three checks above are the
+   price of sitting over the card's own name, and a layer that quietly stopped
+   being found would buy that exemption in silence — so the roster is the
+   evidence that the checks are still looking at something. */
+if (holo.length) {
+  const roster = new Map()
+  for (const h of holo) {
+    const cur = roster.get(h.key)
+    if (!cur || h.effective > cur.effective) roster.set(h.key, h)
+  }
+  console.log(`\n  note: ${roster.size} compositing layer(s) over card content, ${holo.length} sighting(s):`)
+  for (const h of roster.values()) {
+    console.log(`    ${h.key}  ${h.blend}  worst alpha x opacity ${h.effective}  pointer-events ${h.pointer}` +
+      (h.solidBg ? '  SOLID BACKGROUND' : ''))
+  }
+}
 
 if (ellipsised.length) {
   console.log(`\n  note: ${ellipsised.length} label(s) ellipsised — truncated, but visibly so:`)
