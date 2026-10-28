@@ -20,14 +20,6 @@
       <HoloCard class="hero">
         <CardFace :card="cardOf(detail)" size="lg" :radar="false" foil />
       </HoloCard>
-      <RadarChart :axis-keys="cardOf(detail).axisKeys" :values="cardOf(detail).axes"
-                  :size="260" labels class="rad" :class="'r-' + BY_ID[detail].rarity" />
-      <div class="meta">
-        <div class="mrow"><span class="muted">Rarity</span><span>{{ RARITY[BY_ID[detail].rarity].label }}</span></div>
-        <div class="mrow"><span class="muted">Level</span><span>{{ entry(detail).level || '—' }} / 10</span></div>
-        <div class="mrow"><span class="muted">Total points</span><span>{{ cardOf(detail).total }}</span></div>
-        <div class="mrow"><span class="muted">Single-axis cap</span><span>{{ cardOf(detail).cap }}</span></div>
-      </div>
       <div class="shards">
         <div class="srow">
           <span class="muted">Shards</span>
@@ -43,6 +35,24 @@
         <Icon name="lock" /> Not in your collection yet — pull it from a card pack.
       </div>
       <div v-else class="locked-note">Max level reached.</div>
+      <!-- The radar and the table come AFTER the action, and the order is the
+           whole fix. A 280x392 hero pushes 207px down the page; with the two
+           read-only blocks still above it the Upgrade button lands 142.7px
+           BELOW the fold, which no assertion here can catch — the gate asks
+           whether a control got squashed, not whether anyone can see it.
+           Moved, the same page costs the same 155px of scroll and the button
+           sits 267.5px above the fold, because what went under it is the part
+           you read rather than the part you press.
+           Reordered in the MARKUP rather than with `order`, so the screen
+           reader and the tab ring agree with the eye. -->
+      <RadarChart :axis-keys="cardOf(detail).axisKeys" :values="cardOf(detail).axes"
+                  :size="260" labels class="rad" :class="'r-' + BY_ID[detail].rarity" />
+      <div class="meta">
+        <div class="mrow"><span class="muted">Rarity</span><span>{{ RARITY[BY_ID[detail].rarity].label }}</span></div>
+        <div class="mrow"><span class="muted">Level</span><span>{{ entry(detail).level || '—' }} / 10</span></div>
+        <div class="mrow"><span class="muted">Total points</span><span>{{ cardOf(detail).total }}</span></div>
+        <div class="mrow"><span class="muted">Single-axis cap</span><span>{{ cardOf(detail).cap }}</span></div>
+      </div>
     </div>
   </div>
 </template>

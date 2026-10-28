@@ -47,7 +47,7 @@ Twenty-seven assertions:
 | text cut off with nothing to show for it | an ellipsis is reported as a note, not a failure — it is truncation that says so |
 | things painting over the TopBar / TabBar | with one declared exception, below |
 | takeovers that do not take the whole frame | the other half of that exception |
-| content hidden behind something on top of it | laid out fine, inside its container, not cropped — and still invisible. The board and clock sit ABOVE the cut-in on purpose, so a cut-in reaching too far up just quietly disappeared behind them. A box swallowed WHOLE is an overlay doing its job; a partial eclipse is a layout mistake |
+| content partly hidden behind something on top of it | laid out fine, inside its container, not cropped — and still invisible. The board and clock sit ABOVE the cut-in on purpose, so a cut-in reaching too far up just quietly disappeared behind them. A box swallowed WHOLE is an overlay doing its job; a partial eclipse is a layout mistake |
 | grid cells whose contents are ragged | a grid stretches its cells but not necessarily what is in them: owned cards sat 14px shorter than the locked placeholders beside them |
 | controls under the 44px tap target | the floor Apple and Google both publish, measured on the PAINTED rect — a button padded out past the edge of its scroll container only counts the part you can reach. Native inputs are exempt: the browser gives a checkbox or a slider thumb a hit area bigger than its box |
 | elements that move between states of one screen | the main one; see below |

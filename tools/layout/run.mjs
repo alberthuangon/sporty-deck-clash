@@ -133,7 +133,15 @@ check('content cropped by its container', clipped.length, !clipped.length)
 check('elements laid out past the 430px frame', offFrame.length, !offFrame.length)
 check('text cut off with nothing to show for it', truncated.length, !truncated.length)
 check('things painting over the TopBar / TabBar', overChrome.length, !overChrome.length)
-check('content hidden behind something on top of it', covered.length, !covered.length)
+/* PARTLY, and the word is load-bearing. Three people in a row — the two who
+   wrote the holo spec and the one who wrote this file — predicted that a
+   layer sitting over the card's own name would fail here, and it does not:
+   a box swallowed WHOLE is an overlay doing its job, and only a partial
+   eclipse is a layout mistake. The behaviour was always right; the NAME
+   claimed a wider beat than the check walks, and the people misled by it
+   included the people who wrote it. Both proposed fixes would have loosened
+   the gate to permit something it already permitted. */
+check('content partly hidden behind something on top of it', covered.length, !covered.length)
 check('takeovers that do not take the whole frame', leaky.length, !leaky.length)
 check('grid cells whose contents are ragged', ragged.length, !ragged.length)
 check('controls under the 44px tap target', small.length, !small.length)

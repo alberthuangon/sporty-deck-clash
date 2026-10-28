@@ -25,7 +25,7 @@
          A full-card finish has no such box to hide in: it is over the name and
          the rarity stamp by definition, so the gate has to be able to tell a
          compositing layer from an occluding one instead. It now can — see
-         `content hidden behind something on top of it` in tools/layout.
+         `content partly hidden behind something on top of it` in tools/layout.
          Both layers render for every rarity, varying only in what they paint:
          a conditional element would change the anchor indices of a Common
          against a Legendary and walk the rarity-ladder group. -->
