@@ -2,6 +2,7 @@
   <div class="scroll pad ts">
     <p class="muted intro">
       All arenas use the same model and the same 5% margin — only the stake changes.
+      The stronger arenas open as your rank climbs.
     </p>
     <div v-for="(t, i) in TIERS" :key="t.id" class="table" :class="[`tier-${i}`, { locked: !unlocked(t) }]"
          @click="pick(t)">
@@ -16,8 +17,8 @@
         </template>
         <template v-else>
           <div class="t-lock"><Icon name="lock" /></div>
-          <div class="t-lockt muted">Raise your Power to unlock</div>
-          <div class="t-need muted">Need {{ score(t.unlockPower) }} · you have {{ score(colPower) }}</div>
+          <div class="t-lockt muted">Win matches to unlock</div>
+          <div class="t-need muted">Requires {{ ladderLabel(t.unlockRank) }} · you are {{ myRank }}</div>
         </template>
       </div>
     </div>
@@ -28,11 +29,11 @@
 <script setup>
 import { computed } from 'vue'
 import Icon from '../components/Icon.vue'
-import { store, go, TIERS, collectionPower, stakeRange, powerScore } from '../game.js'
-const colPower = computed(() => collectionPower())
-function unlocked (t) { return colPower.value >= t.unlockPower }
+import { store, go, TIERS, stakeRange, tierUnlocked, ladderLabel, rankLabel } from '../game.js'
+/* the same rule and the same words as Home — one gate, written once */
+const myRank = computed(() => rankLabel(store.rank.tierIndex, store.rank.subtier))
+function unlocked (t) { return tierUnlocked(t) }
 function range (t) { return stakeRange(t.fee) }
-function score (q) { return powerScore(q) }
 function pick (t) {
   if (!unlocked(t)) return
   store.pendingTier = t.fee

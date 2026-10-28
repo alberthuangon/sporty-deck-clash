@@ -9,7 +9,7 @@ import { buildCard, RARITY, MAX_LEVEL } from './engine/cards.js'
 import { buildTeam, priceMatch, drawResult, settle, powerOf, powerStars, powerScore, settlementBranch } from './engine/model.js'
 import { findOpponent } from './engine/opponents.js'
 import { buildScript } from './engine/scriptgen.js'
-import { shardCost, TIERS, stakeRange, applyRankDelta, rankWin, RANK_LOSS, REWARD_ROAD, ladderIndex, rankLabel, rollPack } from './engine/economy.js'
+import { shardCost, TIERS, stakeRange, applyRankDelta, rankWin, RANK_LOSS, REWARD_ROAD, ladderIndex, ladderLabel, rankLabel, rollPack } from './engine/economy.js'
 
 export const CATALOGUE = cardData.cards
 export const BY_ID = Object.fromEntries(CATALOGUE.map(c => [c.id, c]))
@@ -172,8 +172,11 @@ export function bestPlacement (gk, three) {
   return best
 }
 
-export function tierUnlocked (tier) { return collectionPower() >= tier.unlockPower }
-export { TIERS, stakeRange, rankLabel, REWARD_ROAD, ladderIndex, RARITY, MAX_LEVEL, rollPack }
+/* RANK, not collection power — see the note on TIERS. The player's own
+   position on the ladder is the same index the requirement is written in. */
+export function rankIndex () { return ladderIndex(store.rank.tierIndex, store.rank.subtier) }
+export function tierUnlocked (tier) { return rankIndex() >= tier.unlockRank }
+export { TIERS, stakeRange, rankLabel, ladderLabel, REWARD_ROAD, ladderIndex, RARITY, MAX_LEVEL, rollPack }
 
 /* ---------- missions ---------- */
 

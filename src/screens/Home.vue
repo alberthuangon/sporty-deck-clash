@@ -2,14 +2,13 @@
   <div class="scroll pad hm">
     <div class="squad card-hero">
       <div class="sq-head">
-        <div>
-          <div class="muted lbl">Squad Power</div>
-          <PowerStars :q="power" />
-        </div>
-        <div class="venue">
-          <div class="muted lbl">{{ leanLabel }}</div>
-          <div class="vbar"><i :style="{ left: (50 + lean * 900) + '%' }"></i></div>
-        </div>
+        <span class="sec-title" style="margin:0">Your squad</span>
+        <!-- padded to a real target and pulled back with margin so the row
+             does not grow around it, the same trick the collection's old
+             back link used. Text rather than a glyph because this icon set
+             has no pencil, and "All ›" in the Recent header already
+             established the arrow as this screen's "go somewhere" mark. -->
+        <button class="sq-edit" @click="go('deckedit')">Edit ›</button>
       </div>
       <div class="lineup">
         <div v-for="s in SLOTS" :key="s.key" class="lu">
@@ -17,20 +16,47 @@
           <CardFace :card="cardOf(store.deck[s.key])" size="sm" full />
         </div>
       </div>
-      <button class="btn edit" @click="go('deckedit')">Edit squad</button>
     </div>
 
-    <button class="btn btn-cta big" data-sfx="start" @click="go('tierselect')">Start match</button>
-
-    <div class="tiers card">
+    <!-- THE CHOICE COMES FIRST, and the button below reports it. -->
+    <div class="arenas">
       <div class="sec-title" style="margin-bottom:8px">Arenas</div>
-      <div v-for="(t, i) in TIERS" :key="t.id" class="trow" :class="`tier-${i}`">
-        <span class="tf"><i class="tbar"></i>₦{{ t.fee }}</span>
-        <span class="tn muted">{{ t.name }}</span>
-        <span v-if="unlocked(t)" class="ok">✓</span>
-        <span v-else class="lock muted"><Icon name="lock" /> Raise your Power to unlock</span>
+      <div class="arena-row">
+        <div v-for="(t, i) in TIERS" :key="t.id" class="arena" :class="[`tier-${i}`,
+             { locked: !unlocked(t), sel: chosen === t.fee }]" @click="choose(t)">
+          <div class="a-fee">₦{{ t.fee }}</div>
+          <div class="a-name">{{ t.name }}</div>
+          <!-- WHAT THE ARENA ACTUALLY DECIDES. Not a win figure: a payout is
+               stake x odds and the odds come from the matchup's own win
+               probability, so there is no winnings number that belongs to an
+               arena rather than to an opponent. The stake range is the thing
+               this choice really sets, and it comes from stakeRange(). -->
+          <!-- ONE SLOT, two contents, a fixed height. Three cards side by
+               side whose insides are different heights is what `grid cells
+               whose contents are ragged` is for, and it caught exactly that:
+               53.7 unlocked against 75.5 locked against 90.3 selected. The
+               same answer the card face already uses for its venue mark and
+               the reveal already uses for its "final card" line — the element
+               is always there, and empty when it has nothing to say. -->
+          <div class="a-detail">
+            <template v-if="unlocked(t)">
+              <span class="a-stake">₦{{ range(t).min }}–₦{{ range(t).max }}</span>
+            </template>
+            <template v-else>
+              <span class="a-need"><Icon name="lock" /> {{ ladderLabel(t.unlockRank) }}</span>
+              <span class="a-have">you are {{ myRank }}</span>
+            </template>
+          </div>
+          <div class="a-sel">{{ chosen === t.fee ? 'SELECTED' : '' }}</div>
+        </div>
       </div>
     </div>
+
+    <!-- disabled says WHY, because a grey button with its usual label is a
+         button that looks broken rather than one that is waiting -->
+    <button class="btn btn-cta big" :disabled="!chosen" data-sfx="start" @click="start">
+      {{ chosen ? `START MATCH · ₦${chosen}` : 'Choose an arena to start' }}
+    </button>
 
     <div class="recent card" v-if="store.history.length">
       <div class="rc-head">
@@ -55,55 +81,83 @@
 import { computed } from 'vue'
 import Icon from '../components/Icon.vue'
 import CardFace from '../components/CardFace.vue'
-import PowerStars from '../components/PowerStars.vue'
 import JackpotPanel from '../components/JackpotPanel.vue'
-import { store, go, cardOf, deckPower, venueLean, collectionPower, TIERS, openLastSeasonDraw } from '../game.js'
+import { store, go, cardOf, TIERS, stakeRange, tierUnlocked, ladderLabel, rankLabel, openLastSeasonDraw } from '../game.js'
 
 const SLOTS = [
   { key: 'gk', short: 'GK' }, { key: 'df', short: 'DF' },
   { key: 'mf', short: 'MF' }, { key: 'fw', short: 'FW' }
 ]
-const power = computed(() => deckPower())
-const lean = computed(() => venueLean())
-const leanLabel = computed(() => {
-  const v = lean.value * 100
-  if (v > 0.4) return 'Home specialist'
-  if (v < -0.4) return 'Away specialist'
-  return 'Balanced squad'
-})
-const colPower = computed(() => collectionPower())
+/* The arenas are gated on RANK now (see the note on TIERS in economy.js).
+   The Squad Power stars that used to sit in the top-left were deckPower()
+   and never had anything to do with the gate — the old gate was
+   collectionPower() — so removing them loses a number, it does not move one.
+   What moves into the lock line is the player's rank, which IS the thing
+   being compared, written with the same ladderLabel the requirement uses. */
+const myRank = computed(() => rankLabel(store.rank.tierIndex, store.rank.subtier))
+const chosen = computed(() => store.pendingTier)
 
 /* Demo: the season draw happens at season end, which nobody reaches in a
    pitch. This is the way in — sealed until opened, then a record of what
    happened. */
 function showLastSeason () { openLastSeasonDraw() }
-function unlocked (t) { return colPower.value >= t.unlockPower }
+function unlocked (t) { return tierUnlocked(t) }
+function range (t) { return stakeRange(t.fee) }
+function choose (t) { if (unlocked(t)) store.pendingTier = t.fee }
+/* straight to matchmaking: the arena that screen was for is chosen here now */
+function start () { if (chosen.value) go('matchmaking') }
 </script>
 
 <style scoped>
 .hm { display: flex; flex-direction: column; gap: 12px; }
 .lbl { font-size: 11px; }
 .squad { padding: 12px; }
-.sq-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 14px; }
-.venue { flex: 0 0 130px; }
-.vbar { position: relative; height: 5px; background: var(--surface-hi); border-radius: 999px; margin-top: 7px; }
-.vbar i { position: absolute; top: -3px; width: 11px; height: 11px; border-radius: 50%; background: var(--green); transform: translateX(-50%); }
-.lineup { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
-.lu-lbl { font-size: 9px; font-weight: 700; color: var(--text-2); text-align: center; margin-bottom: 4px; }
-.edit { font-size: 13px; }
-.big { height: 52px; font-size: 17px; }
-.tiers { padding: 12px; }
-.trow { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--divider); font-size: 13px; }
-.trow:last-child { border-bottom: 0; }
-/* the same rung markers as the arena list, in a narrower row */
-.tier-0 { --tier-accent: var(--text-3); }
-.tier-1 { --tier-accent: var(--green); }
-.tier-2 { --tier-accent: var(--jackpot); }
-.tf { font-weight: 700; width: 56px; display: inline-flex; align-items: center; gap: 7px; color: var(--tier-accent); }
-.tbar { width: 3px; height: 12px; border-radius: 2px; background: var(--tier-accent); flex: none; }
-.tn { flex: 1; font-size: 12px; }
-.ok { color: var(--green); font-weight: 700; }
-.lock { font-size: 10px; text-align: right; }
+.sq-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+/* padded to a real 44px target and pulled back with margin, so making it
+   tappable costs the header row no height */
+.sq-edit {
+  font-size: 13px; font-weight: 700; color: var(--cta);
+  line-height: 18px; padding: 13px 10px; margin: -13px -10px;
+}
+.lineup { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.lu { display: flex; flex-direction: column; gap: 3px; }
+.lu-lbl { font-size: 9px; font-weight: 800; color: var(--text-3); letter-spacing: .06em; text-align: center; }
+
+/* THREE CARDS, one row, because the choice is a comparison: entry, stake and
+   whether it is open are all things you read ACROSS the options rather than
+   down one of them. */
+.arena-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.arena {
+  position: relative; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--divider);
+  border-radius: var(--r-md); padding: 10px 8px 9px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  min-height: 86px; justify-content: center;
+}
+/* NO TIER COLOUR BAR. The first cut gave each arena an accent stripe copied
+   from TierSelect's ramp — grey, green, gold — and on THIS screen green
+   already has a job: it is what a chosen arena wears. A locked Home Arena
+   with a green bar on it reads as the selected one. The fee is 16px and bold
+   and distinguishes the three on its own, so the stripe was spending a
+   semantic colour to repeat something already said. Green is left to mean
+   exactly one thing here: this is the arena you are about to play. */
+.a-fee { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.a-name { font-size: 10px; font-weight: 700; color: var(--text-2); text-align: center; line-height: 1.2; }
+.a-detail {
+  min-height: 26px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1px;
+}
+.a-stake { font-size: 9px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+/* SELECTED is mint and so is the chosen frame: this product's green means
+   "the thing you are about to do", which is exactly what a chosen arena is */
+.arena.sel { border-color: var(--cta); box-shadow: 0 0 0 1px var(--cta), 0 0 14px rgba(51,234,106,.28); }
+.a-sel { font-size: 8px; font-weight: 800; letter-spacing: .08em; color: var(--cta); min-height: 10px; line-height: 10px; }
+.arena.locked { opacity: .72; cursor: default; border-style: dashed; }
+.a-need { font-size: 9px; font-weight: 800; color: var(--text-2); display: flex; align-items: center; gap: 2px; }
+.a-have { font-size: 8px; color: var(--text-3); }
+.big { width: 100%; }
+.big:disabled { opacity: 1; background: var(--surface-hi); color: var(--text-3); box-shadow: none; }
+
 .recent { padding: 12px; }
 .rc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .rc-all { font-size: 11px; color: var(--green); font-weight: 700; padding: 16px 13px; margin: -16px -13px; }

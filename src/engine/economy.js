@@ -111,12 +111,47 @@ export function packRates (pack) {
   return out
 }
 
-/* §6.5 entry fee tiers. unlockPower = required collection power (q_ref scale). */
+/* §6.5 entry fee tiers.
+
+   A DELIBERATE DIVERGENCE FROM THE PRD, recorded here because this project
+   treats the PRD as the authority and an unexplained departure from it reads
+   as a bug for the next person to "fix" back.
+
+   PRD §6.5 gates these on COLLECTION POWER. On 2026-10-28 Albert changed the
+   gate to RANK — "getting into the stronger arenas should be about your
+   record" — so unlockPower is gone rather than kept beside its replacement;
+   two rules for one decision is where they start drifting apart.
+
+   What the measurement said, because the thresholds come from it rather than
+   from how they look:
+
+     the demo squad is matched against its closest power, which prices at
+     q = 0.493, so a win is worth 30 rank points and a loss costs 20, from a
+     start of Bronze III with 40 of 50
+
+       1 win  -> Bronze II      4 wins -> Silver III     12 wins -> Gold III
+       2 wins -> Bronze I       7 wins -> Silver II      (23 matches at 2:1)
+
+   And the thing that reframed the whole change: under the power rule PRO
+   ARENA NEVER OPENS IN THE DEMO AT ALL. It wants 1200 and the entire
+   catalogue owned at Lv.1 is 1016 — it takes all twenty at Lv.10 (1344).
+   So rank is not a risk to Pro Arena's reachability, it is the first thing
+   that gives it any.
+
+   unlockRank is a LADDER INDEX (tierIndex * 3 + (3 - subtier)), the same
+   figure the reward road is indexed by, so there is one notion of "how far
+   up" rather than a second one invented here. */
 export const TIERS = [
-  { id: 't10', fee: 10, name: 'Practice Arena', unlockPower: 0 },
-  { id: 't50', fee: 50, name: 'Home Arena', unlockPower: 0.42 },
-  { id: 't200', fee: 200, name: 'Pro Arena', unlockPower: 0.60 }
+  { id: 't10', fee: 10, name: 'Practice Arena', unlockRank: 0 },   // Bronze III, the start
+  { id: 't50', fee: 50, name: 'Home Arena', unlockRank: 1 },       // Bronze II, one win
+  { id: 't200', fee: 200, name: 'Pro Arena', unlockRank: 3 }       // Silver III, four wins
 ]
+
+/* the inverse of ladderIndex, so a requirement can be printed in the words
+   the player's own rank is printed in */
+export function ladderLabel (i) {
+  return rankLabel(Math.floor(i / 3), 3 - (i % 3))
+}
 
 export function nextTierFee (fee) {
   const i = TIERS.findIndex(t => t.fee === fee)
