@@ -108,7 +108,7 @@
                setCutIn has run, so a tween aimed at the v-if'd CardFace gets
                null and the card ends up popping in with no animation at all -->
           <div class="ci-card-slot" ref="ciCardEl">
-            <CardFace v-if="cutCard" :card="cutCard" size="md" :radar="false" class="ci-card" />
+            <CardFace v-if="cutCard" :card="cutCard" size="md" :radar="false" full class="ci-card" />
           </div>
           <div class="ci-team" :class="cutSide" v-if="cutTeam">
             <i class="ci-jersey"></i>{{ cutTeam }}
@@ -625,7 +625,20 @@ onMounted(() => { /* refs are live from here on */ })
   position: absolute; inset: 0; padding: 8px 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
 }
-.ci-card-slot { width: 112px; flex: 0 0 auto; }
+/* 66, down from 112, and the width is doing the work BECAUSE there is no
+   height to spend. The cut-in is scoped to .arena (206px) rather than to the
+   stage, on purpose — the board and clockbar sit above it at z-index 31 so
+   the score flip is visible while the scorer's card is on screen. Measured,
+   the overlay already uses 198.7 of those 206: card 91.7, gaps 18, team tag
+   20.8, GOAL! 36, subtitle 16.2, padding 16. Seven pixels of slack.
+
+   So the card keeps its height and narrows to reach 5:7 instead: 66 x 92.4
+   against the old 112 x 91.7, which is 0.7px of growth. At 112 it would have
+   been 156.8 tall and the subtitle fell 20.9px outside a stage that clips —
+   the gate caught both cut-ins. Giving this moment a bigger card means taking
+   the height from the GOAL! type or from the scoreboard's exemption, and
+   those are somebody's decisions rather than a slot width. */
+.ci-card-slot { width: 66px; flex: 0 0 auto; }
 .ci-card { width: 100%; }
 .ci-text {
   font-size: 36px; font-weight: 900; letter-spacing: .04em; line-height: 1;

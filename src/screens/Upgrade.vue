@@ -7,7 +7,7 @@
 
     <template v-else>
       <div class="head">
-        <CardFace :card="now" size="md" :radar="false" class="mini" />
+        <CardFace :card="now" size="md" :radar="false" full class="mini" />
         <div class="hinfo">
           <div class="hn">{{ now.name }}</div>
           <div class="hl muted">Lv.{{ now.level }} → <b class="green">Lv.{{ now.level + 1 }}</b></div>
@@ -106,7 +106,17 @@ function doUpgrade () {
 <style scoped>
 .up { gap: 12px; display: flex; flex-direction: column; }
 .head { display: flex; gap: 12px; align-items: center; }
-.mini { width: 92px; flex: 0 0 92px; }
+/* 74, down from 92, because the card went from a stacked box to a 5:7 one
+   and 92 would have made it 128.8 tall. Measured: that is 37.1px of growth on
+   a column whose fullest state (upgrade/done, with the "Upgraded to Lv.N"
+   banner) had 27px of room, and the overflow landed on the one child flex
+   was allowed to squash — `Back to collection` went to 21.5px and failed the
+   44px tap target. 74 costs 11.9 and leaves 17.6.
+
+   The first measurement said this page had 87.6px free and would fit. It was
+   taken on upgrade/ready-in-squad, which has no banner: one state per screen
+   is not a measurement of the screen. */
+.mini { width: 74px; flex: 0 0 74px; }
 .hn { font-size: 17px; font-weight: 700; }
 .hl { font-size: 13px; margin: 2px 0; }
 .hc { font-size: 11px; }
