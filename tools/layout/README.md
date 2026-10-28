@@ -1,24 +1,31 @@
 # tools/layout — the part of "does it look broken" a machine can hold
 
-`npm run layout`. Three passes over one build:
+`npm run layout`. Four passes over one build:
 
 | pass | page | what it can see |
 |---|---|---|
 | the match | `index.html` | a whole compiled match, frame by frame, watching for mid-match shift |
 | the sweep | `screens.html` | 81 states across every screen — boxes, not pixels |
-| contrast  | `screens.html` | pixels, because one question needs them (`contrast.mjs`) |
+| contrast | `screens.html` | pixels, because one question needs them (`contrast.mjs`) |
+| the ledger | `screens.html` | a flow rather than a state: every way out of the pack screen (`flow.mjs`) |
+
+The last two exist because of what the sweep cannot be: it photographs
+states, so it cannot see what a colour does to a letterform, and it never
+walks from one screen to another, so it cannot see a transaction that starts
+on one and finishes on the next.
 
 Assertions live in `run.mjs`; `measure.js` only looks. Each check's own
 reasoning sits beside it. This file holds the thing that is not attached to
 any single check.
 
-## Six ways a measurement here has lied, and what each one looked like
+## Seven ways a measurement here has gone wrong, and what each looked like
 
 Every one of these produced a number that was arithmetically correct and
 about the wrong thing. None was caught by reading code. They are collected
-here because the sixth was predicted by none of the five, and the seventh
-will be predicted by none of the six — what transfers is the *shape*, not the
-list.
+here because the sixth was predicted by none of the five, and the seventh by
+none of the six — what transfers is the *shape*, not the list. Six of them
+are a number that says something untrue; the seventh is a number that says
+nothing, which is worse, because silence and a pass are the same sound.
 
 **1 · The wrong window.** A head-region crop was hardcoded, run twice, and
 returned 1.4 both times. Reproducibility read as correctness. The window sat
@@ -53,6 +60,16 @@ under AA, and the worst pixel condemned a plainly legible card because a
 glyph box is mostly not glyph. Same pixels, same code, three answers.
 → *When a check needs a statistic, the choice of statistic is the check.
 Write down why that one, where the check is.*
+
+**7 · The metric that was silent rather than wrong.** A pack charged 100
+diamonds and handed over two cards of five. The collection count — the
+obvious thing to watch — read `8 / 20` before and after, because the cards it
+failed to deliver were ones the player already owned, and a duplicate pays a
+shard and moves no count at all. The number was correct and had nothing to do
+with the question.
+→ *Before trusting a number to clear something, check it can MOVE for the
+failure you are worried about. The first six lie; this one just says nothing,
+which is harder to notice because nothing is what a pass looks like.*
 
 ## Two questions, not one
 

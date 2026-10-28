@@ -25,6 +25,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { measureChromeContrast } from './contrast.mjs'
+import { measurePackLedger, ledgerBroken, PACK_EXITS } from './flow.mjs'
 
 const run = promisify(execFile)
 const here = fileURLToPath(new URL('.', import.meta.url))
@@ -98,7 +99,7 @@ async function render (page, { size, budget, wall }) {
   return JSON.parse(text)
 }
 
-let match, screens, chromeContrast
+let match, screens, chromeContrast, packLedger
 try {
   match = await render('index.html', { size: '430,460', budget: 30000, wall: 60000 })
   screens = await render('screens.html', { size: '430,932', budget: 200000, wall: 300000 })
@@ -106,6 +107,11 @@ try {
      with the sweep above */
   chromeContrast = await measureChromeContrast({
     chromePath: CHROME, url: `http://127.0.0.1:${port}/screens.html?shot=cards/full`
+  })
+  /* a fourth pass, walking a flow rather than photographing a state — see
+     flow.mjs for why the transaction between screens needs its own */
+  packLedger = await measurePackLedger({
+    chromePath: CHROME, url: `http://127.0.0.1:${port}/screens.html?shot=shop/affordable`
   })
 } catch (e) {
   server.close()
@@ -483,6 +489,16 @@ const CHROME_LOST_CAP = 9.8
 const unreadableChrome = chromeContrast.filter(c => c.lost > CHROME_LOST_CAP)
 check('card chrome unreadable over its picture', unreadableChrome.length,
   !unreadableChrome.length && chromeContrast.length >= 100)
+
+/* THE PACK HANDS OVER WHAT IT CHARGED FOR, whichever way the player leaves.
+   A ledger rather than a sequence: either nothing happened or all of it did.
+   Stated that way it covers an exit nobody has thought of yet, which a list
+   of known-good sequences would not. flow.mjs walks every exit the screen
+   has; a missing one there is the failure mode this is most exposed to, so
+   it refuses to report rather than reporting on the ones it managed. */
+const ledger = ledgerBroken(packLedger)
+check('packs that charge without delivering', ledger.length,
+  !ledger.length && packLedger.length === PACK_EXITS.length)
 check('holo cards measured standing still', swayFlat.length, !swayFlat.length && !!sway.length)
 check('holo sway past its budget', swayBig.length, !swayBig.length)
 check('cards that lean by different amounts', swayYaws.length, swayYaws.length === 1)
@@ -565,6 +581,14 @@ if (holo.length) {
 }
 
 {
+  console.log(`\n  note: the pack's ledger at every way out of it:`)
+  for (const l of packLedger) {
+    console.log(`    left ${l.exit.padEnd(20)} (at ${String(l.reached).padEnd(8)})  ` +
+      `${l.spent} diamond(s) -> ${l.gained} card(s)`)
+  }
+}
+
+{
   const worstBy = new Map()
   for (const c of chromeContrast) {
     const k = `${c.sel} @ ${c.width}px`
@@ -628,6 +652,9 @@ if (fail.length) {
   if (barStates.size !== 2) console.log(`  chrome never measured: saw ${[...barStates.keys()].join(', ') || 'no bars'} — expected TopBar and TabBar`)
   chromeShifts.forEach(c => console.log(`  chrome moved: ${c.bar} ${c.key} takes values ${c.seen} — ${c.detail}`))
   chromeDrift.forEach(c => console.log(`  chrome drifted: ${c.bar} measures ${c.measured}px against a token that says ${c.declared}px`))
+  ledger.forEach(l => console.log(
+    `  pack ledger: left ${l.exit} (at ${l.reached}) — ${l.spent} diamond(s) spent, ${l.gained} card(s) received` +
+    (l.spent === 0 ? ' (nothing was charged, so nothing should have arrived)' : ` (the price is ${l.price} for 5)`)))
   if (chromeContrast.length < 100) {
     console.log(`  chrome contrast barely measured: only ${chromeContrast.length} label(s) sampled across 20 cards x 2 sizes`)
   }

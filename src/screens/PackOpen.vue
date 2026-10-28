@@ -167,7 +167,18 @@ function next () {
    the back arrow, a tab, anything — the cards they paid for arrive. Granting
    them HERE rather than up front is what keeps the one-at-a-time reveal
    honest: the shard line reads live state, so handing over all five at the
-   start would make the first card show the final count. */
+   start would make the first card show the final count.
+
+   AND IT DOES NOT CLOSE THE WINDOW COMPLETELY, which this line looks like it
+   does. onUnmounted does not run when the tab is closed or reloaded, and the
+   store persists — so "reveal two cards, then refresh" still lands where the
+   original bug did: paid for five, holding two. What changed is the size of
+   the opening, from "press back" to "press reload", which a demo will not do.
+   Shutting it for real means the undelivered pulls surviving a reload, which
+   is a change to the store rather than to this screen, and nobody has asked
+   for it. Known and left, not missed — `packs that charge without delivering`
+   in tools/layout walks every exit this screen HAS, and a reload is not one
+   of them. */
 onUnmounted(() => { if (paid.value) commitUpTo(pulls.value.length) })
 function goUpgrade (id) { store.upgradeTarget = id; go('upgrade') }
 </script>
