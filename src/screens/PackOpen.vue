@@ -135,7 +135,10 @@ function goUpgrade (id) { store.upgradeTarget = id; go('upgrade') }
 .stage { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 10px; }
 .counter { font-size: 12px; }
 .glow { color: var(--r-l); font-weight: 700; font-size: 13px; letter-spacing: .08em; line-height: 18px; min-height: 18px; }
-.reveal-card { width: 190px; }
+/* 320: the reveal stage had the most room of any screen in the app and was
+   using the least. Measured — stage 364.6 -> 627.6 in an 884px scroller, zero
+   overflow, 244px still under the button. */
+.reveal-card { width: 320px; }
 .verdict { text-align: center; font-size: 12px; }
 .new-tag { color: var(--cta); font-weight: 800; letter-spacing: .08em; margin-bottom: 3px; }
 .dup-tag { color: var(--text-2); font-weight: 800; letter-spacing: .06em; margin-bottom: 3px; }
@@ -145,5 +148,5 @@ function goUpgrade (id) { store.upgradeTarget = id; go('upgrade') }
 .tn { color: var(--cta); } .td { color: var(--text-2); }
 .up-note { width: 100%; background: var(--surface); border: 1px solid var(--cta-deep); border-radius: var(--r-md); padding: 12px; text-align: center; }
 .up-t { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
-.stage > .btn { width: 190px; }
+.stage > .btn { width: 320px; }
 </style>

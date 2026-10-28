@@ -135,10 +135,22 @@
    seventy per cent of what a pack pays out is Common and a card that does
    nothing reads as broken; what Common does not get is a rainbow. Rare's foil
    is locked to its own blue, so the finish reinforces the rarity rather than
-   washing over it, and the rainbow itself becomes a threshold crossed at
-   Epic. Epic and Legendary are both rainbows and are told apart by coverage
-   and layer count rather than hue — the same refusal to lean on one channel
-   that the rest of the ladder makes.
+   washing over it.
+
+   THE LADDER IS A COUNT OF COLOURS: none, one, two, all. The earlier version
+   made Epic and Legendary both rainbows and told them apart by coverage and
+   layer count, and measuring it showed why that cannot work — "is there a
+   rainbow" saturates at Epic, so Legendary could only ever be a brighter copy
+   of the same sentence. The isolated foil contribution (same frame with the
+   finish on and off, per-pixel) said it outright: Epic measured the HIGHEST
+   hue spread of the four, .889 against Legendary's .806, while Legendary had
+   twice the mean. color-dodge over the brightest body in the ladder runs to
+   white, and white has no hue, so the finish was eating the gold it exists to
+   celebrate — and rarity colour is one of the three semantic families here,
+   which may get stronger and never weaker. Two hues at Epic and the full
+   spectrum at Legendary makes the hue step monotone by construction rather
+   than by tuning, and Legendary's extra lives in the counter-sweep and the
+   sparkles instead of in alpha.
 
    112deg is the same diagonal family as the card body's 118 and its hatch's
    135. It is not a free parameter. */
@@ -162,23 +174,32 @@
     rgba(150,200,255,.45) 50%, rgba(76,155,255,.30) 56%, transparent 70%);
   --holo-back: none;
 }
+/* Two hues, not a rainbow: the step up from Rare is "a second colour
+   appears", the step to Legendary is "all of them do". Alpha up from .28/.30
+   because Rare and Epic measured 20.09 and 22.56 — a 12% gap is not a step. */
 .r-E {
   --holo-foil: linear-gradient(112deg,
-    transparent 28%, rgba(255,90,120,.28) 36%, rgba(255,200,80,.30) 42%,
-    rgba(120,255,170,.30) 48%, rgba(90,190,255,.30) 54%,
-    rgba(180,120,255,.28) 60%, transparent 70%);
+    transparent 26%, rgba(236,72,196,.34) 36%, rgba(255,150,230,.40) 44%,
+    rgba(120,230,255,.40) 54%, rgba(40,170,230,.34) 62%, transparent 72%);
   --holo-back: none;
 }
+/* Full spectrum, WITH GAPS. The old stops ran 0%->100% unbroken and covered
+   .951 of the card; the transparent stops at 22 / 52 / 84% are where the gold
+   body is allowed to speak for itself. */
 .r-L {
   --holo-foil:
     var(--holo-sparkle),
     linear-gradient(112deg,
-      rgba(255,90,120,.30) 0%, rgba(255,200,80,.32) 18%, rgba(120,255,170,.32) 36%,
-      rgba(90,190,255,.32) 54%, rgba(180,120,255,.30) 72%, rgba(255,90,120,.30) 100%);
+      rgba(255,70,110,.34) 0%, rgba(255,180,60,.30) 14%, transparent 22%,
+      rgba(120,255,170,.34) 32%, rgba(90,190,255,.38) 44%, transparent 52%,
+      rgba(180,120,255,.34) 62%, rgba(255,70,180,.30) 76%, transparent 84%,
+      rgba(255,200,90,.30) 100%);
   /* the counter-reflection rides the gloss layer, which already travels the
-     other way — a second sweep against the first is what it physically is */
+     other way — a second sweep against the first is what it physically is,
+     and it is where Legendary's extra moved to when it came out of alpha:
+     overlay does not blow out over a bright body the way color-dodge does */
   --holo-back: linear-gradient(-68deg,
-    transparent 40%, rgba(255,255,255,.18) 50%, transparent 60%);
+    transparent 36%, rgba(255,255,255,.22) 50%, transparent 64%);
 }
 
 /* ---------- the rarity ladder ----------

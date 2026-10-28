@@ -129,7 +129,11 @@ function goUpgrade () { store.upgradeTarget = detail.value; go('upgrade') }
 .detail { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 /* padded out to a real tap target, pulled back with margin so nothing moves */
 .back { align-self: flex-start; font-size: 12px; padding: 15px 12px; margin: -12px -12px -15px; }
-.hero { width: 150px; }
+/* 280, the art brief's number, and the reorder above is what pays for it:
+   the card grows 207px, the page ends up 155px longer than the screen, and
+   the Upgrade button still sits 267.5px above the fold because what went
+   under it is the radar and the stat table rather than the action. */
+.hero { width: 280px; }
 .hero :deep(.cf) { width: 100%; }
 .rad { margin: 2px 0; }
 .meta, .shards { width: 100%; background: var(--surface); border-radius: var(--r-md); padding: 10px 12px; }

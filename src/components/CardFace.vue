@@ -1,5 +1,5 @@
 <template>
-  <div class="cf" :class="[`r-${card.rarity}`, size, { sel: selected, dim: dim }]">
+  <div class="cf" :class="[`r-${card.rarity}`, size, { sel: selected, dim: dim, 'cf-full': full }]">
     <div class="cf-top">
       <span class="cf-rar">{{ card.rarity }}</span>
       <span class="cf-pos">{{ roleCode }}</span>
@@ -8,9 +8,14 @@
     <div class="cf-art">
       <PlayerArt v-if="radar" :card-id="card.id" kind="portrait" :tier="size" :rarity="card.rarity" />
       <PlayerArt v-else-if="size === 'lg'" :card-id="card.id" kind="figure" tier="lg"
-                 :rarity="card.rarity" :number="shirtNo" />
+                 :rarity="card.rarity" :number="shirtNo" eager :fill="full" />
       <div v-else class="cf-mono">{{ initials }}</div>
     </div>
+    <!-- A real element, not ::after. The scrim is what makes the name legible
+         over the picture, so it is doing a job rather than decorating — and a
+         pseudo-element is invisible to every assertion in the layout gate,
+         which is exactly the wrong place to put something load-bearing. -->
+    <i v-if="full" class="cf-scrim" aria-hidden="true"></i>
     <div class="cf-name">{{ card.name }}</div>
     <!-- the venue span is ALWAYS rendered, empty for a neutral card. Measured:
          an empty one is 0x11, which is not a zero box, so it takes an anchor in
@@ -64,6 +69,20 @@ const props = defineProps({
 /* sm is 44 rather than 54: the 3-column cell is 104px tall and 54 would make
    the card's own content 109, growing every row in the grid. */
 const artSize = computed(() => ({ sm: 44, md: 74, lg: 116 }[props.size]))
+/* EVERY lg card, not only the ones with a picture, and the gate is what
+   settled that. Switching shape per card was the obvious first cut — one of
+   twenty is illustrated, so give that one the 5:7 treatment and leave the
+   rest alone — and `elements that move between states of one screen` reported
+   11 shifts across packopen-reveal immediately: the reveal showed F1 at 266px
+   and the next card at 185px, so the name, the verdict and the Next button
+   all jumped 81px between two taps of the same button. A card's geometry may
+   not depend on WHICH card it is; that is the same claim rarity-ladder makes
+   about rarity. So the frame is 5:7 for all of them and the content inside it
+   varies: a photograph where there is one, the drawing where there is not,
+   scaled to fit the same box. The 44px grid keeps the old stacked rows — its
+   cells are sized by the locked placeholders, and that ladder has to turn
+   over all at once or the rows go ragged. */
+const full = computed(() => props.size === 'lg' && !props.radar)
 const initials = computed(() => props.card.name.slice(0, 2).toUpperCase())
 const shirtNo = computed(() => (props.card.seed % 29) + 1)
 
@@ -185,6 +204,55 @@ const venueMark = computed(() =>
 }
 /* only the lg detail card still shows initials; it reads as a rarity-coloured
    monogram rather than the grey repeat of the name directly under it */
+/* THE PICTURE DECIDES NOTHING ABOUT THE SHAPE. The card sets 5:7 and the art
+   fills it; the alternative — letting each image size its own card — would
+   make a card's geometry depend on which card it is, and the rarity-ladder
+   group exists to assert exactly that it does not.
+
+   Type scales with the card, because the safe areas the illustration was
+   drawn against are percentages. 130px in a grid cell and 320px at the pack
+   reveal is a 2.5x range, and a fixed 12px name would sit in a different
+   place in the composition at each end. cqw against .cf itself, so one
+   container drives all three rows. */
+.cf.cf-full {
+  aspect-ratio: 5 / 7;
+  container-type: inline-size;
+  padding: 0;
+  display: block;
+}
+.cf-full .cf-art { position: absolute; inset: 0; margin: 0; display: block; }
+.cf-full .cf-art .pa { width: 100%; height: 100%; }
+/* The SVG stand-ins keep their own proportions inside the taller frame —
+   preserveAspectRatio defaults to meet, so a 74-square drawing is centred
+   rather than stretched into a 5:7 person. */
+.cf-full .cf-top {
+  position: absolute; inset: 0 0 auto; z-index: 2;
+  padding: 3.6cqw 4cqw 0; font-size: 5cqw;
+}
+.cf-full .cf-rar, .cf-full .cf-lv { font-size: 5cqw; }
+.cf-full .cf-rar { padding: 0.6cqw 1.8cqw; border-radius: 1.4cqw; }
+.cf-full .cf-pos { font-size: 4.6cqw; padding: 0.4cqw 1.6cqw; }
+.cf-full .cf-name {
+  /* 10.8, not 8.4: the role line below it is 5.4cqw of type on a 1.2 line
+     box and sits 3cqw off the bottom, so anything under 9.5 puts the name
+     ON it. Nothing in the gate catches that — `content partly hidden`
+     compares paint layers, and two siblings at the same z-index are not
+     above or below each other. Measured the only way it can be: by looking. */
+  position: absolute; left: 0; right: 0; bottom: 10.8cqw; z-index: 2;
+  font-size: 7.4cqw; line-height: 1.1;
+}
+.cf-full .cf-role {
+  position: absolute; left: 0; right: 0; bottom: 3cqw; z-index: 2;
+  font-size: 5.4cqw; line-height: 1.2;
+}
+.cf-full .cf-venue { width: 3.4cqw; height: 5cqw; }
+/* Only as tall as the type it carries, and transparent for most of that: the
+   bottom fifth is where the name lives and the picture's own safe area is. */
+.cf-scrim {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 32%;
+  z-index: 1; pointer-events: none;
+  background: linear-gradient(to top, rgba(8,10,14,.92) 0%, rgba(8,10,14,.72) 38%, rgba(8,10,14,0) 100%);
+}
 .cf-mono { font-size: 22px; font-weight: 800; color: var(--rc); opacity: .9; }
 .cf-name { font-size: 12px; font-weight: 700; line-height: 1.2; text-align: center; }
 .cf-role { font-size: 9px; color: var(--text-2); text-align: center; }
