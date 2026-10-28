@@ -66,9 +66,6 @@ const props = defineProps({
   selected: Boolean,
   dim: Boolean
 })
-/* sm is 44 rather than 54: the 3-column cell is 104px tall and 54 would make
-   the card's own content 109, growing every row in the grid. */
-const artSize = computed(() => ({ sm: 44, md: 74, lg: 116 }[props.size]))
 /* EVERY lg card, not only the ones with a picture, and the gate is what
    settled that. Switching shape per card was the obvious first cut — one of
    twenty is illustrated, so give that one the 5:7 treatment and leave the

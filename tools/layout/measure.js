@@ -265,6 +265,7 @@ export function measure (scope) {
     ragged: [],         // grid cells in one row whose contents are different heights
     smallTargets: [],   // tappable things under the published 44px minimum
     unsizedImages: [],  // <img> that reserves no space before it loads
+    brokenImages: [],   // <img> that never arrived, or arrived empty
     textOverlaps: [],   // two text boxes at the same depth sitting on each other
     overlapUnchecked: [], // pairs the overlap check cannot judge, because clip-path
     clipped: [],        // content cut off by an overflow:hidden ancestor
@@ -536,6 +537,22 @@ export function measure (scope) {
        A bare `auto` means nothing at all is reserved. */
     if (el.tagName === 'IMG' && cs.aspectRatio.trim() === 'auto') {
       out.unsizedImages.push({ key, src: (el.getAttribute('src') || '(none)').slice(-44) })
+    }
+
+    /* A picture that is not there. The first attempt at this was a
+       console.error at startup, on the reasoning that the gate already fails
+       any state that logs one — and deleting a file proved it does not: the
+       message fires once while the module loads, before the harness is
+       listening to a state at all. So the check is where the evidence is.
+       `complete` with a zero natural width is a browser that tried and
+       failed; `complete` false after the page has settled is one that never
+       finished, and both leave a hole where a player should be. */
+    if (el.tagName === 'IMG') {
+      if (el.complete && el.naturalWidth === 0) {
+        out.brokenImages.push({ key, why: 'failed', src: (el.currentSrc || el.src || '(none)').slice(-44) })
+      } else if (!el.complete) {
+        out.brokenImages.push({ key, why: 'still loading', src: (el.currentSrc || el.src || '(none)').slice(-44) })
+      }
     }
 
     /* anything inside the frame, not just screen content — an element that

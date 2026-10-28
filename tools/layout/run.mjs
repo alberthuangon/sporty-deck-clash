@@ -12,7 +12,7 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { createServer } from 'node:http'
-import { readFile } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -129,6 +129,7 @@ const ragged = gather('ragged')
 const small = gather('smallTargets')
 const unsized = gather('unsizedImages')
 const onTop = gather('textOverlaps')
+const broken_img = gather('brokenImages')
 const unchecked = gather('overlapUnchecked')
 
 check('content cropped by its container', clipped.length, !clipped.length)
@@ -149,6 +150,21 @@ check('grid cells whose contents are ragged', ragged.length, !ragged.length)
 check('controls under the 44px tap target', small.length, !small.length)
 check('images that reserve no space', unsized.length, !unsized.length)
 check('text sitting on other text', onTop.length, !onTop.length)
+check('pictures that never arrived', broken_img.length, !broken_img.length)
+
+/* ON DISK, not on screen, and the two are not the same check.
+   `pictures that never arrived` can only see cards the sweep puts on screen,
+   and deleting a goalkeeper's portrait proved the gap: 81 states and not one
+   of them shows G2, so the file vanished and every assertion stayed green.
+   The sweep is a sample of states; the catalogue is a fixed list of twenty.
+   A list is checked against a directory, not against a camera. */
+const ART_DIR = join(here, '../../src/assets/player-art')
+const catalogue = JSON.parse(await readFile(join(here, '../../src/data/cards.json'), 'utf8')).cards
+const onDisk = new Set(await readdir(ART_DIR).catch(() => []))
+const missingArt = catalogue.flatMap(c =>
+  ['figure', 'portrait'].map(k => onDisk.has(`${c.id}-${k}.webp`) ? null : `${c.id}-${k}.webp`)
+).filter(Boolean)
+check('cards with no picture on disk', missingArt.length, !missingArt.length && catalogue.length > 0)
 
 /* The main event. Within a group, every element the states have in common has
    to sit at the same height — a group is a set of states a player can watch
@@ -407,6 +423,8 @@ if (fail.length) {
   overChrome.forEach(c => console.log(`  over ${c.bar}: ${c.state}  ${c.key} by ${c.over}px  "${c.text}"`))
   leaky.forEach(l => console.log(`  leaky takeover: ${l.state}  ${l.key} leaves ${l.short}px of the frame showing`))
   covered.forEach(c => console.log(`  hidden: ${c.state}  ${c.key} is ${c.over}px behind ${c.behind}  "${c.text}"`))
+  missingArt.forEach(m => console.log(`  no file: src/assets/player-art/${m}`))
+  broken_img.forEach(b => console.log(`  no picture: ${b.state}  ${b.key} ${b.why}  ...${b.src}`))
   onTop.forEach(o => console.log(`  on top of each other: ${o.state}  ${o.a} and ${o.b} overlap by ${o.bite}px of a ${o.of}px line  "${o.text}"`))
   ragged.forEach(r => console.log(`  ragged: ${r.state}  ${r.grid} row at ${r.row} spreads ${r.spread}px — ${r.cells}`))
   const byTarget = new Map()

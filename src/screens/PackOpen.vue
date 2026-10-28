@@ -65,6 +65,7 @@ import CardFace from '../components/CardFace.vue'
 import SealTear from '../components/SealTear.vue'
 import HoloCard from '../components/HoloCard.vue'
 import { flyTo } from '../ui/flyIn.js'
+import { artFor } from '../ui/art.js'
 import { store, go, buyPack, commitPull, entry, canUpgrade, upgradeCost, BY_ID } from '../game.js'
 import { buildCard } from '../engine/cards.js'
 import { PACKS } from '../engine/economy.js'
@@ -82,6 +83,16 @@ onMounted(() => {
   const res = buyPack(pack)
   if (!res) { go('shop'); return }
   pulls.value = res
+  /* The five cards are already decided here, several seconds before the pack
+     is torn — the tear is the only place in the app where an animation is
+     allowed to gate information, and that pause is free decoding time. The
+     reveal is the one screen where the card IS the moment, so a picture
+     arriving late is the moment arriving late. Fire and forget: nothing waits
+     on these, they only warm the cache. */
+  for (const p of res) {
+    const url = artFor(p.id, 'figure')
+    if (url) { const img = new Image(); img.decoding = 'async'; img.src = url }
+  }
 })
 
 const current = computed(() => pulls.value[index.value] || {})
