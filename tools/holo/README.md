@@ -57,5 +57,25 @@ worst frame is a different one for each rarity.
 - The forbidden arc for hair and skin is **90-210 degrees**, green through
   cyan. It is not derived from where warm colours live; it comes from which of
   four real cards were accepted and which were refused when they were looked
-  at. Magenta hair and purple hair were accepted. Do not widen it to make
-  something pass.
+  at. Magenta hair and purple hair were accepted.
+
+## About the thresholds in here
+
+Do not widen one to make something pass — and **do not tighten one to make
+something fail**. Both directions are the same mistake. The 20% allowance on
+cold hair pixels was set before anyone knew that the two candidate fixes would
+come in at 13.8% and 0.1%; tightening it afterwards to prefer the cleaner one
+would have been calibrating the threshold to the result it was supposed to
+judge. A threshold means something only if it was set beforehand and then
+honoured — and *afterwards* runs in both directions.
+
+## About margins
+
+These tools report margins. Comments should not. A comment that states a
+margin makes a claim about two things at once — the measurement and the
+threshold — and either can move without anyone touching that file. The
+`.r-L` comment in `src/styles/tokens.css` went stale twice this way: first
+quoting a dE-76 threshold of 20 that had been replaced elsewhere, then
+quoting the replacement against a worst case nobody had measured yet. Record
+the rule and where it is enforced; leave the margin to whoever runs the
+check.
