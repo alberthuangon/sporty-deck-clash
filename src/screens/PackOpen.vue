@@ -1,8 +1,8 @@
 <template>
-  <div class="scroll po" :class="[{ 'is-reduced': reduced }, 'opening-rarity-' + (currentCard?.rarity || 'C')]" :style="{ '--reveal-color': fx.color }">
+  <div class="scroll po" :class="[{ 'is-reduced': reduced, 'is-summary': stage === 'summary' && viewing === null }, 'opening-rarity-' + (currentCard?.rarity || 'C')]" :style="{ '--reveal-color': fx.color }">
     <div class="opening-ambient" aria-hidden="true"></div>
     <div v-show="stage === 'reveal' && currentCard?.rarity === 'L'" ref="legendaryRaysEl" class="legendary-rays" aria-hidden="true"><PackParticles :active="stage === 'reveal' && currentCard?.rarity === 'L'" /></div>
-    <header class="opening-heading"><div><p class="eyebrow">{{ pack.name }} · {{ pulls.length }} players</p><h1>{{ stage === 'sealed' ? 'Your next signing awaits' : stage === 'reveal' ? 'Meet your new lineup' : 'The pack is yours' }}</h1></div><button v-if="stage !== 'summary'" class="skip-results" @click="summary">Reveal all <span aria-hidden="true">↗</span></button></header>
+    <header v-if="stage !== 'summary'" class="opening-heading"><div><p class="eyebrow">{{ pack.name }} · {{ pulls.length }} players</p><h1>{{ stage === 'sealed' ? 'Your next signing awaits' : stage === 'reveal' ? 'Meet your new lineup' : 'The pack is yours' }}</h1></div><button v-if="stage !== 'summary'" class="skip-results" @click="summary">Reveal all <span aria-hidden="true">↗</span></button></header>
     <div v-if="stage === 'sealed'" class="stage sealed-stage">
       <div class="sealed-orbit" aria-hidden="true"></div>
       <p class="stage-kicker">FIVE PLAYERS. NEW POSSIBILITIES.</p>
@@ -25,7 +25,25 @@
       <div class="gesture-hint" aria-hidden="true"><span>↑</span><p>{{ index === pulls.length - 1 ? 'Tap card to see your pack' : 'Tap the card or swipe up' }}</p><small>{{ index === pulls.length - 1 ? 'Your complete lineup awaits' : 'to reveal your next player' }}</small></div>
     </div>
     <div v-else-if="viewing !== null" class="stage detail-stage"><HoloCard class="viewed"><CardFace :card="cardFor(viewed)" size="lg" :radar="false" full foil /></HoloCard><button v-if="canUpgrade(viewed.id)" class="btn btn-cta" @click="goUpgrade(viewed.id)">Upgrade {{ BY_ID[viewed.id].name }}</button><button class="btn" @click="viewing = null">Back to summary</button></div>
-    <div v-else ref="summaryEl" class="stage summary-stage"><div class="summary-intro"><span class="summary-check" aria-hidden="true">✓</span><h2 class="sum-h">Your squad just got stronger</h2><p>{{ newCount }} new {{ newCount === 1 ? 'player' : 'players' }} · {{ pulls.length - newCount }} upgrade shards</p></div><div class="sum-grid"><button v-for="(p,i) in pulls" :key="i" class="sum-slot" :aria-label="`View ${BY_ID[p.id].name}, ${p.isNew ? 'new player' : 'one shard'}`" @click="viewing = i"><CardFace :card="cardFor(p)" size="sm" full :class="{ 'is-new':p.isNew }" :sub="p.isNew ? 'NEW' : '+1 shard'" /><i v-if="canUpgrade(p.id)" class="dot"></i></button></div><p class="summary-note">Tap a player to inspect their card</p><button class="btn btn-cta" @click="go('cards')">View collection</button><button class="btn" @click="go('shop')">Back to shop</button></div>
+    <section v-else ref="summaryEl" class="stage summary-stage" aria-labelledby="summary-title">
+      <div class="summary-intro">
+        <div class="summary-badge"><span aria-hidden="true">✓</span>Pack complete</div>
+        <p class="eyebrow">{{ pack.name }} · {{ pulls.length }} players</p>
+        <h1 id="summary-title" class="sum-h" tabindex="-1">Your squad just<br>got stronger</h1>
+        <div class="summary-stats">
+          <div class="summary-stat new-players"><Icon name="players" :size="21" /><p><strong>{{ newCount }}</strong> new {{ newCount === 1 ? 'player' : 'players' }}</p></div>
+          <div class="summary-stat shard-stat"><Icon name="diamond" :size="21" /><p><strong>{{ shardCount }}</strong> upgrade {{ shardCount === 1 ? 'shard' : 'shards' }}</p></div>
+        </div>
+      </div>
+      <div class="sum-grid">
+        <button v-for="(p,i) in pulls" :key="i" class="sum-slot" :aria-label="`View ${BY_ID[p.id].name}, ${p.isNew ? 'new player' : 'one shard'}`" @click="viewing = i">
+          <CardFace :card="cardFor(p)" size="sm" full :class="{ 'is-new':p.isNew }" :sub="p.isNew ? 'NEW' : '+1 shard'" />
+          <i v-if="canUpgrade(p.id)" class="dot"></i>
+        </button>
+      </div>
+      <p class="summary-note">Tap a player to inspect their card</p>
+      <div class="summary-actions"><button class="btn btn-cta collection-cta" @click="go('cards')">View collection <span aria-hidden="true">›</span></button><button class="btn shop-return" @click="go('shop')">Back to shop</button></div>
+    </section>
   </div>
 </template>
 
@@ -37,6 +55,7 @@ import SealTear from '../components/SealTear.vue'
 import HoloCard from '../components/HoloCard.vue'
 import PackParticles from '../components/PackParticles.vue'
 import PackCrest from '../components/PackCrest.vue'
+import Icon from '../components/Icon.vue'
 import { flyTo } from '../ui/flyIn.js'
 import { artFor } from '../ui/art.js'
 import { reduced, uiPlay, UI_TIME } from '../ui/motion.js'
@@ -60,6 +79,7 @@ const current = computed(() => pulls.value[index.value] || {})
 const currentCard = computed(() => cardFor(current.value))
 const viewed = computed(() => viewing.value === null ? null : pulls.value[viewing.value])
 const newCount = computed(() => pulls.value.filter(p => p.isNew).length)
+const shardCount = computed(() => pulls.value.length - newCount.value)
 const shardText = computed(() => current.value.cost ? `${current.value.shards} / ${current.value.cost} shards` : `${current.value.shards} shards`)
 const fx = computed(() => ({
   C: { color:'#acbdce', charge:0, shake:0, rays:0, motion:'cardReveal' },
@@ -120,7 +140,7 @@ function next() {
     tl.to(hitEl.value,{y:-110,x:30,rotation:7,opacity:0,duration:UI_TIME.cardToss,ease:'power2.in'})
   },{onEnd:() => { if(!alive || stage.value!=='reveal') return; if(index.value===pulls.value.length-1) { summary(); return } index.value++; nextTick(reveal) }})
 }
-function summary() { stage.value='summary'; cancelMotion(); sealRef.value?.reset(); viewing.value=null; nextTick(() => summaryEl.value?.querySelector('button')?.focus({preventScroll:true})) }
+function summary() { stage.value='summary'; cancelMotion(); sealRef.value?.reset(); viewing.value=null; nextTick(() => summaryEl.value?.querySelector('h1')?.focus({preventScroll:true})) }
 function cardDown(e) { if(e.button>0 || stage.value!=='reveal') return; if(revealAnim && !revealAnim.record.done) { revealAnim.skip(); ignoreClick=true; return } if(tossAnim && !tossAnim.record.done) return; ignoreClick=false; drag={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false}; try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* The pointer may already have ended. */ } }
 function cardMove(e) { if(!drag || drag.id!==e.pointerId) return; const dx=e.clientX-drag.x,dy=e.clientY-drag.y; if(Math.hypot(dx,dy)>6) drag.moved=true; if(drag.moved) gsap.set(hitEl.value,{x:Math.max(-45,Math.min(45,dx*.3)),y:Math.max(-100,Math.min(20,dy)),rotation:dx*.025}) }
 function cardUp(e) { if(!drag || drag.id!==e.pointerId) return; const d=drag; drag=null; ignoreClick=true; if(!d.moved || e.clientY-d.y < -55) next(); else springBack() }
@@ -196,8 +216,34 @@ function goUpgrade(id) { store.upgradeTarget=id; go('upgrade') }
 .result-tag { font-size:11px; letter-spacing:.14em; font-weight:800; line-height:18px; }.new-tag { color:var(--cta); }.dup-tag { color:#cad6e5; }
 .verdict p { font-size:12px; color:#aebfd4; line-height:18px; margin:5px 0 0; }
 .gesture-hint { text-align:center; margin-top:26px; color:#e6edf7; }.gesture-hint > span { display:block; font-size:24px; line-height:30px; color:#b5cbe4; animation:nudge 2s ease-in-out infinite; }.gesture-hint p { margin:5px 0 3px; font-size:12px; }.gesture-hint small { font-size:10px; color:#8298b3; }
-.summary-stage { padding-top:24px; }.summary-intro { text-align:center; }.summary-check { display:grid;place-items:center;width:36px;height:36px;margin:0 auto 12px;border:1px solid #6fe39355;background:#20433666;color:var(--cta);border-radius:50%;font-size:20px; }.sum-h { font-size:20px; letter-spacing:-.03em; }.summary-intro p { color:#aebfd4;font-size:12px;margin:8px 0 10px; }
-.sum-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%; }.sum-slot { position:relative;cursor:pointer;display:flex;text-align:initial;min-width:0; }.sum-slot > .cf { flex:1;min-width:0; }.sum-slot :deep(.is-new .cf-role) { color:var(--cta);font-weight:800; }.summary-note { font-size:11px;color:#9badc5;margin:0 0 6px; }.viewed { width:min(100%,280px); }.viewed :deep(.cf) { width:100%; }.detail-stage { padding-top:20px; }
+.po.is-summary { padding:30px 24px 32px; scrollbar-width:none; }
+.po.is-summary::-webkit-scrollbar { display:none; }
+.summary-stage { padding-top:0; gap:0; width:100%; }
+.summary-intro { width:100%; text-align:center; padding-bottom:22px; margin-bottom:22px; border-bottom:1px solid #adc3e21f; }
+.summary-badge { display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:32px; padding:5px 12px; margin-bottom:14px; color:#54ed89; border:1px solid #54ed8980; border-radius:22px; background:#071b16a6; box-shadow:0 0 20px #36cf6c0c; text-transform:uppercase; font-size:11px; font-weight:800; letter-spacing:.11em; }
+.summary-badge span { display:grid; place-items:center; width:19px; height:19px; border-radius:50%; background:#37e779; color:#07391a; font-size:14px; letter-spacing:0; }
+.summary-intro .eyebrow { margin:0 0 12px; font-size:10px; letter-spacing:.12em; }
+.sum-h { outline:none; font-size:31px; line-height:1.14; letter-spacing:-.04em; font-weight:800; }
+.summary-stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:22px; }
+.summary-stat { display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 6px; min-height:40px; border:1px solid #a7bdd138; border-radius:9px; background:#0b1521c9; color:#bdcce0; }
+.summary-stat p { margin:0; color:#e3eaf4; font-size:12px; white-space:nowrap; }
+.summary-stat strong { font-size:19px; line-height:1; font-weight:800; margin-right:3px; }
+.new-players,.new-players strong { color:#35e978; }
+.shard-stat :deep(.icon) { fill:#bbcbdf; stroke:#dae5f3; }
+.sum-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; width:100%; }
+.sum-slot { position:relative; cursor:pointer; display:flex; text-align:initial; min-width:0; grid-column:span 2; border-radius:9px; }
+.sum-slot:nth-child(4) { grid-column:2 / span 2; }
+.sum-slot:nth-child(5) { grid-column:4 / span 2; }
+.sum-slot > .cf { flex:1; min-width:0; }
+.sum-slot:focus-visible { outline:2px solid #b8cdeb; outline-offset:4px; }
+.sum-slot :deep(.is-new .cf-role) { color:var(--cta); font-weight:800; }
+.summary-note { font-size:11px; color:#a7b9d1; line-height:1.4; margin:20px 0 22px; text-align:center; }
+.summary-actions { display:flex; flex-direction:column; gap:12px; width:100%; }
+.collection-cta { height:52px; min-height:52px; border-radius:10px; font-size:17px; gap:12px; }
+.collection-cta span { font-size:30px; line-height:1; font-weight:400; margin-top:-3px; }
+.shop-return { height:48px; min-height:48px; border:1px solid #7d91ad; border-radius:10px; color:#f0f4fa; background:#0c172366; font-size:16px; }
+.viewed { width:min(100%,280px); }.viewed :deep(.cf) { width:100%; }.detail-stage { padding-top:20px; }
+@media(max-width:370px) { .po.is-summary { padding:24px 16px 20px; }.sum-h { font-size:27px; }.summary-stats { gap:8px; margin-top:18px; }.summary-stat { gap:4px; padding:9px 4px; }.summary-stat p { font-size:10px; }.summary-stat strong { font-size:17px; margin-right:1px; }.summary-stat :deep(.icon) { width:17px !important; height:17px !important; }.summary-intro { padding-bottom:18px; margin-bottom:18px; }.sum-grid { gap:10px; }.summary-note { margin:18px 0; font-size:10px; }.collection-cta { height:48px;min-height:48px;font-size:16px; }.shop-return { height:44px;min-height:44px;font-size:15px; } }
 @keyframes motes { 50% { opacity:.15; } }@keyframes rays { to { transform:rotate(360deg); } }@keyframes nudge { 50% { opacity:.5; } }
 .is-reduced .legendary-rays::before,.is-reduced .legendary-rays::after,.is-reduced .card-particles i,.is-reduced .reveal-rays,.is-reduced .gesture-hint > span { animation:none; }
 @media(max-width:370px),(max-height:780px) { .po { padding:12px 18px 22px; }.opening-heading h1 { font-size:16px; }.opening-heading { min-height:57px; }.card-hit,.waiting-card { width:min(100%,245px); }.card-theatre { padding-top:25px;padding-bottom:16px; }.waiting-card { top:25px; }.gesture-hint { margin-top:13px; }.sealed-stage { padding-top:18px;min-height:580px; }.sealed-stage :deep(.seal) { width:210px;height:290px; }.stage-kicker { margin-bottom:18px; }.sealed-stage :deep(.seal-wrap) { margin-bottom:14px; } }

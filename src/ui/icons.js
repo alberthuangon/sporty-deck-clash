@@ -61,6 +61,10 @@ export const ICONS = {
     ['path', { d: 'M3 8.5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1.6a2 2 0 0 0 0 3.8v1.6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.6a2 2 0 0 0 0-3.8V8.5z' }],
     ['path', { d: 'M14 7.5v9', 'stroke-dasharray': '2 2' }]
   ],
+  players: [
+    ['circle', { cx:9, cy:7, r:3 }],
+    ['path', { d:'M3 20v-2a6 6 0 0 1 12 0v2M16 4a3 3 0 0 1 0 6M18 13a5 5 0 0 1 3 5v2' }]
+  ],
   diamond: [
     ['path', { d: 'M12 3.2l6.4 8.8L12 20.8 5.6 12z' }]
   ]

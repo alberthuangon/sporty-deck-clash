@@ -199,6 +199,14 @@ function finishPackReveal() {
   for (const name of ['cardReveal','cardEpicReveal','cardLegendaryReveal']) uiLast(name)?.skip()
 }
 
+function assertSummaryLayout() {
+  const slots=[...document.querySelectorAll('.sum-slot')].map(el=>el.getBoundingClientRect())
+  const grid=document.querySelector('.sum-grid').getBoundingClientRect()
+  if(slots.length!==5||slots.some(r=>Math.abs(r.width-slots[0].width)>.75||Math.abs(r.height-slots[0].height)>.75))throw new Error('All five summary cards must keep equal dimensions')
+  if(Math.abs((slots[3].left+slots[4].right)/2-(grid.left+grid.right)/2)>.75||Math.abs(slots[3].top-slots[4].top)>.75)throw new Error('The last two cards must form a centered second row')
+  if(document.querySelector('.opening-heading'))throw new Error('Summary must have one centered headline, without the old duplicate heading')
+}
+
 async function openPack (click, raf) {
   await click('[data-sfx="tear"]')
   const run = uiLast('tear')
@@ -893,8 +901,17 @@ export const CASES = [
     id: 'packopen/summary',
     screen: 'packopen',
     setup () { reset(); richCollection(); boughtPack() },
-    async act ({ click, raf }) { await openPack(click, raf); for (let i = 0; i < 5; i++) await advancePack(click, raf) }
+    async act ({ click, raf }) { await openPack(click, raf); for (let i = 0; i < 5; i++) await advancePack(click, raf); assertSummaryLayout() }
   },
+  {id:'packopen/summary-gold',screen:'packopen',setup(){reset();boughtPack('gold')},async act({click}){
+    await click('.skip-results');assertSummaryLayout()
+    if(document.querySelector('.new-players').textContent.trim()!=='4 new players'||document.querySelector('.shard-stat').textContent.trim()!=='1 upgrade shard')throw new Error('Summary must show live counts and singular shard copy')
+  }},
+  {id:'packopen/summary-upgrade-inspect',screen:'packopen',setup(){reset();store.ownedCards.F16={level:1,shards:0};boughtPack('gold')},async act({click,raf}){
+    await click('.skip-results');await click('.sum-slot',4);await raf()
+    if(!document.querySelector('.detail-stage .btn-cta')?.textContent.includes('Upgrade Zuberi'))throw new Error('Eligible summary cards must retain their upgrade entrance')
+    await click('.detail-stage > .btn:last-child');await raf();assertSummaryLayout()
+  }},
   {
     /* one of the five, looked at full size. The summary's cards are 5:7 now
        and a tap opens the same lg + foil + sway card the collection's detail
