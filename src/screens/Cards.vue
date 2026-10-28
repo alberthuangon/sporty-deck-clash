@@ -23,7 +23,6 @@
     </div>
 
     <div v-else class="detail">
-      <button class="back muted" @click="detail = null">‹ All cards</button>
       <HoloCard class="hero">
         <CardFace :card="cardOf(detail)" size="lg" :radar="false" full foil />
       </HoloCard>
@@ -92,7 +91,15 @@ function firstCost (c) { return SHARD_COST[c.rarity][1] }
 function shardText (c) { return `${entry(c.id).shards} / ${firstCost(c)}` }
 function open (id) { detail.value = id }
 
-/* the top bar's back arrow leaves the detail view before it leaves the tab */
+/* THE ONLY WAY OUT, now that the in-page "< All cards" button is gone. The
+   two did exactly the same thing — this watch has always wired the top bar's
+   arrow to `detail = null` — so the screen was offering one action twice.
+   immediate: true is what makes the OTHER entrance work: arriving with
+   store.cardTarget already set means `detail` is non-null before this watch
+   would otherwise first fire, and without `immediate` that route would land
+   on a detail page with no exit at all. Verified by state rather than by
+   reading: the arrow is 44x44 and clicking it on a cardTarget arrival puts
+   the grid back. */
 watch(detail, v => { screenBack.value = v ? () => { detail.value = null } : null }, { immediate: true })
 onUnmounted(() => { screenBack.value = null })
 function goUpgrade () { store.upgradeTarget = detail.value; go('upgrade') }
@@ -115,8 +122,6 @@ function goUpgrade () { store.upgradeTarget = detail.value; go('upgrade') }
 .slot :deep(.has-shards .cf-role) { color: var(--rc); font-weight: 700; }
 .slot :deep(.cf-role) { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .detail { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-/* padded out to a real tap target, pulled back with margin so nothing moves */
-.back { align-self: flex-start; font-size: 12px; padding: 15px 12px; margin: -12px -12px -15px; }
 /* 280, the art brief's number, and the reorder above is what pays for it:
    the card grows 207px, the page ends up 155px longer than the screen, and
    the Upgrade button still sits 267.5px above the fold because what went
