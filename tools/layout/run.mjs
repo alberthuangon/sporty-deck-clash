@@ -369,9 +369,9 @@ check('foil layers painting instead of blending', holoPainting.length, !holoPain
 
      stand-ins, 190x266   mean  C 4.96  R 21.71  E 32.12  L 38.19
                           hue   C .222  R .361   E .694   L .833
-     real art, 280x392    mean  C 2.53  R 20.93  E 20.61  L 25.55
+     real art, 280x392    mean  C 2.53  R 15.99  E 20.61  L 25.55
                           hue   C   --  R   --   E .556   L .611
-                          cov   C .020  R .455   E .497   L .771
+                          cov   C .020  R .335   E .497   L .771
      hair hue, lit        C 16.8  R 296.2  E 339.2  L 18.1  (unlit 16.8)
 
    THE SECOND ROW IS THE REAL ONE. Measured against the stand-ins the whole

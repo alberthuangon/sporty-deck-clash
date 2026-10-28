@@ -195,11 +195,20 @@
    the whole spectrum. Common's gloss now has a name — it is the lamination
    every card gets — and Rare is the first card that is actually foiled. */
 .r-R {
+  /* NARROWER, NOT DIMMER, and the distinction is the whole repair. Two white
+     bands at these peaks measured 20.93 of mean against Epic's 20.61 — a
+     lower step reading brighter than a higher one, and more obvious by eye
+     than 1.6% because a hard white edge carries more contrast than Epic's
+     colour melting into the painting. Contrast is what makes the step
+     legible; area is what makes the mean. Dimming spends both, narrowing
+     spends only the second. 22% and 21% of the sweep became 16% and 15%,
+     peaks untouched — about 45px of band on a 280px card, still a reflection
+     and not a scratch. */
   --holo-foil: linear-gradient(112deg,
-    transparent 24%, rgba(226,234,246,.30) 31%, rgba(255,255,255,.50) 35%,
-    rgba(226,234,246,.30) 39%, transparent 46%,
-    transparent 54%, rgba(214,224,240,.22) 60%, rgba(255,255,255,.38) 64%,
-    rgba(214,224,240,.22) 68%, transparent 75%);
+    transparent 27%, rgba(226,234,246,.30) 32%, rgba(255,255,255,.50) 35%,
+    rgba(226,234,246,.30) 38%, transparent 43%,
+    transparent 57%, rgba(214,224,240,.22) 61%, rgba(255,255,255,.38) 64%,
+    rgba(214,224,240,.22) 67%, transparent 72%);
   --holo-back: none;
 }
 /* Two hues, not a rainbow: the step up from Rare is "a second colour
