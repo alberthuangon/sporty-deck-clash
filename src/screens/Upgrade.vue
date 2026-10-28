@@ -15,23 +15,32 @@
         </div>
       </div>
 
+      <!-- THE TABLE IS THE CHART NOW. Six axis figures were on screen twice,
+           both copies inside one scroll, which is what Albert called out. The
+           gains move onto the chart beside the numbers they change.
+           Three things only the table was saying had to go somewhere rather
+           than quietly disappear: the gain on an axis that gains nothing (a
+           muted +0 on every axis, in RadarChart), the two invented axis names
+           (the line under the legend), and the key to the dashed polygon,
+           which the table used to make unnecessary and now does not.
+           A card at Lv.10 passes no deltas at all rather than six +0s: there
+           is no next level to gain nothing from, and "+0" there would be
+           describing an upgrade that does not exist. -->
       <div class="radwrap" :class="'r-' + BY_ID[target].rarity">
         <RadarChart ref="radarRef" :axis-keys="now.axisKeys" :values="now.axes"
-                    :ghost="next ? next.axes : null" :size="280" labels />
+                    :ghost="next ? next.axes : null" :deltas="next ? delta : null" :size="280" labels />
         <div class="legend">
           <span><i class="sw solid"></i>Now</span>
           <span><i class="sw dash"></i>Next level</span>
         </div>
-      </div>
-
-      <div class="deltas">
-        <div v-for="k in now.axisKeys" :key="k" class="drow" :class="{ zero: !delta[k] }">
-          <span>{{ AXIS_LABEL[k] }}</span>
-          <span class="dv">
-            {{ now.axes[k] }}
-            <template v-if="delta[k]"> → {{ next.axes[k] }} <b class="green">+{{ delta[k] }}</b></template>
-            <template v-else><span class="muted"> · unchanged</span></template>
-          </span>
+        <!-- SHO / DRI / PAS / DEF are football; a player who has never seen
+             this game still reads them. HOM and AWY are this product's own
+             invention — Home Spirit and Away Form, meaning he plays better at
+             home or away rather than anything about which team he is on — and
+             three letters cannot carry that. The table spelled them out in
+             full and was the only thing that did. -->
+        <div v-if="hasVenueAxes" class="axnote muted">
+          HOM · AWY — how well he plays at home and away
         </div>
       </div>
 
@@ -62,7 +71,7 @@ import { ref, computed, nextTick } from 'vue'
 import CardFace from '../components/CardFace.vue'
 import RadarChart from '../components/RadarChart.vue'
 import { store, go, cardOf, entry, canUpgrade, upgradeCost, upgradeCard, BY_ID, deckPower, deckPowerWith, powerScore } from '../game.js'
-import { buildCard, AXIS_LABEL } from '../engine/cards.js'
+import { buildCard } from '../engine/cards.js'
 
 const radarRef = ref(null)
 const target = ref(store.upgradeTarget || null)
@@ -82,6 +91,7 @@ const delta = computed(() => {
   now.value.axisKeys.forEach(k => { out[k] = next.value ? next.value.axes[k] - now.value.axes[k] : 0 })
   return out
 })
+const hasVenueAxes = computed(() => now.value.axisKeys.some(k => k === 'HOM' || k === 'AWY'))
 const inDeck = computed(() => Object.values(store.deck).includes(target.value))
 const powerBefore = computed(() => { tick.value; return deckPower() })
 const powerAfter = computed(() => {
@@ -128,11 +138,7 @@ function doUpgrade () {
    Without that the key would be a different colour from its own chart. */
 .sw { display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--radar-c, var(--green)); margin-right: 5px; vertical-align: middle; }
 .sw.dash { border-top: 2px dashed var(--cta); }
-.deltas { background: var(--surface); border-radius: var(--r-md); padding: 4px 12px; }
-.drow { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--divider); }
-.drow:last-child { border-bottom: 0; }
-.drow.zero { opacity: .5; }
-.dv { font-variant-numeric: tabular-nums; }
+.axnote { font-size: 10px; letter-spacing: .01em; text-align: center; margin-top: 2px; }
 .power { display: flex; justify-content: space-between; padding: 12px; font-size: 13px; }
 /* .banner-win carries the colour now (base.css): a state, not an action.
    It used to be a deep-green slab with a mint button sitting inside it, two

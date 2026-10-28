@@ -771,8 +771,11 @@ export const CASES = [
     setup () { reset(); richCollection(); store.ownedCards.F2 = { level: 2, shards: 99 }; store.upgradeTarget = 'F2' }
   },
   {
-    /* an axis that gains nothing prints "· unchanged" where another prints
-       "-> 66 +2": same slot, two very different lengths */
+    /* an axis that gains nothing. It used to print "· unchanged" against a
+       neighbour's "-> 66 +2" — two very different lengths in one slot — and
+       now prints a muted +0 against a mint +2 on the chart itself. Same job:
+       this is the state that proves "no gain" still SAYS something after the
+       stat table was folded into the radar. */
     id: 'upgrade/ready-off-squad',
     screen: 'upgrade',
     setup () { reset(); richCollection(); store.ownedCards.F4 = { level: 2, shards: 99 }; store.upgradeTarget = 'F4' }

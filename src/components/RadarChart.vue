@@ -15,9 +15,22 @@
       <text v-for="(k,i) in axisKeys" :key="'t'+k" class="lbl"
             :x="pt(i,1.22).x" :y="pt(i,1.22).y + 3"
             :text-anchor="anchor(i)">{{ k }}</text>
+      <!-- The gain sits WITH the number it changes, which is the whole point
+           of folding the table into the chart: the same figure was on screen
+           twice, in the same scroll.
+
+           EVERY axis renders a gain, including the ones that gain nothing.
+           The table used to say "75 · unchanged" out loud, and if an axis
+           with no gain simply showed nothing here then "this stat does not
+           improve" and "the delta failed to render" would look identical —
+           blank is not a message. A muted +0 is one.
+
+           dx, not a space: SVG collapses leading whitespace in text content,
+           so a space written in the template renders as "64+2". -->
       <text v-for="(k,i) in axisKeys" :key="'v'+k" class="val"
             :x="pt(i,1.22).x" :y="pt(i,1.22).y + 13"
-            :text-anchor="anchor(i)">{{ values[k] }}</text>
+            :text-anchor="anchor(i)">{{ values[k]
+        }}<tspan v-if="deltas" dx="2.5" :class="deltas[k] ? 'up' : 'flat'">{{ deltas[k] ? '+' + deltas[k] : '+0' }}</tspan></text>
     </g>
   </svg>
 </template>
@@ -32,7 +45,10 @@ const props = defineProps({
   ghost: { type: Object, default: null },
   size: { type: Number, default: 150 },
   max: { type: Number, default: 100 },
-  labels: { type: Boolean, default: false }
+  labels: { type: Boolean, default: false },
+  /* axis key -> how much the next level adds. Null leaves the chart exactly
+     as every other caller has it; only the upgrade screen passes one. */
+  deltas: { type: Object, default: null }
 })
 /* Where the shape is RIGHT NOW. Normally just a mirror of `values` — every
    card in every grid renders one of these and none of them animates — and
@@ -113,4 +129,9 @@ defineExpose({ poly, morph })
 .node { fill: var(--radar-c, var(--green)); }
 .lbl { font-size: 8px; fill: var(--text-2); font-weight: 700; letter-spacing: .03em; }
 .val { font-size: 9px; fill: #fff; font-weight: 700; }
+/* mint for a gain, matching the dashed next-level polygon it is describing —
+   rarity says what the card IS, green says what it gains, the same split the
+   ghost line already makes */
+.val .up { fill: var(--cta); }
+.val .flat { fill: var(--text-3, #6B7080); }
 </style>
