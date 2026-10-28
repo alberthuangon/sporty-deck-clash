@@ -863,6 +863,27 @@ export const CASES = [
 
   /* ------------------------------------------------ Upgrade */
   { id: 'upgrade/no-card', screen: 'upgrade', setup () { reset() } },
+  { id: 'upgrade/unowned-target', screen: 'upgrade', setup () { reset(); store.upgradeTarget = 'F12' }, act () {
+    if (!document.querySelector('.no-card') || document.querySelector('[data-sfx="upgrade"]')) throw new Error('An unowned player cannot enter the upgrade transaction')
+  } },
+  { id: 'upgrade/exact-shards', screen: 'upgrade', setup () { reset(); richCollection(); store.ownedCards.F2 = { level: 2, shards: 4 }; store.upgradeTarget = 'F2' }, async act ({ click }) {
+    await click('[data-sfx="upgrade"]')
+    if (store.ownedCards.F2.level !== 3 || store.ownedCards.F2.shards !== 0 || !document.querySelector('[data-sfx="upgrade"]').disabled) throw new Error('Exact-cost upgrade must deduct four shards once and disable the next upgrade')
+    if (document.querySelector('.cost-balance').textContent.includes('-')) throw new Error('Insufficient shards must not display a negative projected balance')
+  } },
+  { id: 'upgrade/last-level', screen: 'upgrade', setup () { reset(); richCollection(); store.ownedCards.F2 = { level: 9, shards: 200 }; store.upgradeTarget = 'F2' }, async act ({ click }) {
+    await click('[data-sfx="upgrade"]')
+    if (store.ownedCards.F2.level !== 10 || store.ownedCards.F2.shards !== 0 || document.querySelector('[data-sfx="upgrade"]') || document.querySelector('.hl').textContent.includes('11')) throw new Error('Final upgrade must stop at level ten without another cost or level preview')
+  } },
+  { id: 'upgrade/done-off-squad', screen: 'upgrade', setup () { reset(); richCollection(); store.ownedCards.F4 = { level: 2, shards: 4 }; store.upgradeTarget = 'F4' }, async act ({ click }) {
+    const before = game.powerScore(game.deckPower())
+    await click('[data-sfx="upgrade"]')
+    if (store.ownedCards.F4.level !== 3 || !document.querySelector('.add-squad') || game.powerScore(game.deckPower()) !== before) throw new Error('An upgraded reserve must offer squad editing without changing current squad power')
+  } },
+  { id: 'upgrade/repeat', screen: 'upgrade', setup () { reset(); richCollection(); store.ownedCards.F2 = { level: 2, shards: 99 }; store.upgradeTarget = 'F2' }, async act ({ click }) {
+    await click('[data-sfx="upgrade"]'); await click('[data-sfx="upgrade"]')
+    if (store.ownedCards.F2.level !== 4 || store.ownedCards.F2.shards !== 87 || !document.querySelector('.done-banner').textContent.includes('Lv.4')) throw new Error('Repeated upgrades must use the new cost and refresh the receipt')
+  } },
   {
     id: 'upgrade/ready-in-squad',
     screen: 'upgrade',
