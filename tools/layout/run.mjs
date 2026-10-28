@@ -127,6 +127,7 @@ const covered = gather('covered')
 const leaky = gather('leakyTakeover')
 const ragged = gather('ragged')
 const small = gather('smallTargets')
+const unsized = gather('unsizedImages')
 
 check('content cropped by its container', clipped.length, !clipped.length)
 check('elements laid out past the 430px frame', offFrame.length, !offFrame.length)
@@ -136,6 +137,7 @@ check('content hidden behind something on top of it', covered.length, !covered.l
 check('takeovers that do not take the whole frame', leaky.length, !leaky.length)
 check('grid cells whose contents are ragged', ragged.length, !ragged.length)
 check('controls under the 44px tap target', small.length, !small.length)
+check('images that reserve no space', unsized.length, !unsized.length)
 
 /* The main event. Within a group, every element the states have in common has
    to sit at the same height — a group is a set of states a player can watch

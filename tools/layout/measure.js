@@ -216,6 +216,7 @@ export function measure (scope) {
     leakyTakeover: [],  // a declared takeover that does not cover the frame
     ragged: [],         // grid cells in one row whose contents are different heights
     smallTargets: [],   // tappable things under the published 44px minimum
+    unsizedImages: [],  // <img> that reserves no space before it loads
     clipped: [],        // content cut off by an overflow:hidden ancestor
     offFrame: [],       // laid out past the edge of the 430px phone
     truncated: [],      // text cut off with no ellipsis to say so
@@ -398,6 +399,24 @@ export function measure (scope) {
       const pr = paintedRect(el, rect)
       const w = +(pr.right - pr.left).toFixed(1), h = +(pr.bottom - pr.top).toFixed(1)
       if (w > 0 && h > 0 && (w < 44 || h < 44)) out.smallTargets.push({ key, w, h, text: textOf(el) })
+    }
+
+    /* An <img> that has not arrived yet is a zero-height box, and everything
+       below it drops into place the moment it does.
+
+       THE CAMERA CANNOT CATCH THIS, which is why the check is structural
+       rather than geometric. Every state is measured after the page has
+       settled, so by then the images are in: the one frame where the bug is
+       visible is the one frame the gate never sees. `elements that move
+       between states of one screen` would catch it only if a state happened
+       to be parked mid-load, and none is.
+
+       So the contract is reserve-the-space-up-front, and either half of it
+       counts: a CSS `aspect-ratio`, or the width/height attributes, which the
+       UA stylesheet turns into the same thing (computed as `auto 500 / 700`).
+       A bare `auto` means nothing at all is reserved. */
+    if (el.tagName === 'IMG' && cs.aspectRatio.trim() === 'auto') {
+      out.unsizedImages.push({ key, src: (el.getAttribute('src') || '(none)').slice(-44) })
     }
 
     /* anything inside the frame, not just screen content — an element that
