@@ -199,13 +199,20 @@
     var(--holo-sparkle),
     linear-gradient(112deg,
       rgba(255,70,110,.30) 0%, rgba(255,180,60,.28) 14%, transparent 22%,
-      /* cyan, not green, and quieter. A saturated green at .34 colour-dodged
-         over a mid-value warm turned the player's brown hair GREEN — the one
-         thing in the frame that cannot be relit, because hair and skin are
-         identity and the kit is only costume. Cyan reads as light; green
-         reads as paint. */
-      rgba(170,255,225,.24) 32%,
-      rgba(90,190,255,.32) 44%, transparent 52%,
+      /* DESATURATED, not re-hued, and that distinction was settled by
+         experiment rather than argument. A saturated green here dodged the
+         player's brown hair to 138.8 degrees — green — and swapping the hue
+         for cyan only moved it to 196.8, because colour-dodge on a near-black
+         pixel resolves to the blend colour's hue and the base has almost no
+         say. Two arms were run against the same frames: push these two stops
+         round the wheel past the forbidden arc (hair went purple, 294.6) or
+         keep the hue and drain the saturation (hair stayed BROWN, 18.1 against
+         16.8 unlit). The second won on the ladder as well, .833 of hue spread
+         against .806 — washing a stop out costs the card less variety than
+         moving it, because the gradient keeps its position in the spectrum.
+         So the cold half of Legendary is light rather than pigment. */
+      rgba(220,255,245,.16) 32%,
+      rgba(150,210,255,.26) 44%, transparent 52%,
       rgba(180,120,255,.30) 62%, rgba(255,70,180,.28) 76%, transparent 84%,
       rgba(255,200,90,.28) 100%);
   /* the counter-reflection rides the gloss layer, which already travels the
