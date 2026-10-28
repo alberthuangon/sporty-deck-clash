@@ -30,11 +30,26 @@
    exception, and a card that only shines when hovered is a dead card to most
    of the people who will see it. So the light drifts on its own.
 
-   If the tilt shared that variable, the card would be rotating forever, and
-   a card that is always rotating cannot be measured: the layout gate compares
-   this card's four rarities against each other and caught exactly that,
-   0.2-0.3px of drift, when the first version tilted during its sweep. Light
-   drifts; geometry stays still until something actually touches it. */
+   The first version let the tilt share that variable and the layout gate
+   caught it: this card's four rarities are compared against each other, and a
+   card that is always rotating measured 0.2-0.3px apart between them. The
+   conclusion drawn then — "light drifts; geometry stays still" — was the
+   cheap half of the fix. The expensive half is that the gate was sampling a
+   moving thing at whatever moment it happened to look, and the answer to that
+   is to name the moment, not to stop the movement. It now does (tools/layout
+   pins the phase), so the geometry drifts too.
+
+   ONE CLOCK. --holo-d runs -1 -> +1 -> -1 over seven seconds and everything
+   that drifts is derived from it: the light's position, the tilt, the lean of
+   the shadow. Two tracks that both say "where are we in the cycle" can come
+   apart in a later edit and the symptom — light going one way, card going the
+   other — is the exact thing this is for.
+
+   And the derivation is not a new set of numbers. The drift's tilt IS the
+   pointer formula evaluated at the drifting position, so the idle card is
+   indistinguishable from one with a finger resting where the light is. That
+   is what "same phase" means here, and it is why there is no second
+   amplitude to keep in sync with the first. */
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { reduced } from '../ui/motion.js'
 
@@ -172,6 +187,9 @@ const vars = computed(() => {
     '--holo-px': (px.value * 100).toFixed(2) + '%',
     '--holo-py': (py.value * 100).toFixed(2) + '%',
     '--holo-g': g.toFixed(4),
+    /* the one tilt constant, shared with the drift's own amplitude in CSS so
+       there is no second number to keep in step with this one */
+    '--holo-tilt': props.tilt + 'deg',
     '--holo-rx': ((py.value - 0.5) * props.tilt * 2 * g).toFixed(2) + 'deg',
     '--holo-ry': ((0.5 - px.value) * props.tilt * 2 * g).toFixed(2) + 'deg',
     '--holo-sx': ((px.value - 0.5) * -14 * g).toFixed(1) + 'px',
@@ -183,12 +201,15 @@ const vars = computed(() => {
 <style scoped>
 /* Registered so the drift can INTERPOLATE. An unregistered custom property
    animates discretely — it would jump at the midpoint instead of travelling,
-   and the whole effect depends on it travelling. */
-@property --holo-dx {
-  syntax: '<percentage>'; inherits: true; initial-value: 50%;
-}
-@property --holo-dy {
-  syntax: '<percentage>'; inherits: true; initial-value: 50%;
+   and the whole effect depends on it travelling.
+
+   Only the CLOCK is animated, so only the clock has to be registered: --holo-d
+   is a plain number and everything else is a calc on it. The old version
+   animated the light's two coordinates directly and needed both registered;
+   deriving them costs nothing and removes the possibility of the two tracks
+   disagreeing about where in the cycle we are. */
+@property --holo-d {
+  syntax: '<number>'; inherits: true; initial-value: 0;
 }
 @property --holo-g {
   syntax: '<number>'; inherits: true; initial-value: 0;
@@ -206,29 +227,66 @@ const vars = computed(() => {
   /* up and down still scrolls the page; sideways is the card's */
   touch-action: pan-y;
   animation: holo-idle 7s ease-in-out infinite;
+
+  /* WHERE THE DRIFT IS LOOKING. 50% +/- 16% horizontally and +/- 8%
+     vertically: over a third of the card one way and a sixth the other, which
+     is a card held in a hand that is not quite still rather than a scanner
+     sweeping it. */
+  --holo-dx: calc(50% + var(--holo-d) * 16%);
+  --holo-dy: calc(50% + var(--holo-d) * 8%);
   --holo-x: calc(var(--holo-dx) + (var(--holo-px, 50%) - var(--holo-dx)) * var(--holo-g));
   --holo-y: calc(var(--holo-dy) + (var(--holo-py, 50%) - var(--holo-dy)) * var(--holo-g));
+
+  /* HOW FAR THE DRIFT TURNS THE CARD, and the numbers are not new ones.
+     The pointer turns the card by (0.5 - x) * tilt * 2; evaluate that at the
+     drift's own excursion — 0.16 of the card sideways, 0.08 up and down — and
+     you get tilt * 0.32 and tilt * 0.16. So this is the same formula, applied
+     to the place the light is already looking from, and there is exactly one
+     tilt constant in the component (--holo-tilt, written by the script).
+     At the default 9deg that is +/-2.9deg of yaw and +/-1.4 of pitch.
+     Sideways dominates because that is the gesture: someone turning a card in
+     their fingers to catch the light, not nodding it. */
+  --holo-dry: calc(var(--holo-d) * var(--holo-tilt, 9deg) * -0.32);
+  --holo-drx: calc(var(--holo-d) * var(--holo-tilt, 9deg) * 0.16);
+  /* the same lean applied to the shadow's 14px, so the card and the thing it
+     casts agree about which way it is facing */
+  --holo-dsx: calc(var(--holo-d) * -2.24px);
+  --holo-dsy: calc(var(--holo-d) * -1.12px);
 }
-/* The default state is MOVING, not off. Seven seconds there and back, over a
-   third of the card rather than all of it: this is a card held in a hand that
-   is not quite still, not a scanner sweeping. A pointer or a tilted phone
-   takes over while it is there and hands back when it goes. */
+/* The default state is MOVING, not off: a phone has no cursor, so "nothing is
+   touching the card" is the normal case rather than the exception. Seven
+   seconds there and back. A pointer or a tilted phone takes over while it is
+   there and hands back when it goes. */
 @keyframes holo-idle {
-  0%   { --holo-dx: 34%; --holo-dy: 42%; }
-  50%  { --holo-dx: 66%; --holo-dy: 58%; }
-  100% { --holo-dx: 34%; --holo-dy: 42%; }
+  0%   { --holo-d: -1; }
+  50%  { --holo-d: 1; }
+  100% { --holo-d: -1; }
 }
 /* Reduced motion stops the movement and keeps the finish: the foil carries
    rarity, so switching it off would tell those players their Legendary is a
-   Common. */
-.holo.still { animation: none; --holo-dx: 50%; --holo-dy: 50%; }
+   Common. One line does it now — with the clock stopped --holo-d falls back to
+   its registered initial value of 0, which is the card square on and the light
+   in the middle. */
+.holo.still { animation: none; }
 
 .holo :deep(.cf) {
-  transform: rotateX(var(--holo-rx, 0deg)) rotateY(var(--holo-ry, 0deg));
+  /* MIXED, not switched, exactly as the light above is: the drift's angle
+     fades out as --holo-g fades in, so a finger arriving does not fight the
+     idle sway and letting go eases back into it instead of snapping. The
+     script has already multiplied its own half by g, which is why only the
+     drift's half carries (1 - g). */
+  transform:
+    rotateX(calc(var(--holo-drx, 0deg) * (1 - var(--holo-g)) + var(--holo-rx, 0deg)))
+    rotateY(calc(var(--holo-dry, 0deg) * (1 - var(--holo-g)) + var(--holo-ry, 0deg)));
   transform-style: preserve-3d;
   will-change: transform;
   /* the card's own drop shadow leans the other way as it turns — without it
-     the card moves and its shadow does not, which reads as a sticker */
-  box-shadow: var(--holo-sx, 0) var(--holo-sy, 4px) 18px rgba(0,0,0,.5), var(--cf-shadow);
+     the card moves and its shadow does not, which reads as a sticker.
+     0px rather than 0 in the fallbacks: a bare zero is unitless and adding it
+     to a length inside calc makes the whole declaration invalid. */
+  box-shadow:
+    calc(var(--holo-dsx, 0px) * (1 - var(--holo-g)) + var(--holo-sx, 0px))
+    calc(var(--holo-dsy, 0px) * (1 - var(--holo-g)) + var(--holo-sy, 4px))
+    18px rgba(0,0,0,.5), var(--cf-shadow);
 }
 </style>

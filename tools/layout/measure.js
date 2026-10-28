@@ -444,6 +444,34 @@ export function measure (scope) {
     }
   }
 
+  /* ROWS ARE LAYOUT, AND A TILTED CARD'S PAINTED TOP IS NOT.
+
+     The holo card leans 2.9deg under a perspective, and under a perspective a
+     box's painted top is a function of its horizontal position as well as its
+     vertical one: six probes planted at the SAME layout y and 50px apart paint
+     3.07px apart, and 0px apart with the lean taken out. So `rect.top` inside
+     that card answers "same row and same x", while the invariance group only
+     ever claimed the first — and the three states it failed on were an empty
+     venue span against an "H", and an "ST" role code against a "CM". Different
+     letters, same row.
+
+     So the anchor takes the LAYOUT top: the same element read with the sway at
+     its zero point. Nothing is switched off and nothing is exempted — every
+     paint-based check below still runs on the leaning card, and the lean
+     itself is measured, bounded and required to be identical from card to card
+     (`holo sway` in run.mjs). What moved is only which of the two questions
+     this number answers.
+
+     Elements outside a transformed subtree read identically either way, so the
+     map covers everything rather than guessing who is affected: guessing the
+     window is how three measurements in this project came back wrong. */
+  const flatTop = new Map()
+  if (typeof window !== 'undefined' && window.__flatten) {
+    window.__flatten(() => {
+      for (const el of phone.querySelectorAll('*')) flatTop.set(el, el.getBoundingClientRect().top)
+    })
+  }
+
   const seen = new Map()
   const anchorSeen = new Map()
   for (const el of phone.querySelectorAll('*')) {
@@ -465,7 +493,8 @@ export function measure (scope) {
       const an = anchorKey(el)
       const i = (anchorSeen.get(an) || 0) + 1
       anchorSeen.set(an, i)
-      out.anchors[i === 1 ? an : `${an}#${i}`] = +rect.top.toFixed(1)
+      const top = flatTop.has(el) ? flatTop.get(el) : rect.top
+      out.anchors[i === 1 ? an : `${an}#${i}`] = +top.toFixed(1)
     }
 
     if (!decorative(el)) {

@@ -333,6 +333,56 @@ const holoTappable = holo.filter(h => h.pointer !== 'none')
    necessary: a foil clipped to the artwork could only ever hide artwork. */
 const holoPainting = holo.filter(h => h.solidBg)
 
+/* THE SWAY, both ways round.
+
+   The card drifts on a seven-second clock and the harness pins the phase so
+   the 81 states can be compared at all (see screens.js). A pin is a powerful
+   thing to hand a gate: pinned to the middle of the travel, the whole sweep
+   would measure a card standing still and every geometry assertion above
+   would quietly be describing something the player never sees. So the pin is
+   checked, from both sides.
+
+   `at` is the yaw the sweep itself was measured at — sin(2.9deg) = .0502 when
+   the pin is where it should be, 0 if anyone moves it to the flat point or
+   takes the sway out of the component. Half the cap is a wide tolerance on
+   purpose: the claim is "the card was leaning", not a second copy of the
+   amplitude, which the line below owns.
+
+   The budget below is TWO numbers because one of them turned out to measure
+   the wrong axis. `spread` is how far apart the two ends of the travel are —
+   3.3px at the 320px pack reveal — and the obvious reading is that it bounds
+   the sway. It does not: tripling the YAW alone left it at 5.0 and the gate
+   green, because vertical extent is driven by the pitch and the yaw only
+   reaches it through a second-order perspective term. The sway is a yaw; a
+   budget that barely moves when the yaw triples is not its budget.
+
+   So the yaw is bounded in its own units. The band is 1.4deg to 4.3deg around
+   a designed 2.9 — the lower half is `measured standing still` above, the
+   upper half is here, and 4.3 is where the request's own "within 3 to 4
+   degrees" runs out. `spread` stays, bounding the thing it really does
+   measure: how far the card's box walks the page. Six is enough for the
+   320px reveal and not enough for twice the movement.
+
+   Together these replace "the geometry never moves", and they are weaker
+   than what they replaced — they bound the movement instead of forbidding
+   it, which is what it means to have asked for the movement. */
+const SWAY_CAP = 6
+const SWAY_YAW = 0.0502
+const sway = screens.results.filter(r => r.rendered && r.sway).map(r => ({ state: r.id, ...r.sway }))
+const swayFlat = sway.filter(s => s.at < SWAY_YAW / 2)
+const swayBig = sway.filter(s => s.spread > SWAY_CAP || s.at > SWAY_YAW * 1.5)
+/* The piece of the invariance claim the anchors can no longer carry.
+
+   `a card's geometry may not depend on WHICH card it is` used to be one
+   assertion because geometry was one thing. Now it is two: the rows, which
+   the anchors still compare exactly, and the lean, which they deliberately
+   read past. A Legendary that swayed twice as far as a Common would walk
+   every row under it on a real phone and clear all 38 checks above — so the
+   yaw every state was photographed at has to be the same yaw. An angle, not
+   a distance: the hero is 280px and the pack reveal is 320, and the same
+   rotation on a bigger card moves more pixels on purpose. */
+const swayYaws = [...new Set(sway.map(s => s.at))]
+
 const early = screens.results.filter(r => r.tooEarly).map(r => ({ state: r.id }))
 
 console.log(`\nUI animations stay inside the budget  (${motion.length} play(s) across the sweep)\n`)
@@ -352,6 +402,9 @@ check('chrome that does not match its token', chromeDrift.length, !chromeDrift.l
 check('foil layers you cannot see through', holoSolid.length, !holoSolid.length && !!holo.length)
 check('foil layers that could eat a tap', holoTappable.length, !holoTappable.length)
 check('foil layers painting instead of blending', holoPainting.length, !holoPainting.length)
+check('holo cards measured standing still', swayFlat.length, !swayFlat.length && !!sway.length)
+check('holo sway past its budget', swayBig.length, !swayBig.length)
+check('cards that lean by different amounts', swayYaws.length, swayYaws.length === 1)
 
 /* THE BASELINE LIVES HERE, in the line that prints every run, because the
    alternative is somebody's memory or a file in a scratchpad.
@@ -420,6 +473,12 @@ if (holo.length) {
   }
 }
 
+if (sway.length) {
+  const worst = sway.reduce((a, b) => (b.spread > a.spread ? b : a))
+  console.log(`\n  note: holo sway measured in ${sway.length} state(s) — worst ${worst.spread}px ` +
+    `(${worst.state}), pinned at yaw ${worst.at} of a ${SWAY_CAP}px cap`)
+}
+
 if (ellipsised.length) {
   console.log(`\n  note: ${ellipsised.length} label(s) ellipsised — truncated, but visibly so:`)
   ellipsised.forEach(e => console.log(`    ${e.state}  ${e.key}  -${e.over}px  "${e.text}"`))
@@ -468,6 +527,14 @@ if (fail.length) {
   if (!holo.length) console.log('  foil never measured: no state in the sweep shows a holo card')
   holoSolid.forEach(h => console.log(`  foil too solid: ${h.state}  ${h.key} hides up to ${h.effective} (stop ${h.maxStopAlpha} x opacity ${h.opacity})`))
   holoTappable.forEach(h => console.log(`  foil takes taps: ${h.state}  ${h.key} pointer-events: ${h.pointer}`))
+  if (!sway.length) console.log('  sway never measured: no state in the sweep shows a holo card')
+  swayFlat.forEach(s2 => console.log(`  measured flat: ${s2.state} was photographed at yaw ${s2.at} — the pin is off the sway`))
+  swayBig.forEach(s2 => console.log(`  sways too far: ${s2.state} leans ${s2.at} (cap ${(SWAY_YAW * 1.5).toFixed(4)}) ` +
+    `and moves ${s2.spread}px between the ends of its drift (cap ${SWAY_CAP})`))
+  if (swayYaws.length > 1) {
+    console.log(`  leans differ: yaw takes values ${swayYaws.join(', ')}`)
+    for (const y of swayYaws) console.log(`    ${y}  ${sway.filter(s2 => s2.at === y).map(s2 => s2.state).join(' ')}`)
+  }
   console.log('')
   process.exit(1)
 }

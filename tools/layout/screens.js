@@ -29,6 +29,90 @@ import { uiResetReport, uiReport, uiCancelAll, UI_BUDGET } from '../../src/ui/mo
 
 gsap.ticker.lagSmoothing(0)
 
+/* THE DRIFT HAS A PHASE, SO THE GATE HAS TO NAME ONE.
+
+   The holo card sways on a seven-second clock, and the sweep walks 81 states
+   that take different amounts of virtual time to reach. Measured without a
+   pin, the four rarities landed 0.1px apart and the four pack-reveal states
+   did too — not because any card is a different shape, but because the camera
+   fired at four different moments of the same movement. Eight findings, all
+   of them the harness's.
+
+   The obvious fix is to stop the animation for the sweep, and it is the wrong
+   one: a gate that switches a thing off to measure it is measuring something
+   the player never sees, and this repo has a name for that. So the clock keeps
+   running and the VALUE it writes is overridden instead. An !important author
+   declaration outranks a CSS animation (verified: --holo-d reads exactly 1
+   with animation-play-state still `running`), so every state is measured at
+   d = +1 — the far end of the sway, 2.9deg of yaw, the hardest case rather
+   than the easiest.
+
+   What that buys: a geometric difference between two states is a real
+   difference in the card, because the phase is no longer free to vary.
+   What it gives up, honestly: nothing asserts the card holds still over time
+   any more, because it no longer does. That one claim is replaced by three
+   narrower ones in run.mjs — the lean is real, it is the same lean on every
+   card, and it is bounded. */
+const PIN_HI = 'skd-holo-hi'
+const PIN_LO = 'skd-holo-lo'
+const PIN_MID = 'skd-holo-mid'
+const pinStyle = document.createElement('style')
+pinStyle.textContent =
+  `.${PIN_HI} .holo { --holo-d: 1 !important; }` +
+  `.${PIN_LO} .holo { --holo-d: -1 !important; }` +
+  `.${PIN_MID} .holo { --holo-d: 0 !important; }`
+document.head.appendChild(pinStyle)
+const htmlEl = document.documentElement
+const pin = at => { htmlEl.classList.remove(PIN_HI, PIN_LO, PIN_MID); htmlEl.classList.add(at) }
+pin(PIN_HI)
+
+/* Lent to measure.js so the invariance anchors can read a row's LAYOUT
+   position. Under a perspective lean a box's painted top also depends on
+   where it sits horizontally, and a row is not a horizontal claim — the long
+   version is beside the anchors in measure.js. try/finally because a throw in
+   the middle would leave the whole sweep pinned flat, and a harness stuck in
+   the wrong state is the quietest kind of green. */
+window.__flatten = fn => {
+  /* restores the pin it FOUND, not a hardcoded one. measure() captures its
+     paint layers before it asks for this and its content boxes after, so a
+     restore that disagrees with the entry state compares a flat layer against
+     a leaning name: 22 invented `content partly hidden` findings, every one of
+     them the harness measuring two different cards. Found by deliberately
+     entering at the wrong pin, which is the only way it could have shown up.
+     try/finally because a throw here would leave the whole sweep pinned flat,
+     and a harness stuck in the wrong state is the quietest kind of green. */
+  const was = [PIN_HI, PIN_LO, PIN_MID].find(c => htmlEl.classList.contains(c)) || PIN_HI
+  pin(PIN_MID)
+  try { fn() } finally { pin(was) }
+}
+
+/* How far the sway actually moves the card, measured by putting it at each
+   end of its own travel. */
+function swayOf () {
+  const cf = document.querySelector('.screen .holo .cf')
+  if (!cf) return null
+  const read = at => {
+    pin(at)
+    const r = cf.getBoundingClientRect()
+    const t = getComputedStyle(cf).transform
+    const m = t === 'none' ? 0 : +t.slice(t.indexOf('(') + 1).split(',')[2]
+    return { top: r.top, h: r.height, yaw: Number.isFinite(m) ? m : 0 }
+  }
+  const hi = read(PIN_HI)
+  const lo = read(PIN_LO)
+  /* `at` is read LAST, from whatever state this function leaves the page in —
+     NOT from the `hi` sample above. Taken from `hi` it reported a leaning card
+     no matter where the sweep was really pinned, which is the exact shape of
+     lie the assertion exists to catch: proven by pinning the sweep flat and
+     watching all 39 checks stay green. It only means "the sweep measured a
+     leaning card" if it is the sweep's own pin that gets measured. */
+  const back = read(PIN_HI)
+  return {
+    at: +Math.abs(back.yaw).toFixed(4),
+    spread: +Math.max(Math.abs(hi.top - lo.top), Math.abs(hi.h - lo.h)).toFixed(2)
+  }
+}
+
 const errors = []
 const app = createApp(App)
 app.config.errorHandler = (err, inst, info) => {
@@ -199,6 +283,7 @@ window.__screens = async () => {
         bg: getComputedStyle(el).backgroundColor,
         bgImage: getComputedStyle(el).backgroundImage
       }))
+      rec.sway = swayOf()
       const el = document.querySelector(`.screen[data-screen="${c.screen}"]`)
       rec.rendered = !!el && el.getBoundingClientRect().height > 0
       rec.nodes = el ? el.querySelectorAll('*').length : 0
