@@ -504,12 +504,17 @@ export const CASES = [
   /* ------------------------------------------------ Rank */
   { id: 'rank/fresh', screen: 'rank', group: 'rank-road', setup () { reset() } },
   {
-    /* claimed nodes only change colour and opacity */
+    /* Reward status and the next-reward preview must keep the road stable. */
     id: 'rank/claimed-nodes',
     screen: 'rank',
     group: 'rank-road',
     setup () { reset(); store.rank = { score: 20, tierIndex: 0, subtier: 2, peakNodes: ['b3', 'b2'] }; store.tickets = 5 }
   },
+
+  { id: 'rank/rules-open', screen: 'rank', setup () { reset() }, act () { document.querySelector('.rank-help summary').click() } },
+  { id: 'rank/major-promotion', screen: 'rank', setup () { reset(); store.rank = { score: 49, tierIndex: 0, subtier: 1, peakNodes: ['b3', 'b2'] } } },
+  { id: 'rank/demoted-after-rewards', screen: 'rank', setup () { reset(); store.rank = { score: 10, tierIndex: 0, subtier: 3, peakNodes: ['b3', 'b2'] } } },
+  { id: 'rank/champion', screen: 'rank', setup () { reset(); store.rank = { score: 1320, tierIndex: 5, subtier: 3, peakNodes: ['b3', 'b2', 'b1', 's3', 's2', 's1', 'g3', 'g2'] } } },
 
   /* ------------------------------------------------ History */
   { id: 'history/empty', screen: 'history', setup () { reset() } },
