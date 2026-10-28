@@ -506,6 +506,26 @@ export const CASES = [
     screen: 'cards',
     setup () { reset(); richCollection(); store.ownedCards.F1 = { level: 2, shards: 99 }; store.cardTarget = 'F1' }
   },
+  { id: 'cards/detail-max-level', screen: 'cards', setup () { reset(); store.ownedCards.G1 = { level: 10, shards: 99 }; store.cardTarget = 'G1' }, act () {
+    if (!document.querySelector('.max-level-panel') || document.querySelector('.shard-track') || document.querySelector('.detail-upgrade')) throw new Error('Max-level cards must not offer another upgrade')
+  } },
+  { id: 'cards/detail-locked-shards', screen: 'cards', setup () { reset(); store.ownedCards.F12 = { level: 0, shards: 1 }; store.cardTarget = 'F12' }, act () {
+    if (!document.querySelector('.unowned-panel .saved-shards') || document.querySelector('.shard-track') || document.querySelector('.hero .cf-lv').textContent.trim()) throw new Error('Uncollected shards must not suggest ownership or an upgrade path')
+  } },
+  { id: 'cards/detail-one-shard-short', screen: 'cards', setup () { reset(); store.ownedCards.G1 = { level: 1, shards: 1 }; store.cardTarget = 'G1' }, act () {
+    const button = document.querySelector('.detail-upgrade')
+    if (!button?.disabled || button.textContent.trim() !== 'Need 1 more shard') throw new Error('One missing shard must be singular and disable the upgrade action')
+  } },
+  { id: 'cards/detail-shop-link', screen: 'cards', setup () { reset(); store.cardTarget = 'G1' }, async act ({ click }) {
+    await click('.detail-shop')
+    if (store.currentScreen !== 'shop') throw new Error('The card-pack link must open Shop')
+    store.cardTarget = 'G1'; game.go('cards')
+  } },
+  { id: 'cards/detail-upgrade-link', screen: 'cards', setup () { reset(); store.ownedCards.G1 = { level: 1, shards: 2 }; store.cardTarget = 'G1' }, async act ({ click }) {
+    await click('.detail-upgrade')
+    if (store.currentScreen !== 'upgrade' || store.upgradeTarget !== 'G1') throw new Error('Upgrade must open the existing upgrade screen for this player')
+    store.cardTarget = 'G1'; game.go('cards')
+  } },
 
   /* ------------------------------------------------ Shop */
   { id: 'shop/affordable', screen: 'shop', group: 'shop-packs', setup () { reset(); store.diamonds = 900 } },

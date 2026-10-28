@@ -1,5 +1,5 @@
 <template>
-  <div ref="viewport" class="scroll pad cards-page">
+  <div ref="viewport" class="scroll pad cards-page" :class="{ 'detail-mode': detail }">
     <div v-if="!detail" class="collection">
       <section class="collection-summary" aria-label="Collection progress">
         <p class="eyebrow">Your collection</p>
@@ -28,41 +28,47 @@
     </div>
 
     <div v-else class="detail">
-      <HoloCard class="hero">
-        <CardFace :card="cardOf(detail)" size="lg" :radar="false" full foil />
-      </HoloCard>
-      <div class="shards">
-        <div class="srow">
-          <span class="muted">Shards</span>
-          <span>{{ entry(detail).shards }} / {{ cost }}</span>
+      <section class="detail-stage" aria-label="Player card">
+        <div class="detail-badges">
+          <span class="rarity-badge" :class="'r-' + BY_ID[detail].rarity">{{ RARITY[BY_ID[detail].rarity].label }}</span>
+          <span class="ownership-badge" :class="{ 'is-squad': inSquad(detail) }"><span aria-hidden="true">{{ inSquad(detail) ? '✓' : !isOwned(detail) ? '◇' : '•' }}</span>{{ inSquad(detail) ? 'In squad' : isOwned(detail) ? 'Owned' : 'Not collected' }}</span>
         </div>
-        <div class="bar"><i :style="{ width: barPct + '%' }"></i></div>
-      </div>
-      <button v-if="isOwned(detail) && cost" class="btn" :class="{ 'btn-cta': canUpgrade(detail) }"
-              :disabled="!canUpgrade(detail)" @click="goUpgrade">
-        {{ canUpgrade(detail) ? 'Upgrade to Lv.' + (entry(detail).level + 1) : 'Need more shards' }}
-      </button>
-      <div v-else-if="!isOwned(detail)" class="locked-note">
-        <Icon name="lock" /> Not in your collection yet — pull it from a card pack.
-      </div>
-      <div v-else class="locked-note">Max level reached.</div>
-      <!-- The radar and the table come AFTER the action, and the order is the
-           whole fix. A 280x392 hero pushes 207px down the page; with the two
-           read-only blocks still above it the Upgrade button lands 142.7px
-           BELOW the fold, which no assertion here can catch — the gate asks
-           whether a control got squashed, not whether anyone can see it.
-           Moved, the same page costs the same 155px of scroll and the button
-           sits 267.5px above the fold, because what went under it is the part
-           you read rather than the part you press.
-           Reordered in the MARKUP rather than with `order`, so the screen
-           reader and the tab ring agree with the eye. -->
-      <RadarChart :axis-keys="cardOf(detail).axisKeys" :values="cardOf(detail).axes"
-                  :size="260" labels class="rad" :class="'r-' + BY_ID[detail].rarity" />
-      <div class="meta">
-        <div class="mrow"><span class="muted">Rarity</span><span>{{ RARITY[BY_ID[detail].rarity].label }}</span></div>
-        <div class="mrow"><span class="muted">Level</span><span>{{ entry(detail).level || '—' }} / 10</span></div>
-        <div class="mrow"><span class="muted">Total points</span><span>{{ cardOf(detail).total }}</span></div>
-        <div class="mrow"><span class="muted">Single-axis cap</span><span>{{ cardOf(detail).cap }}</span></div>
+        <HoloCard class="hero">
+          <CardFace :card="detailCard" size="lg" :radar="false" :locked="!isOwned(detail)" full foil />
+        </HoloCard>
+      </section>
+      <div class="detail-body">
+        <section class="detail-meta" aria-label="Card information">
+          <div><span>Level</span><strong>{{ isOwned(detail) ? entry(detail).level : '—' }} <small>/ 10</small></strong></div>
+          <div><span>Total points</span><strong>{{ detailCard.total }}</strong></div>
+          <div><span>Per-axis cap</span><strong>{{ detailCard.cap }}</strong></div>
+        </section>
+
+        <section v-if="isOwned(detail) && cost" class="upgrade-panel" aria-labelledby="upgrade-heading">
+          <div class="detail-panel-head"><h2 id="upgrade-heading">Next upgrade</h2><span class="next-level">Lv.{{ entry(detail).level + 1 }}</span></div>
+          <div class="shard-row"><span>Shards</span><strong>{{ entry(detail).shards }} / {{ cost }}</strong></div>
+          <div class="shard-track" role="progressbar" aria-label="Shards for next upgrade" :aria-valuenow="Math.min(entry(detail).shards, cost)" :aria-valuemin="0" :aria-valuemax="cost"><i :style="{ width: barPct + '%' }" /></div>
+          <p class="shard-hint" :class="{ ready: canUpgrade(detail) }">{{ canUpgrade(detail) ? 'Ready to take this player to the next level.' : `${remainingShards} more shard${remainingShards === 1 ? '' : 's'} needed` }}</p>
+          <button class="btn detail-upgrade" :class="{ 'btn-cta': canUpgrade(detail) }" :disabled="!canUpgrade(detail)" @click="goUpgrade">{{ canUpgrade(detail) ? 'Upgrade to Lv.' + (entry(detail).level + 1) : `Need ${remainingShards} more shard${remainingShards === 1 ? '' : 's'}` }}</button>
+          <button v-if="!canUpgrade(detail)" class="detail-shop" @click="go('shop')">Find card packs in Shop <span aria-hidden="true">›</span></button>
+        </section>
+        <section v-else-if="!isOwned(detail)" class="upgrade-panel unowned-panel" aria-labelledby="unowned-heading">
+          <div class="detail-panel-head"><h2 id="unowned-heading"><Icon name="lock" :size="15" /> Not collected</h2></div>
+          <p>Find this player in a card pack to add them to your collection.</p>
+          <p v-if="entry(detail).shards" class="saved-shards">{{ shardText(BY_ID[detail]) }} saved. Shards upgrade players you already own.</p>
+          <button class="btn btn-cta detail-upgrade" @click="go('shop')">Find card packs in Shop <span aria-hidden="true">›</span></button>
+        </section>
+        <section v-else class="upgrade-panel max-level-panel" aria-labelledby="max-heading">
+          <div class="detail-panel-head"><h2 id="max-heading">Max level reached</h2><span class="complete-badge">Lv.10</span></div>
+          <p>This player has reached the highest level.</p>
+        </section>
+
+        <section class="attributes-panel" :class="'r-' + BY_ID[detail].rarity" aria-labelledby="attributes-heading">
+          <div class="detail-panel-head"><h2 id="attributes-heading">Player attributes</h2><span class="attribute-info" aria-hidden="true">ⓘ</span></div>
+          <p v-if="!isOwned(detail)" class="attribute-preview">Lv.1 preview · Collect this player to use them.</p>
+          <RadarChart :axis-keys="detailCard.axisKeys" :values="detailCard.axes" :size="244" labels class="rad" role="img" :aria-label="attributeSummary" />
+          <dl class="axis-key"><div v-for="axis in detailCard.axisKeys" :key="axis"><dt>{{ axis }}</dt><dd>{{ AXIS_LABEL[axis] }}</dd></div></dl>
+        </section>
       </div>
     </div>
   </div>
@@ -76,7 +82,7 @@ import HoloCard from '../components/HoloCard.vue'
 import RadarChart from '../components/RadarChart.vue'
 import { store, go, CATALOGUE, BY_ID, cardOf, entry, owned as isOwned, canUpgrade, upgradeCost, RARITY } from '../game.js'
 import { screenBack } from '../store.js'
-import { SHARD_COST } from '../engine/economy.js'
+import { AXIS_LABEL } from '../engine/cards.js'
 
 const detail = ref(store.cardTarget || null)
 const viewport = ref(null)
@@ -105,12 +111,11 @@ function inSquad (id) { return isOwned(id) && Object.values(store.deck).includes
 function cardLabel (c) { return `${c.name}, ${RARITY[c.rarity].label}, ${isOwned(c.id) ? 'level ' + entry(c.id).level : 'not collected, ' + shardText(c)}${inSquad(c.id) ? ', in squad' : ''}${canUpgrade(c.id) ? ', upgrade ready' : ''}` }
 function clearFilters () { ownership.value = 'all'; rarity.value = 'all' }
 
-/* shards needed for the next step: the next level if owned, otherwise the
-   Lv.1 -> Lv.2 cost, so an unowned card still shows meaningful progress */
-const cost = computed(() => {
-  if (!detail.value) return null
-  return upgradeCost(detail.value) ?? SHARD_COST[BY_ID[detail.value].rarity][1]
-})
+const detailCard = computed(() => detail.value ? cardOf(detail.value) : null)
+// Only owned, non-max cards have an upgrade cost. Uncollected shards never unlock a player.
+const cost = computed(() => detail.value && isOwned(detail.value) ? upgradeCost(detail.value) : null)
+const remainingShards = computed(() => cost.value ? Math.max(0, cost.value - entry(detail.value).shards) : 0)
+const attributeSummary = computed(() => detailCard.value ? detailCard.value.axisKeys.map(k => `${AXIS_LABEL[k]} ${detailCard.value.axes[k]}`).join(', ') : '')
 const barPct = computed(() => {
   if (!detail.value || !cost.value) return 0
   return Math.min(100, (entry(detail.value).shards / cost.value) * 100)
@@ -183,17 +188,54 @@ function goUpgrade () { store.upgradeTarget = detail.value; go('upgrade') }
 .collection-empty p { margin:0 0 7px; font-size:12px; }
 .collection-empty .btn { max-width:220px; font-size:13px; }
 @media(max-width:370px) { .collection-summary { padding:12px; } .collection-filters button { font-size:10px; gap:4px; } .select-wrap select { font-size:10px; padding-left:9px; padding-right:23px; } .grid { gap:10px 7px; } .card-status { font-size:8px; gap:2px; } }
-.detail { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-/* 280, the art brief's number, and the reorder above is what pays for it:
-   the card grows 207px, the page ends up 155px longer than the screen, and
-   the Upgrade button still sits 267.5px above the fold because what went
-   under it is the radar and the stat table rather than the action. */
-.hero { width: 280px; }
-.hero :deep(.cf) { width: 100%; }
-.rad { margin: 2px 0; }
-.meta, .shards { width: 100%; background: var(--surface); border-radius: var(--r-md); padding: 10px 12px; }
-.mrow, .srow { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
-.bar { height: 6px; background: var(--surface-hi); border-radius: 999px; overflow: hidden; margin-top: 6px; }
-.bar i { display: block; height: 100%; background: var(--cta); }
-.detail > .btn { width: 100%; }
+
+.cards-page.detail-mode { padding:0; }
+.detail { display:flex; flex-direction:column; min-height:100%; }
+.detail-stage { display:flex; flex-direction:column; align-items:center; gap:12px; padding:16px 12px 16px; background:linear-gradient(180deg,#14202d66,#191e2533 65%,#191e25),url('../assets/rank-art/stadium.webp') center / cover; }
+.detail-badges { display:flex; justify-content:center; align-items:center; gap:8px; min-height:25px; }
+.rarity-badge,.ownership-badge { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:25px; padding:4px 12px; border:1px solid #7d899b; border-radius:6px; font-size:10px; font-weight:700; line-height:15px; text-transform:uppercase; letter-spacing:.035em; }
+.rarity-badge { color:var(--rc); background:#202832d9; border-color:var(--rc); }
+.ownership-badge { color:#c7d0dd; border-radius:20px; background:#19232dcc; }
+.ownership-badge.is-squad { color:#83eaa5; border-color:#6cd393; background:#163024aa; }
+.hero { width:224px; max-width:calc(100% - 38px); }
+.hero :deep(.cf) { width:100%; }
+.detail-body { display:flex; flex-direction:column; gap:12px; padding:0 12px 18px; }
+.detail-meta { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); padding:13px 5px; border:1px solid #424d5a; border-radius:9px; background:linear-gradient(125deg,#29313b,#222a33); }
+.detail-meta > div { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; }
+.detail-meta > div + div { border-left:1px solid #586170; }
+.detail-meta > div > span { text-transform:uppercase; letter-spacing:.035em; font-size:9px; font-weight:600; color:#bfc8d6; }
+.detail-meta strong { font-size:20px; font-variant-numeric:tabular-nums; line-height:1.15; }
+.detail-meta small { font-size:15px; font-weight:600; }
+.upgrade-panel,.attributes-panel { padding:12px; border:1px solid #414b59; border-radius:10px; background:linear-gradient(125deg,#28303a,#202831); }
+.detail-panel-head { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:20px; }
+.detail-panel-head h2 { display:flex; align-items:center; gap:6px; font-size:12px; color:#d6deea; text-transform:uppercase; letter-spacing:.02em; }
+.next-level { font-size:14px; font-weight:700; }
+.shard-row { display:flex; justify-content:space-between; margin-top:11px; padding-top:10px; border-top:1px solid #4c5663; font-size:12px; color:#c2cbd7; }
+.shard-row strong { color:#f0f4fa; font-variant-numeric:tabular-nums; }
+.shard-track { height:7px; overflow:hidden; border:1px solid #5e6979; border-radius:20px; background:#202731; margin-top:8px; }
+.shard-track i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#32ce62,#68ef9a); }
+.shard-hint { color:#b5c0d0; font-size:10px; line-height:15px; margin:7px 0 10px; }
+.shard-hint.ready { color:#91e8af; }
+.detail-upgrade { min-height:44px; font-size:14px; gap:8px; }
+.detail-upgrade:disabled { color:#c2cbd8; background:#2b333e; box-shadow:inset 0 0 0 1px #667181; }
+.detail-shop { display:flex; align-items:center; justify-content:center; gap:7px; width:100%; min-height:44px; margin-bottom:-4px; margin-top:3px; font-size:11px; color:#c7d1df; }
+.detail-shop > span { font-size:20px; }
+.detail-shop:focus-visible,.detail-upgrade:focus-visible { outline:2px solid var(--cta); outline-offset:2px; border-radius:5px; }
+.unowned-panel p,.max-level-panel p { color:#c2ccda; font-size:12px; line-height:1.6; margin:10px 0; }
+.unowned-panel .saved-shards { color:#afbccf; font-size:11px; }
+.unowned-panel .detail-upgrade { margin-top:12px; }
+.max-level-panel p { margin-bottom:0; }
+.complete-badge { color:#8ae7a8; font-size:12px; font-weight:700; padding:3px 7px; border:1px solid #629d77; border-radius:5px; }
+.attributes-panel { display:flex; flex-direction:column; align-items:center; }
+.attributes-panel .detail-panel-head { align-self:stretch; }
+.attribute-info { font-size:18px; color:#b9c5d6; }
+.rad { margin:10px 0 7px; max-width:100%; height:auto; }
+.rad :deep(.lbl) { font-size:9px; fill:#c3cddb; }
+.rad :deep(.val) { font-size:11px; transform:translateY(5px); }
+.axis-key { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%; gap:7px 10px; margin:0; padding-top:11px; border-top:1px solid #414c5a; }
+.axis-key > div { display:flex; align-items:baseline; gap:5px; min-width:0; }
+.axis-key dt { font-size:10px; font-weight:700; color:#d9e0eb; }
+.axis-key dd { margin:0; font-size:10px; color:#b7c3d5; }
+.attribute-preview { font-size:10px; color:#b7c3d5; margin:9px 0 0; }
+@media(max-width:370px) { .detail-stage { padding-top:12px; } .hero { width:206px; } .detail-meta > div > span { font-size:8px; } .detail-meta strong { font-size:18px; } .detail-body { padding-left:10px; padding-right:10px; } .axis-key { column-gap:6px; } .axis-key dd,.axis-key dt { font-size:9px; } }
 </style>
