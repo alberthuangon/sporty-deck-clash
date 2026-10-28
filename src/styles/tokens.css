@@ -203,7 +203,9 @@
      legible; area is what makes the mean. Dimming spends both, narrowing
      spends only the second. 22% and 21% of the sweep became 16% and 15%,
      peaks untouched — about 45px of band on a 280px card, still a reflection
-     and not a scratch. */
+     and not a scratch. Both versions are side by side in
+     tools/holo/evidence/, because this is a claim about two pictures and
+     prose cannot carry it. */
   --holo-foil: linear-gradient(112deg,
     transparent 27%, rgba(226,234,246,.30) 32%, rgba(255,255,255,.50) 35%,
     rgba(226,234,246,.30) 38%, transparent 43%,
