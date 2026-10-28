@@ -151,7 +151,19 @@ export async function measurePackLedger ({ chromePath, url }) {
   return result
 }
 
-/* Either nothing happened or all of it did. */
+/* EITHER NOTHING HAPPENED OR ALL OF IT DID — unchanged, and deliberately so.
+
+   The moment of purchase moved (it is the Shop's buy button now, not the
+   tear) and the expected row for "left on the sealed pack" moved with it,
+   from 0 -> 0 to the price -> 5. The RULE did not move: a pack is still all
+   or nothing, and the reason the row changed is that the player has already
+   bought it by the time that screen exists, not that the invariant was
+   relaxed to fit.
+
+   Which is why this is still written as a ledger over spent and gained
+   rather than as a table of expected values per exit. A table would have
+   needed editing in five places to say the same thing, and each edit is a
+   chance to write down what the code does instead of what it should. */
 export function ledgerBroken (rows) {
   return rows.filter(r => (r.spent === 0 ? r.gained !== 0 : !(r.spent === r.price && r.gained === 5)))
 }

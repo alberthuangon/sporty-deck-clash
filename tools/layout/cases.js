@@ -14,6 +14,7 @@
 import { store, resetStore } from '../../src/store.js'
 import * as game from '../../src/game.js'
 import { uiRunning, uiLast, UI_TIME } from '../../src/ui/motion.js'
+import { PACKS } from '../../src/engine/economy.js'
 
 /* The engine is deterministic given its rng, but the game layer reaches for
    Math.random (toss assignment, draw, script). Seeding it makes every case
@@ -184,6 +185,16 @@ function timeline () {
 /* The first click on PackOpen now starts a 0.92s tear, and the card is not
    granted until it finishes. Every case that walks the reveal has to get
    through that door first; skipping it is what a second tap does anyway. */
+/* Buy the pack the way the Shop does, because the Shop is where buying now
+   happens: purchasePack pays, rolls and hands over all five in one act, and
+   PackOpen performs a record of it. A case that only set pendingPack would
+   land on a screen with nothing to show and bounce straight back to the shop
+   — which is the correct behaviour and a useless state to measure. */
+function boughtPack (id = 'standard') {
+  store.pendingPack = id
+  store.pendingPulls = game.purchasePack(PACKS.find(p => p.id === id))
+}
+
 async function openPack (click, raf) {
   await click('[data-sfx="tear"]')
   const run = uiLast('tear')
@@ -685,7 +696,7 @@ export const CASES = [
     screen: 'packopen',
     group: 'packopen-tear',
     scope: '.po > .stage > .btn',
-    setup () { reset(); richCollection(); store.pendingPack = 'standard' }
+    setup () { reset(); richCollection(); boughtPack() }
   },
   {
     /* The gold pack at full size had nothing looking at it: every packopen
@@ -697,7 +708,7 @@ export const CASES = [
        itself rather than a sealed pack with a tearing one. */
     id: 'packopen/sealed-gold',
     screen: 'packopen',
-    setup () { reset(); richCollection(); store.diamonds = 900; store.pendingPack = 'gold' }
+    setup () { reset(); richCollection(); store.diamonds = 900; boughtPack('gold') }
   },
   {
     /* mid-rip. The halves are supposed to move, so the group is scoped to the
@@ -710,7 +721,7 @@ export const CASES = [
     group: 'packopen-tear',
     scope: '.po > .stage > .btn',
     expectAbsent: '.reveal-card',
-    setup () { reset(); richCollection(); store.pendingPack = 'standard' },
+    setup () { reset(); richCollection(); boughtPack() },
     async act ({ click, raf, at }) {
       await click('[data-sfx="tear"]')
       const run = uiLast('tear')
@@ -723,7 +734,7 @@ export const CASES = [
     id: 'packopen/reveal-1',
     screen: 'packopen',
     group: 'packopen-reveal',
-    setup () { reset(); richCollection(); store.pendingPack = 'standard' },
+    setup () { reset(); richCollection(); boughtPack() },
     act: ({ click, raf }) => openPack(click, raf)
   },
   {
@@ -732,7 +743,7 @@ export const CASES = [
     id: 'packopen/shard-flying',
     screen: 'packopen',
     group: 'packopen-reveal',
-    setup () { reset(); richCollection(); store.pendingPack = 'standard' },
+    setup () { reset(); richCollection(); boughtPack() },
     async act ({ click, raf, at }) {
       await openPack(click, raf)
       holdFlight(at)
@@ -743,7 +754,7 @@ export const CASES = [
     id: 'packopen/reveal-3',
     screen: 'packopen',
     group: 'packopen-reveal',
-    setup () { reset(); richCollection(); store.pendingPack = 'standard' },
+    setup () { reset(); richCollection(); boughtPack() },
     async act ({ click, raf }) { await openPack(click, raf); await click('.btn-cta'); await click('.btn-cta') }
   },
   {
@@ -752,14 +763,30 @@ export const CASES = [
     id: 'packopen/reveal-last',
     screen: 'packopen',
     group: 'packopen-reveal',
-    setup () { reset(); richCollection(); store.pendingPack = 'standard' },
+    setup () { reset(); richCollection(); boughtPack() },
     async act ({ click, raf }) { await openPack(click, raf); for (let i = 0; i < 4; i++) await click('.btn-cta') }
   },
   {
     id: 'packopen/summary',
     screen: 'packopen',
-    setup () { reset(); richCollection(); store.pendingPack = 'standard' },
+    setup () { reset(); richCollection(); boughtPack() },
     async act ({ click, raf }) { await openPack(click, raf); for (let i = 0; i < 5; i++) await click('.btn-cta') }
+  },
+  {
+    /* one of the five, looked at full size. The summary's cards are 5:7 now
+       and a tap opens the same lg + foil + sway card the collection's detail
+       page shows, so this is the second place in the app where that object
+       appears at full size — and the first one that reaches it by tapping a
+       grid rather than by navigating. */
+    id: 'packopen/card-view',
+    screen: 'packopen',
+    setup () { reset(); richCollection(); boughtPack() },
+    async act ({ click, raf }) {
+      await openPack(click, raf)
+      for (let i = 0; i < 5; i++) await click('.btn-cta')
+      await click('.sum-slot')
+      await raf()
+    }
   },
 
   /* ------------------------------------------------ Upgrade */

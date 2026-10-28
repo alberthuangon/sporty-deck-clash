@@ -232,14 +232,44 @@ export function rollPackPulls (pack) {
   })
 }
 
-/* The one moment money changes hands. The flag moves here from the summary
-   screen for the same reason: a pack that has been torn has been opened, and
-   deciding that three taps later is what let the demo script replay. */
+/* The one moment money changes hands. */
 export function payForPack (pack) {
   if (store.diamonds < pack.price) return false
   store.diamonds -= pack.price
   store.flags.packOpened = true
   return true
+}
+
+/* ONE ACT: pay, roll, and hand over all five.
+
+   The tear used to be where money moved, which closed the three holes it was
+   meant to close and left the premise wrong. Albert put it plainly: opening
+   the pack is a special effect — the five cards are already decided the
+   moment it is bought, because rollPackPulls has always run before anything
+   is on screen. So the purchase is the purchase, and PackOpen performs
+   something that has already happened.
+
+   The invariant is unchanged and is the reason this is one function rather
+   than three calls at a call site: money and cards move together, with no
+   statement between them that anything can return early from or navigate
+   away during. What changed is only WHEN that single moment is — which also
+   closes the one hole the previous version could not, since there is no
+   longer any window for a reload to land in.
+
+   THE SNAPSHOT IS THE POINT, not bookkeeping. The reveal shows the cards one
+   at a time, and its shard line used to read live state — true, because the
+   grant happened a beat earlier. Granting all five up front makes live state
+   the FINAL state, so card one would announce the count card five produced.
+   So each pull records what was true as it landed. */
+export function purchasePack (pack) {
+  if (!canBuyPack(pack)) return null
+  const pulls = rollPackPulls(pack)
+  if (!payForPack(pack)) return null
+  return pulls.map(p => {
+    commitPull(p)
+    const e = entry(p.id)
+    return { id: p.id, isNew: p.isNew, level: e.level, shards: e.shards, cost: upgradeCost(p.id) }
+  })
 }
 
 export function commitPull (pull) { return grantCard(pull.id) }

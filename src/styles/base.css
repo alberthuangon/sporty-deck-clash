@@ -132,10 +132,41 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; }
   border-radius: var(--r-md);
   color: var(--cta);
 }
+/* "there is something to do with this one", in two grids: the collection and
+   the pack summary. Both put it at a card's top-right corner.
+
+   z-index 4, and it is not decoration. A full-bleed CardFace stacks its own
+   layers up to 3 (the foil), and .cf is position:relative with z-index auto —
+   which does NOT make it a stacking context, so those inner layers compete
+   directly with this one in the GRID CELL's context and win. Measured, not
+   guessed: elementFromPoint at the dot's own centre returned .cf-lv on the
+   pack summary and .cf-top in the collection. The dot was in the DOM, the
+   right size, in the right place, and under the card's level stamp.
+
+   Nothing in the layout gate could see that: `content partly hidden` skips
+   elements with no text, which this is, and being painted over leaves a box
+   exactly where it should be. Raised rather than isolating .cf, because
+   isolation would change what the foil's mix-blend-mode composites against
+   and that ladder is settled.
+
+   And raising it alone was the wrong fix, which the gate said in one run: it
+   stopped hiding the dot and started hiding the LEVEL, 4.4px of "Lv.1" behind
+   a dot. They want the same corner, and on a full-bleed card that corner has
+   an owner.
+
+   Outside the card is not available either. A badge hanging off the corner
+   failed `grid cells whose contents are ragged`, because that check measures
+   a cell's children bounds and the three pixels of overhang made the one cell
+   with a dot taller than its neighbours. Inside the card is clipped
+   (.cf is overflow:hidden), outside it changes the cell. So the dot takes the
+   only space a full-bleed card actually leaves: the right edge below the
+   status row, measured rather than picked — the row's box ends at 27.7px on
+   a 101px card and 28.8 on a 130px one, and the name does not start until
+   112. It reads as hanging off the level stamp, which is what it is about. */
 .dot {
-  position: absolute; top: 4px; right: 4px;
+  position: absolute; top: 31px; right: 4px; z-index: 4;
   width: 8px; height: 8px; border-radius: 50%;
-  background: var(--red); box-shadow: 0 0 0 2px var(--surface);
+  background: var(--red); box-shadow: 0 0 0 2px rgba(8,10,14,.75);
 }
 /* One scored goal, as a row. Shared rather than scoped because the result
    screen and a history entry show the SAME list — and this project has

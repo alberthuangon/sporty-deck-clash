@@ -58,11 +58,18 @@
 <script setup>
 import { ref } from 'vue'
 import PackCrest from '../components/PackCrest.vue'
-import { store, go } from '../game.js'
+import { store, go, purchasePack } from '../game.js'
 import { PACKS } from '../engine/economy.js'
 const showOdds = ref(null)
+/* THE PURCHASE HAPPENS HERE, all of it. The button is already disabled when
+   the player cannot afford it; purchasePack checks again and returns null
+   rather than navigating, so a pack that was not bought never opens a screen
+   that performs buying one. */
 function buy (p) {
+  const pulls = purchasePack(p)
+  if (!pulls) return
   store.pendingPack = p.id
+  store.pendingPulls = pulls
   go('packopen')
 }
 </script>

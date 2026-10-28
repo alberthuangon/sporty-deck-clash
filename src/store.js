@@ -62,6 +62,10 @@ function initialState () {
 
     // transient hand-off between screens
     pendingPack: null,
+    /* the five cards of a pack that has been PAID FOR AND GRANTED, waiting to
+       be shown. Not a promise of cards — a record of cards the player already
+       holds, which is why the reveal can be interrupted by anything at all. */
+    pendingPulls: null,
     pendingTier: null,
     upgradeTarget: null,
     cardTarget: null,
