@@ -268,16 +268,71 @@ const venueText = computed(() => (props.sub ? '' : venueMark.value))
      5.4cqw at 280 is 15px and the floor never binds. */
   --cf-sub: max(9px, 5.4cqw);
   --cf-gap: max(4px, 3cqw);
+  /* everything the bottom scrim has to cover: the role line, the gap, and the
+     name's own line box. Named because the scrim is measured FROM it. */
+  --cf-foot: calc(var(--cf-gap) + var(--cf-sub) * 1.2 + max(2px, 1.4cqw) + max(11px, 7.4cqw) * 1.1);
 }
 .cf-full .cf-art { position: absolute; inset: 0; margin: 0; display: block; }
 .cf-full .cf-art .pa { width: 100%; height: 100%; }
+/* THE TOP SCRIM, which is the badge's backdrop and the level's as well.
+
+   Three chips sit up here and only one of them brought its own background:
+   the rarity stamp, which is why it was never the problem. Giving the other
+   two a chip each would have put three competing boxes in a 66px-wide row,
+   so the backdrop goes behind the ROW. It is the same device the name has
+   had at the other end of the card all along, which is also why it needs no
+   new vocabulary to read.
+
+   The gradient fades out below the type rather than ending on an edge, and
+   the padding-bottom is what gives it somewhere to fade: the row is
+   absolutely positioned, so a taller box costs no layout. */
 .cf-full .cf-top {
   position: absolute; inset: 0 0 auto; z-index: 2;
-  padding: 3.6cqw 4cqw 0; font-size: max(9px, 5cqw);
+  padding: 3.6cqw 4cqw 7cqw; font-size: max(9px, 5cqw);
+  background: linear-gradient(to bottom,
+    rgba(8,10,14,.80) 0%, rgba(8,10,14,.62) 42%, rgba(8,10,14,0) 100%);
 }
 .cf-full .cf-rar, .cf-full .cf-lv { font-size: max(9px, 5cqw); }
 .cf-full .cf-rar { padding: 0.6cqw 1.8cqw; border-radius: 1.4cqw; }
-.cf-full .cf-pos { font-size: max(8px, 4.6cqw); padding: 0.4cqw 1.6cqw; }
+/* A BACKDROP, NOT A COLOUR, and the stroke goes.
+   (the backdrop is the top scrim below; this rule only drops the stroke)
+
+   Measured on all twenty cards at both sizes a card is used at, differencing
+   the rendered card against itself with the chrome hidden so the contrast is
+   taken only on the pixels the type actually inks:
+
+     the 1px divider stroke   69-100% of its own perimeter under 3:1
+     the ST / PM text         up to 48% of the strokes under AA at 130px,
+                              up to 77% at 66px, on 20 of 20
+
+   The stroke is not half-visible, it is absent: #3A3F4A sits at the same
+   luminance as the picture's mid-tones, so it matches its background almost
+   everywhere rather than contrasting with it. The same four bands measured
+   against white swing 3.09 to 20.34, which is what says the flatness belongs
+   to the colour and not to the measurement.
+
+   So the fix is a backdrop. Not a new colour: the product already spends
+   three colour families on meaning (rarity, home/away, win/loss) and a fourth
+   dilutes all three — the same argument that made this badge neutral grey in
+   the first place. With something behind it the stroke has nothing left to
+   do, and an invisible stroke that still paints is the smudge it was adding.
+
+   TWO BACKDROPS, each with its own job, and measuring is what settled that.
+   The row's scrim alone left G4 losing 26% of this badge's strokes at 130px:
+   the gradient has faded to about .45 by the time it reaches the bottom of
+   the glyphs, which is thinner than the .62 a chip of its own gives them. The
+   chip alone left the LEVEL unprotected at the other end of the row. So the
+   row carries the gradient and the badge carries a chip, which also puts it
+   in the same vocabulary as the rarity stamp beside it.
+
+   Scoped to .cf-full. The stacked cards (History, the pack summary, the
+   shootout) put this badge on the card BODY, not on a picture, and the stroke
+   reads fine against a flat dark surface. */
+.cf-full .cf-pos {
+  font-size: max(8px, 4.6cqw); padding: 0.4cqw 1.6cqw;
+  border-color: transparent;
+  background: rgba(8, 10, 14, .62);
+}
 /* THE CLEARANCE IS A RULE, NOT A NUMBER.
 
    This used to be a measured 10.8cqw, found by looking, with a comment saying
@@ -302,8 +357,18 @@ const venueText = computed(() => (props.sub ? '' : venueMark.value))
 .cf-full .cf-venue.home, .cf-full .cf-venue.away { padding: 0 0.9cqw; }
 /* Only as tall as the type it carries, and transparent for most of that: the
    bottom fifth is where the name lives and the picture's own safe area is. */
+/* Tall enough for the type it carries, which is not the same as 32% of the
+   card. At 280 and 130 those agree — the block is 53 and 29px against a 32%
+   scrim of 125 and 58, so the name sits deep in the opaque end. At 66 they do
+   not: the px floors stop the type shrinking with the card, so the same block
+   is still 29px while 32% has fallen to 30, and the name's upper half ends up
+   in the part of the gradient that has already faded to nothing. Measured,
+   nine of twenty lost 1-42% of their strokes there.
+   max(), so the two big sizes keep exactly the scrim they were tuned with and
+   only the small card gets a taller one. */
 .cf-scrim {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 32%;
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: max(32%, calc(var(--cf-foot) * 1.9));
   z-index: 1; pointer-events: none;
   background: linear-gradient(to top, rgba(8,10,14,.92) 0%, rgba(8,10,14,.72) 38%, rgba(8,10,14,0) 100%);
 }

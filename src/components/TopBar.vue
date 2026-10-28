@@ -6,7 +6,7 @@
     <div class="tb-title" @click="$emit('title')">{{ title }}</div>
     <div class="tb-wallet">
       <span class="w-item" data-wallet="cash">₦{{ cash.toLocaleString() }}</span>
-      <span class="w-item" data-wallet="diamonds"><i class="gem">◆</i>{{ diamonds }}</span>
+      <span class="w-item" data-wallet="diamonds"><i class="gem">◆</i>{{ diamonds.toLocaleString() }}</span>
     </div>
   </header>
 </template>

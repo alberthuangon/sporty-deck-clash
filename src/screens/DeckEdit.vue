@@ -16,14 +16,14 @@
       <div v-for="s in SLOTS" :key="s.key" class="slot" :class="{ active: picking === s.key }"
            @click="picking = picking === s.key ? null : s.key">
         <div class="slot-lbl">{{ s.label }}</div>
-        <CardFace :card="cardOf(draft[s.key])" size="sm" />
+        <CardFace :card="cardOf(draft[s.key])" size="sm" full />
       </div>
     </div>
 
     <div v-if="picking" class="picker">
       <div class="sec-title">Choose {{ SLOTS.find(s => s.key === picking).label }}</div>
       <div class="pick-grid">
-        <CardFace v-for="id in options" :key="id" :card="cardOf(id)" size="sm"
+        <CardFace v-for="id in options" :key="id" :card="cardOf(id)" size="sm" full
                   :selected="draft[picking] === id" :dim="usedElsewhere(id)"
                   @click="choose(id)" />
       </div>

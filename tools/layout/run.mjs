@@ -17,6 +17,7 @@ import { extname, join } from 'node:path'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
+import { measureChromeContrast } from './contrast.mjs'
 
 const run = promisify(execFile)
 const here = fileURLToPath(new URL('.', import.meta.url))
@@ -90,10 +91,15 @@ async function render (page, { size, budget, wall }) {
   return JSON.parse(text)
 }
 
-let match, screens
+let match, screens, chromeContrast
 try {
   match = await render('index.html', { size: '430,460', budget: 30000, wall: 60000 })
   screens = await render('screens.html', { size: '430,932', budget: 200000, wall: 300000 })
+  /* a third pass, with pixels — see contrast.mjs for why it cannot ride along
+     with the sweep above */
+  chromeContrast = await measureChromeContrast({
+    chromePath: CHROME, url: `http://127.0.0.1:${port}/screens.html?shot=cards/full`
+  })
 } catch (e) {
   server.close()
   console.log(`\nLAYOUT CHECK FAILED — the harness could not finish\n\n  ${e.message}\n`)
@@ -445,6 +451,31 @@ check('chrome that does not match its token', chromeDrift.length, !chromeDrift.l
 check('foil layers you cannot see through', holoSolid.length, !holoSolid.length && !!holo.length)
 check('foil layers that could eat a tap', holoTappable.length, !holoTappable.length)
 check('foil layers painting instead of blending', holoPainting.length, !holoPainting.length)
+
+/* CAN YOU READ THE CARD OVER THE PICTURE?
+
+   The one check here that looks at pixels rather than boxes, and it exists
+   because the failure it catches got past two people reading screenshots —
+   one of whom then measured the wrong element and published the result. The
+   badge's own stroke was invisible along 69-100% of its perimeter on every
+   card at both sizes, and up to 77% of the ST/PM strokes sat below AA, while
+   the element somebody did measure (the level, in the dark top corner) came
+   back at 12:1 and looked like a clean bill of health. Eyes and a well-chosen
+   sample are not a repeatable process.
+
+   WHAT the number is, and why that one, is in contrast.mjs. The threshold is
+   measured rather than chosen: the worst label on the fixed design is G3's
+   name on the 66px card at 7.1%, and the cap is that with 38% headroom. Not a
+   round ten — a round number is one somebody picked, and the next person
+   cannot tell whether it came from anywhere. Verified red four ways, each
+   naming its own element: drop the badge's chip and G4's ST fails at 130px;
+   drop the row's scrim and F1's level fails at 66; put the bottom scrim back
+   to a flat 32% and seven names fail at 66; break the pictures and the pass
+   refuses to report at all rather than scoring a card that is not there. */
+const CHROME_LOST_CAP = 9.8
+const unreadableChrome = chromeContrast.filter(c => c.lost > CHROME_LOST_CAP)
+check('card chrome unreadable over its picture', unreadableChrome.length,
+  !unreadableChrome.length && chromeContrast.length >= 100)
 check('holo cards measured standing still', swayFlat.length, !swayFlat.length && !!sway.length)
 check('holo sway past its budget', swayBig.length, !swayBig.length)
 check('cards that lean by different amounts', swayYaws.length, swayYaws.length === 1)
@@ -486,7 +517,17 @@ check('cards that lean by different amounts', swayYaws.length, swayYaws.length =
    Drift is not a failure — the art is still arriving and these will be
    retuned on purpose. It prints so that the retune is a decision somebody
    makes rather than something that happens to them. */
-const HOLO_BASELINE = { 'i.cf-foil': 0.45, 'i.cf-gloss': 0.26 }
+const HOLO_BASELINE = { 'i.cf-foil': 0.50, 'i.cf-gloss': 0.34 }
+/* WHICH LADDER THESE DESCRIBE, because the last pair did not say.
+   Re-pinned against the ladder as of `e13783c` — Rare achromatic in two
+   unequal narrowed bands, Legendary with its second light (--holo-back at
+   .34). The previous pair (.45 / .26) was taken before `4aac93c` reworked the
+   ladder into a count of colours, so for several commits the run printed a
+   drift against a ladder that no longer existed, and working out WHICH commit
+   had moved it took a git archaeology pass. That pass is what this line is
+   worth: the next person gets the answer instead of the dig. The foil's .50
+   is Rare's white band, which is also where `foil layers you cannot see
+   through` fires (> 0.5) — it passes by a hundredth, on purpose, unchanged. */
 
 /* Printed even when every one of them passes. The three checks above are the
    price of sitting over the card's own name, and a layer that quietly stopped
@@ -513,6 +554,18 @@ if (holo.length) {
       : `  vs baseline ${base}  ${h.effective > base ? '+' : ''}${(h.effective - base).toFixed(2)}`
     console.log(`    ${h.key}  ${h.blend}  worst alpha x opacity ${h.effective}${drift}  pointer-events ${h.pointer}` +
       (h.solidBg ? '  SOLID BACKGROUND' : ''))
+  }
+}
+
+{
+  const worstBy = new Map()
+  for (const c of chromeContrast) {
+    const k = `${c.sel} @ ${c.width}px`
+    if (!worstBy.has(k) || c.lost > worstBy.get(k).lost) worstBy.set(k, c)
+  }
+  console.log(`\n  note: chrome contrast over the illustration, ${chromeContrast.length} label(s) on 20 cards:`)
+  for (const [k, c] of [...worstBy].sort((a, b) => b[1].lost - a[1].lost)) {
+    console.log(`    ${k.padEnd(18)} worst ${String(c.lost).padStart(5)}% of strokes under AA  (${c.id}, mean ${c.mean}:1)`)
   }
 }
 
@@ -568,6 +621,11 @@ if (fail.length) {
   if (barStates.size !== 2) console.log(`  chrome never measured: saw ${[...barStates.keys()].join(', ') || 'no bars'} — expected TopBar and TabBar`)
   chromeShifts.forEach(c => console.log(`  chrome moved: ${c.bar} ${c.key} takes values ${c.seen} — ${c.detail}`))
   chromeDrift.forEach(c => console.log(`  chrome drifted: ${c.bar} measures ${c.measured}px against a token that says ${c.declared}px`))
+  if (chromeContrast.length < 100) {
+    console.log(`  chrome contrast barely measured: only ${chromeContrast.length} label(s) sampled across 20 cards x 2 sizes`)
+  }
+  unreadableChrome.forEach(c => console.log(
+    `  unreadable: ${c.id} ${c.sel} at ${c.width}px — ${c.lost}% of its strokes under 4.5:1 (mean ${c.mean}), cap ${CHROME_LOST_CAP}%`))
   if (!holo.length) console.log('  foil never measured: no state in the sweep shows a holo card')
   holoSolid.forEach(h => console.log(`  foil too solid: ${h.state}  ${h.key} hides up to ${h.effective} (stop ${h.maxStopAlpha} x opacity ${h.opacity})`))
   holoTappable.forEach(h => console.log(`  foil takes taps: ${h.state}  ${h.key} pointer-events: ${h.pointer}`))

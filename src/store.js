@@ -9,7 +9,12 @@ const KEY = 'skd.v1'
    Shard counts always follow the PRD §6.3 curve (E Lv.1->2 = 1 shard). */
 function initialState () {
   return {
-    diamonds: 80,
+    /* 1000, up from 80, and the old number was worse than it looked: the
+       cheapest pack is 100 diamonds (economy.js), so a new player could not
+       open ANY pack, not merely not a gold one. 1000 buys two gold packs at
+       450 each, which is wider than the ask ("should be able to afford a gold
+       pack") and leaves the first pull a choice rather than a wait. */
+    diamonds: 1000,
     cash: 5000,
     tickets: 0,
 
