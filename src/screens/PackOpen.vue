@@ -19,7 +19,7 @@
            hero. The wrapper carries the tilt; the ref stays on the CardFace so
            the shard flight still measures the card and not the perspective box. -->
       <HoloCard>
-        <CardFace ref="cardRef" :card="currentCard" size="lg" :radar="false" foil class="reveal-card" />
+        <CardFace ref="cardRef" :card="currentCard" size="lg" :radar="false" full foil class="reveal-card" />
       </HoloCard>
 
       <div class="verdict">

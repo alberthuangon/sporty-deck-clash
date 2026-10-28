@@ -29,8 +29,38 @@ export const PORTRAITS = keyed(POR, '-portrait.webp')
    Not decoration: an <img> with no intrinsic ratio is a zero-height box until
    it loads, and then everything below it drops. The layout gate asserts this
    (`images that reserve no space`) precisely because it cannot photograph the
-   moment it goes wrong — every state is measured after the page settles. */
-export const ART_BOX = { figure: [640, 896], portrait: [160, 160] }
+   moment it goes wrong — every state is measured after the page settles.
+
+   384, not 160. The portraits were cut for a 44px circle in a stacked grid
+   cell; the cell is a full-bleed 130x182 card now, and object-fit: cover
+   fits a SQUARE source to the cell's HEIGHT before cropping it sideways — so
+   the number to beat is 182, not the 130 it looks like, and the old file was
+   being asked to cover 182 with 160. Rebuilt from the 1254px masters by
+   tools/art/portraits.mjs. These two numbers are a claim about what is on
+   disk, so the layout gate checks them against the files themselves rather
+   than taking this line's word for it. */
+export const ART_BOX = { figure: [640, 896], portrait: [384, 384] }
+
+/* WHERE TO AIM A CROP, for the few that need aiming.
+
+   The portraits are square and the collection grid is 5:7, so the browser
+   throws away 14.3% of the width from each side. That is the right default:
+   nineteen of the twenty are composed centrally enough that a symmetric cut
+   takes background and hair that was already running off the frame, and the
+   face lands where it should. Checked by looking at all twenty cropped, not
+   by a rule.
+
+   F15 is the exception and it is a composition fact rather than a near miss:
+   he is shouting with his head thrown back and to his right, so the subject's
+   mass sits left of the square's centre. A symmetric cut pushes his beard
+   into the right edge while cutting the dreadlocks on the left — the one
+   player the default gets wrong at both edges at once. 35% aims the window at
+   him instead of at the picture.
+
+   Not a crop baked into the file. The export stays square (tools/art), so
+   this is one number to revisit if the cell's shape ever changes, rather than
+   twenty images to re-cut. */
+export const ART_FOCUS = { F15: '35% center' }
 
 export function artFor (cardId, kind) {
   return (kind === 'figure' ? FIGURES : PORTRAITS)[cardId] || null

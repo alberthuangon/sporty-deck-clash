@@ -166,6 +166,49 @@ const missingArt = catalogue.flatMap(c =>
 ).filter(Boolean)
 check('cards with no picture on disk', missingArt.length, !missingArt.length && catalogue.length > 0)
 
+/* AND THE SIZE IT CLAIMS THEY ARE.
+
+   src/ui/art.js writes ART_BOX onto every <img> as its width and height
+   attributes, which is what reserves the space before the file arrives. The
+   assertion above proves the file exists and `images that reserve no space`
+   proves the attributes are there; neither one asks whether the two agree,
+   and a card whose declared box has the wrong RATIO drops everything below
+   it the moment the real picture lands — the bug this repo has shipped three
+   times, in the one form the sweep cannot photograph, because every state is
+   measured after the page has settled.
+
+   It bit immediately: the portraits were rebuilt at 384 and ART_BOX still
+   said 160. Harmless that time, both being square, and harmless is not the
+   same as right — the next edit to that line is the one that is not. */
+function webpSize (buf) {
+  if (buf.slice(0, 4).toString() !== 'RIFF' || buf.slice(8, 12).toString() !== 'WEBP') return null
+  const fmt = buf.slice(12, 16).toString()
+  if (fmt === 'VP8X') return [buf.readUIntLE(24, 3) + 1, buf.readUIntLE(27, 3) + 1]
+  if (fmt === 'VP8L') { const b = buf.readUInt32LE(21); return [(b & 0x3FFF) + 1, ((b >> 14) & 0x3FFF) + 1] }
+  if (fmt === 'VP8 ') return [buf.readUInt16LE(26) & 0x3FFF, buf.readUInt16LE(28) & 0x3FFF]
+  return null
+}
+const artSrc = await readFile(join(here, '../../src/ui/art.js'), 'utf8')
+const declared = {}
+for (const [, kind, w, h] of artSrc.matchAll(/(figure|portrait):\s*\[(\d+),\s*(\d+)\]/g)) {
+  declared[kind] = [+w, +h]
+}
+const wrongBox = []
+for (const c of catalogue) {
+  for (const kind of ['figure', 'portrait']) {
+    const want = declared[kind]
+    if (!want) { wrongBox.push({ file: `(ART_BOX has no ${kind})`, want: '-', got: '-' }); continue }
+    const f = `${c.id}-${kind}.webp`
+    if (!onDisk.has(f)) continue
+    const got = webpSize(await readFile(join(ART_DIR, f)))
+    if (!got) { wrongBox.push({ file: f, want: want.join('x'), got: 'unreadable header' }); continue }
+    if (got[0] !== want[0] || got[1] !== want[1]) {
+      wrongBox.push({ file: f, want: want.join('x'), got: got.join('x') })
+    }
+  }
+}
+check('pictures that are not the size art.js says', wrongBox.length, !wrongBox.length && !!Object.keys(declared).length)
+
 /* The main event. Within a group, every element the states have in common has
    to sit at the same height — a group is a set of states a player can watch
    one turn into another without navigating, so anything that moves between
@@ -499,6 +542,7 @@ if (fail.length) {
   leaky.forEach(l => console.log(`  leaky takeover: ${l.state}  ${l.key} leaves ${l.short}px of the frame showing`))
   covered.forEach(c => console.log(`  hidden: ${c.state}  ${c.key} is ${c.over}px behind ${c.behind}  "${c.text}"`))
   missingArt.forEach(m => console.log(`  no file: src/assets/player-art/${m}`))
+  wrongBox.forEach(w => console.log(`  wrong size: ${w.file} is ${w.got}, ART_BOX declares ${w.want}`))
   broken_img.forEach(b => console.log(`  no picture: ${b.state}  ${b.key} ${b.why}  ...${b.src}`))
   onTop.forEach(o => console.log(`  on top of each other: ${o.state}  ${o.a} and ${o.b} overlap by ${o.bite}px of a ${o.of}px line  "${o.text}"`))
   ragged.forEach(r => console.log(`  ragged: ${r.state}  ${r.grid} row at ${r.row} spreads ${r.spread}px — ${r.cells}`))

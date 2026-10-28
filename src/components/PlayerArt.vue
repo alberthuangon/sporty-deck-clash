@@ -25,7 +25,7 @@
    cannot photograph, because every state is measured after the page settles.
    It asserts the attributes instead (`images that reserve no space`). */
 import { computed } from 'vue'
-import { artFor, ART_BOX } from '../ui/art.js'
+import { artFor, ART_BOX, ART_FOCUS } from '../ui/art.js'
 
 const props = defineProps({
   cardId: { type: String, required: true },
@@ -52,7 +52,13 @@ const px = computed(() => {
   if (props.size == null) return (TIER_PX[props.tier] || TIER_PX.md) + 'px'
   return typeof props.size === 'number' ? props.size + 'px' : props.size
 })
-const style = computed(() => (props.fill ? {} : { width: px.value, height: px.value }))
+/* object-position only matters while the parent is cropping this image, and
+   the parent only crops it when it owns the box — so it rides with `fill`
+   rather than being set unconditionally. See ART_FOCUS for why one card has
+   one and nineteen do not. */
+const style = computed(() => (props.fill
+  ? (ART_FOCUS[props.cardId] ? { objectPosition: ART_FOCUS[props.cardId] } : {})
+  : { width: px.value, height: px.value }))
 </script>
 
 <style scoped>
