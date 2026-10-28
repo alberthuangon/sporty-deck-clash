@@ -49,5 +49,13 @@ for card in meta['cards']:
                 hues[int(hu*36)%36]+=1
             if m>40: c40+=1
     live=sum(1 for b in hues if b>c12*0.01) if c12 else 0
-    rows.append((card['rarity'], tot/n, c12/n, c40/n, live/36))
-    print(f"{card['rarity']:8} {tot/n:12.2f} {c12/n:12.3f} {c40/n:12.3f} {live/36:11.3f}")
+    cov=c12/n
+    # Hue spread is counted over the pixels the foil actually moved, so when
+    # it moves almost none the figure is noise wearing a number. Common on a
+    # real illustration covers 2% of the card and read .528 -- HIGHER than
+    # Rare -- from a few hundred stray pixels. Below a twentieth of the card
+    # there is nothing to describe, so it says so instead of inventing it.
+    spread = live/36 if cov >= 0.05 else None
+    rows.append((card['rarity'], tot/n, cov, c40/n, spread))
+    txt = f"{spread:11.3f}" if spread is not None else f"{'  too sparse':>11}"
+    print(f"{card['rarity']:8} {tot/n:12.2f} {cov:12.3f} {c40/n:12.3f} {txt}")

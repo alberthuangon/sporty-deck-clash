@@ -364,12 +364,22 @@ check('foil layers painting instead of blending', holoPainting.length, !holoPain
    same" means.
 
    Measured beside them by differencing a frame against itself with the finish
-   hidden (scratchpad foildiff.py / hair.py), at 190x266:
+   hidden (tools/holo), first against the SVG stand-ins at 190x266 and then
+   against the real illustrations at the sizes that ship:
 
-     mean contribution   C 4.96   R 21.71   E 32.12   L 38.19
-     coverage            C .130   R .563    E .635    L .861
-     hue spread          C .222   R .361    E .694    L .833
-     hair hue, lit       C 16.8   R 296.2   E 339.2   L 18.1   (unlit 16.8)
+     stand-ins, 190x266   mean  C 4.96  R 21.71  E 32.12  L 38.19
+                          hue   C .222  R .361   E .694   L .833
+     real art, 280x392    mean  C 2.53  R 14.10  E 20.61  L 22.01
+                          hue   C   --  R .278   E .556   L .583
+                          cov   C .020  R .386   E .497   L .721
+     hair hue, lit        C 16.8  R 296.2  E 339.2  L 18.1  (unlit 16.8)
+
+   THE SECOND ROW IS THE REAL ONE, and it is about 40% weaker, because
+   colour-dodge adds less to a bright base than to a dark one and every
+   illustration arrived with a blue rim-burst. Epic to Legendary went from
+   +19% to +7% with it. Size turned out not to matter at all — 280 and 320
+   agree to three figures — so the retune everyone expected after the card
+   grew was never the question; the base did.
 
    Drift is not a failure — the art is still arriving and these will be
    retuned on purpose. It prints so that the retune is a decision somebody
