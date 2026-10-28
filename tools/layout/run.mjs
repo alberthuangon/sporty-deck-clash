@@ -128,6 +128,8 @@ const leaky = gather('leakyTakeover')
 const ragged = gather('ragged')
 const small = gather('smallTargets')
 const unsized = gather('unsizedImages')
+const onTop = gather('textOverlaps')
+const unchecked = gather('overlapUnchecked')
 
 check('content cropped by its container', clipped.length, !clipped.length)
 check('elements laid out past the 430px frame', offFrame.length, !offFrame.length)
@@ -146,6 +148,7 @@ check('takeovers that do not take the whole frame', leaky.length, !leaky.length)
 check('grid cells whose contents are ragged', ragged.length, !ragged.length)
 check('controls under the 44px tap target', small.length, !small.length)
 check('images that reserve no space', unsized.length, !unsized.length)
+check('text sitting on other text', onTop.length, !onTop.length)
 
 /* The main event. Within a group, every element the states have in common has
    to sit at the same height — a group is a set of states a player can watch
@@ -338,6 +341,13 @@ check('foil layers painting instead of blending', holoPainting.length, !holoPain
    price of sitting over the card's own name, and a layer that quietly stopped
    being found would buy that exemption in silence — so the roster is the
    evidence that the checks are still looking at something. */
+if (unchecked.length) {
+  const byPair = new Map()
+  for (const u of unchecked) byPair.set(`${u.a} / ${u.b}`, (byPair.get(`${u.a} / ${u.b}`) || 0) + 1)
+  console.log(`\n  note: ${byPair.size} overlapping text pair(s) the check could not judge — clip-path:`)
+  for (const [k, n] of byPair) console.log(`    ${k}  (${n} state${n > 1 ? 's' : ''})`)
+}
+
 if (holo.length) {
   const roster = new Map()
   for (const h of holo) {
@@ -370,6 +380,7 @@ if (fail.length) {
   overChrome.forEach(c => console.log(`  over ${c.bar}: ${c.state}  ${c.key} by ${c.over}px  "${c.text}"`))
   leaky.forEach(l => console.log(`  leaky takeover: ${l.state}  ${l.key} leaves ${l.short}px of the frame showing`))
   covered.forEach(c => console.log(`  hidden: ${c.state}  ${c.key} is ${c.over}px behind ${c.behind}  "${c.text}"`))
+  onTop.forEach(o => console.log(`  on top of each other: ${o.state}  ${o.a} and ${o.b} overlap by ${o.bite}px of a ${o.of}px line  "${o.text}"`))
   ragged.forEach(r => console.log(`  ragged: ${r.state}  ${r.grid} row at ${r.row} spreads ${r.spread}px — ${r.cells}`))
   const byTarget = new Map()
   small.forEach(t => {

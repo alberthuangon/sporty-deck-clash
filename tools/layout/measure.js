@@ -96,6 +96,43 @@ function containingBlock (cs) {
   return cs.position !== 'static' || cs.transform !== 'none' ||
     cs.filter !== 'none' || cs.perspective !== 'none' || cs.contain.includes('paint')
 }
+/* THE GLYPHS, NOT THE ELEMENT. An element's rect includes its padding, and
+   this app pads things out on purpose: the back button is padded to a 44px
+   tap target and pulled back with negative margins so nothing moves, which
+   makes its BOX overlap its neighbour's while the two bits of writing sit
+   comfortably apart. Measuring the box reported seven of those. A Range over
+   the element's own text nodes gives the line boxes the reader actually sees.
+   Only the element's own text — a child element's lines belong to the child,
+   which is a separate entry in this list. */
+function glyphBox (el) {
+  let box = null
+  for (const n of el.childNodes) {
+    if (n.nodeType !== 3 || !n.textContent.trim()) continue
+    const range = el.ownerDocument.createRange()
+    range.selectNodeContents(n)
+    for (const r of range.getClientRects()) {
+      if (r.width <= 0 || r.height <= 0) continue
+      box = box ? {
+        top: Math.min(box.top, r.top), left: Math.min(box.left, r.left),
+        bottom: Math.max(box.bottom, r.bottom), right: Math.max(box.right, r.right)
+      } : { top: r.top, left: r.left, bottom: r.bottom, right: r.right }
+    }
+    range.detach && range.detach()
+  }
+  if (!box) return null
+  return { ...box, width: box.right - box.left, height: box.bottom - box.top,
+    x: box.left, y: box.top }
+}
+
+/* walks up, because the clip is usually on a parent rather than on the text */
+function clipPathed (el) {
+  for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
+    const cp = getComputedStyle(n).clipPath
+    if (cp && cp !== 'none') return true
+  }
+  return false
+}
+
 function clipAncestors (el) {
   const pos = getComputedStyle(el).position
   const out = []
@@ -228,6 +265,8 @@ export function measure (scope) {
     ragged: [],         // grid cells in one row whose contents are different heights
     smallTargets: [],   // tappable things under the published 44px minimum
     unsizedImages: [],  // <img> that reserves no space before it loads
+    textOverlaps: [],   // two text boxes at the same depth sitting on each other
+    overlapUnchecked: [], // pairs the overlap check cannot judge, because clip-path
     clipped: [],        // content cut off by an overflow:hidden ancestor
     offFrame: [],       // laid out past the edge of the 430px phone
     truncated: [],      // text cut off with no ellipsis to say so
@@ -277,6 +316,69 @@ export function measure (scope) {
      hiding it" are different questions. A takeover or a toast legitimately
      puts the screen out of play — content behind one is not a layout mistake
      — but neither should ever be named as the thing that ate a row. */
+  /* TWO SIBLINGS AT THE SAME DEPTH, ON TOP OF EACH OTHER.
+
+     `content partly hidden` compares PAINT LAYERS, so it is structurally
+     unable to see this: two boxes at the same z-index are neither above nor
+     below one another and neither is ever in the other's `above` list. The
+     hole was found by looking — a card's name sat on its role line, 8.4cqw of
+     clearance for 5.4cqw of type on a 1.2 line box 3cqw off the bottom — and
+     looking is not a gate.
+
+     Only text against text, and only where NEITHER box contains the other: a
+     label inside its own row overlaps it by definition, and a quarter of the
+     smaller box is the line between two words touching and two words sharing
+     a space.
+
+     PAINTED rects, not raw ones, and the first version proved why: 48 hits,
+     and the two biggest families were both getBoundingClientRect ignoring
+     clipping. The sealed pack holds the same text twice on purpose, each half
+     clipped to its side of the rip, and reported 100% overlap. A match feed
+     row scrolled out of its own scroller still reports where it would have
+     been, which was on top of the buttons below. Neither is on screen at all.
+     Flying tokens are left out on top of that: a burst of ◈ glyphs is MEANT
+     to pile up, and two other assertions already own them. */
+  const texts = [...phone.querySelectorAll('*')]
+    .filter(el => !invisible(el) && textOf(el) && !el.closest('.fly') &&
+      [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()))
+    .map(el => {
+      const g = glyphBox(el)
+      return g && { el, z: paintLayer(el), rect: paintedRect(el, g), name: label(el) }
+    })
+    .filter(t => t && t.rect.right - t.rect.left > 0 && t.rect.bottom - t.rect.top > 0)
+  for (let i = 0; i < texts.length; i++) {
+    for (let j = i + 1; j < texts.length; j++) {
+      const a = texts[i], b = texts[j]
+      if (a.z !== b.z) continue
+      if (a.el.contains(b.el) || b.el.contains(a.el)) continue
+      /* A clip-path is invisible to every rect in this file, the same way a
+         mask is, so where one is in play this assertion has nothing to say
+         and says nothing — but it says WHICH pairs it gave up on, because an
+         exemption nobody can see is indistinguishable from a check that has
+         stopped running. The sealed pack is the whole population today: two
+         halves holding identical text, each clipped to its side of the rip. */
+      if (clipPathed(a.el) || clipPathed(b.el)) {
+        out.overlapUnchecked.push({ a: a.name, b: b.name, text: textOf(a.el).slice(0, 24) })
+        continue
+      }
+      const ow = Math.min(a.rect.right, b.rect.right) - Math.max(a.rect.left, b.rect.left)
+      const oh = Math.min(a.rect.bottom, b.rect.bottom) - Math.max(a.rect.top, b.rect.top)
+      if (ow <= TOL || oh <= TOL) continue
+      /* Area share was the first rule and it MISSED THE BUG IT WAS WRITTEN
+         FOR. A name sitting on a role line overlapped it by 1.6px of a 9.7px
+         line box — 16% of the smaller area, under any threshold loose enough
+         to stay quiet elsewhere. Lines of text stack VERTICALLY, so the
+         vertical bite is the signal and the horizontal share is only there to
+         say the two are in the same column rather than side by side. */
+      const narrow = Math.min(a.rect.right - a.rect.left, b.rect.right - b.rect.left)
+      if (ow < narrow * 0.25) continue
+      if (oh < 1.5) continue
+      out.textOverlaps.push({ a: a.name, b: b.name, bite: +oh.toFixed(1),
+        of: +Math.min(a.rect.bottom - a.rect.top, b.rect.bottom - b.rect.top).toFixed(1),
+        text: textOf(a.el).slice(0, 24) })
+    }
+  }
+
   const layered = [...phone.querySelectorAll('*')]
     .filter(el => !invisible(el) && opaque(getComputedStyle(el)) && paintLayer(el) > 0)
     .map(el => ({ el, z: paintLayer(el), rect: el.getBoundingClientRect(), name: label(el),
