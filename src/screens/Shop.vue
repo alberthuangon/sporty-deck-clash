@@ -12,7 +12,7 @@
           <div class="pack-bonus"><span v-if="p.id === 'gold'">{{ legendaryRate(p) / legendaryRate(PACKS[0]) }}× Legendary rate</span></div>
           <button class="odds-link" :data-odds="p.id" @click="openOdds(p, $event)">View drop rates <span aria-hidden="true">›</span></button>
           <p class="legendary-rate">Legendary: {{ legendaryRate(p) }}% per card</p>
-          <button class="btn btn-cta buy" :data-pack="p.id" :disabled="store.diamonds < p.price" :aria-label="`Buy and open ${p.name} for ${p.price} diamonds`" @click="buy(p)"><span>Buy &amp; open</span><span class="buy-price"><Icon name="diamond" :size="18" class="gem" />{{ p.price }}</span></button>
+          <button class="btn btn-cta buy" :data-pack="p.id" :disabled="store.diamonds < p.price" :aria-label="`Buy and open ${p.name} for ${p.price} diamonds`" @click="buy(p)"><span>Buy &amp; open</span><span class="buy-price"><DiamondIcon :size="20" class="gem" />{{ p.price }}</span></button>
           <p class="short" aria-live="polite">{{ store.diamonds < p.price ? `Need ${p.price - store.diamonds} more diamonds` : '' }}</p>
         </div>
       </section>
@@ -26,10 +26,10 @@
 </template>
 
 <script setup>
+import DiamondIcon from '../components/DiamondIcon.vue'
 import { ref, computed, nextTick } from 'vue'
 import PackCrest from '../components/PackCrest.vue'
 import PackArtwork from '../components/PackArtwork.vue'
-import Icon from '../components/Icon.vue'
 import { store, go, purchasePack, CATALOGUE, owned, RARITY } from '../game.js'
 import { PACKS } from '../engine/economy.js'
 const showOdds = ref(null)

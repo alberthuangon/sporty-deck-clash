@@ -18,14 +18,27 @@
 import gsap from 'gsap'
 import { uiPlay, UI_TIME } from './motion.js'
 import { ICONS } from './icons.js'
+import diamondArt from '../assets/missions-art/diamond.webp'
 
 /* A token's face. `icon` names a shape from icons.js and is built with real
    DOM calls — these nodes are created outside Vue, so there is no template to
    put an <Icon> in, and an emoji here would be the one platform-rendered
    glyph left in the app now that the tab bar has gone. Falls back to a text
-   glyph, which is still how the diamond and the shard travel. */
+   glyph for non-currency particles such as upgrade shards. Diamonds share
+   the same raster art as the wallet, prices and rewards. */
 const SVG_NS = 'http://www.w3.org/2000/svg'
 function paint (el, icon, glyph) {
+  if (icon === 'diamond' || (!icon && glyph === '◆')) {
+    const image = document.createElement('img')
+    image.src = diamondArt
+    image.alt = ''
+    image.setAttribute('aria-hidden', 'true')
+    image.width = 17
+    image.height = 17
+    image.style.cssText = 'display:block;width:1em;height:1em;object-fit:contain'
+    el.appendChild(image)
+    return
+  }
   const shape = icon && ICONS[icon]
   if (!shape) { el.textContent = glyph; return }
   const svg = document.createElementNS(SVG_NS, 'svg')
@@ -73,6 +86,7 @@ export function flyTo (from, to, { count = 6, glyph = '◆', icon = null, colour
   for (let i = 0; i < count; i++) {
     const el = document.createElement('i')
     el.className = 'fly'
+    el.setAttribute('aria-hidden', 'true')
     paint(el, icon, glyph)
     if (colour) el.style.color = colour
     el.style.left = sx + 'px'

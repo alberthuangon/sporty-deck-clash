@@ -13,7 +13,7 @@
     </section>
     <div class="rank-body">
       <section v-if="nextReward" class="next-reward" aria-label="Next reward">
-        <span class="reward-token" :class="nextReward.reward.tickets ? 'ticket-token' : 'diamond-token'" aria-hidden="true"><Icon :name="nextReward.reward.tickets ? 'ticket' : 'diamond'" :size="32" /></span>
+        <span class="reward-token" :class="nextReward.reward.tickets ? 'ticket-token' : 'diamond-token'" aria-hidden="true"><Icon v-if="nextReward.reward.tickets" name="ticket" :size="32" /><DiamondIcon v-else :size="36" /></span>
         <div><p class="eyebrow">Next reward</p><h2>{{ rewardText(nextReward.reward) }}</h2><p class="reach">Reach {{ nextReward.label }}</p></div>
         <span class="reward-star" aria-hidden="true">✦</span>
       </section>
@@ -28,7 +28,7 @@
               <RankCrest :tier="node.tier" :sub="node.sub" />
               <div class="node-name"><strong>{{ node.label }}</strong><span class="node-status" :class="{ 'next-pill': node.id === nextReward?.id }">{{ claimedIds.includes(node.id) ? 'Earned' : node.id === nextReward?.id ? 'Next' : '' }}</span></div>
               <div class="node-rewards">
-                <span v-if="node.reward.diamonds"><Icon name="diamond" :size="19" class="diamond-icon" /><span>{{ node.reward.diamonds }}<small> Diamonds</small></span></span>
+                <span v-if="node.reward.diamonds"><DiamondIcon :size="21" class="diamond-icon" /><span>{{ node.reward.diamonds }}<small> Diamonds</small></span></span>
                 <span v-if="node.reward.tickets"><Icon name="ticket" :size="20" class="ticket-icon" /><span>{{ node.reward.tickets }}<small> Draw Tickets</small></span></span>
               </div>
             </div>
@@ -48,6 +48,7 @@
   </div>
 </template>
 <script setup>
+import DiamondIcon from '../components/DiamondIcon.vue'
 import { computed } from 'vue'
 import Icon from '../components/Icon.vue'
 import RankCrest from '../components/RankCrest.vue'

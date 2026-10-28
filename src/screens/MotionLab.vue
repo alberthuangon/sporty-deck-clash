@@ -109,7 +109,7 @@
         <div v-show="demo === 'payout'" class="uinum">
           <CountUp :value="payoutTo" :from="799" prefix="₦" />
         </div>
-        <div v-show="demo === 'flyIn'" ref="flySrc" class="uisrc">◆</div>
+        <div v-show="demo === 'flyIn'" ref="flySrc" class="uisrc"><DiamondIcon :size="26" /></div>
         <div v-show="demo === 'rankUp'" class="uinum small">promotion burst</div>
       </div>
 
@@ -136,6 +136,7 @@
 </template>
 
 <script setup>
+import DiamondIcon from '../components/DiamondIcon.vue'
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import gsap from 'gsap'
 import Stage from '../match/Stage.vue'

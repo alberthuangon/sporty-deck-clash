@@ -6,12 +6,13 @@
       <div class="seal-half bot" ref="tearB"><PackArtwork :tier="tier" /></div>
       <div class="seal-rip" ref="ripEl"></div>
     </div>
-    <p class="seal-caption">{{ title }} <span>· ◆ {{ price }}</span></p>
+    <p class="seal-caption">{{ title }} <span>· <DiamondIcon :size="15" /> {{ price }}</span></p>
     <p class="seal-hint">{{ hint }}</p>
   </div>
 </template>
 
 <script setup>
+import DiamondIcon from './DiamondIcon.vue'
 /* Tap or drag the upper seam to open. The two halves share the real Shop
    artwork; a cancelled gesture springs back without granting/revealing cards. */
 import { ref, onUnmounted } from 'vue'

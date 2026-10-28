@@ -599,7 +599,10 @@ export const CASES = [
   },
 
   /* ------------------------------------------------ Missions */
-  { id: 'tasks/mixed', screen: 'tasks', group: 'tasks-claim', setup () { reset() } },
+  { id: 'tasks/mixed', screen: 'tasks', group: 'tasks-claim', setup () { reset() }, act () {
+    if([...document.querySelectorAll('.mission')].map(el=>el.dataset.task).join(',')!=='t2,t3,t1')throw new Error('Ready missions must come before ongoing and claimed missions')
+    if(['ready','ongoing','claimed'].some(k=>document.querySelector(`.${k}-count strong`).textContent!=='1'))throw new Error('Mission overview must reflect the live task states')
+  } },
   {
     /* same screen, one tap later: Claim becomes Claimed */
     id: 'tasks/claimed',
@@ -622,6 +625,32 @@ export const CASES = [
       await raf()
     }
   },
+
+  {id:'tasks/repeat-claim',screen:'tasks',setup(){reset()},async act({click}){
+    const button=document.querySelector('.claim');await click('.claim')
+    button.dispatchEvent(new MouseEvent('click',{bubbles:true}))
+    if(store.diamonds!==1030||!button.disabled||document.querySelector('.ready-count strong').textContent!=='0'||document.querySelector('.claimed-count strong').textContent!=='2')throw new Error('A repeated claim must award exactly once and update counts immediately')
+  }},
+  {id:'tasks/multiple-ready',screen:'tasks',setup(){reset();store.tasks[0].claimed=false},async act({click}){
+    await click('.claim',0);await click('.claim',1)
+    if(store.diamonds!==1040||document.querySelector('.ready-count strong').textContent!=='0'||[...document.querySelectorAll('.claim')].some(b=>!b.disabled))throw new Error('Separate ready missions must grant their own rewards once')
+  }},
+  {id:'tasks/all-claimed',screen:'tasks',setup(){reset();store.tasks.forEach(t=>{t.done=true;t.claimed=true})},act(){
+    if(document.querySelector('.claim')||document.querySelector('.claimed-count strong').textContent!=='3')throw new Error('Claimed missions must not offer another reward')
+  }},
+  {id:'tasks/all-ongoing',screen:'tasks',setup(){reset();store.tasks.forEach(t=>{t.done=false;t.claimed=false})},act(){
+    const bar=document.querySelector('[role="progressbar"]')
+    if(document.querySelector('.claim')||document.querySelector('.ongoing-count strong').textContent!=='3'||bar?.getAttribute('aria-valuenow')!=='0'||bar?.getAttribute('aria-valuemax')!=='1')throw new Error('Incomplete tasks must retain their actual progress without a Claim or Start action')
+  }},
+  {id:'tasks/empty',screen:'tasks',setup(){reset();store.tasks=[]},act(){
+    if(document.querySelector('.mission')||!document.querySelector('.empty-missions'))throw new Error('An empty mission list needs an honest empty state')
+  }},
+  {id:'tasks/leave-during-claim',screen:'tasks',setup(){reset()},async act({click,sleep}){
+    await click('.claim');game.go('cards');await sleep(450)
+    if(document.querySelector('.fly')||document.querySelector('.mission-toast')||store.diamonds!==1030)throw new Error('Leaving missions must clean up flights and notifications without undoing the reward')
+    game.go('tasks');await sleep(450)
+    if(document.querySelector('.claim')||document.querySelector('.mission')?.dataset.task!=='t3')throw new Error('Re-entering must prioritize remaining ongoing missions without replaying rewards')
+  }},
 
   /* ------------------------------------------------ Rank */
   { id: 'rank/fresh', screen: 'rank', group: 'rank-road', setup () { reset() } },

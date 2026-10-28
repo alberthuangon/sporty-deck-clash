@@ -8,7 +8,7 @@
            not allowed to make them wait to read it again. -->
       <div class="ru-tier" :class="tierClass" ref="tierEl">{{ view.label }}</div>
       <div class="ru-reward" ref="rewardEl">
-        <span v-if="view.reward.diamonds" class="rw"><i class="gem">◆</i> {{ view.reward.diamonds }}</span>
+        <span v-if="view.reward.diamonds" class="rw"><DiamondIcon :size="22" /> {{ view.reward.diamonds }}</span>
         <span v-if="view.reward.tickets" class="rw"><Icon name="ticket" /> {{ view.reward.tickets }} jackpot tickets</span>
         <span v-if="!view.reward.diamonds && !view.reward.tickets" class="rw muted">no reward node here</span>
       </div>
@@ -24,6 +24,7 @@
 </template>
 
 <script setup>
+import DiamondIcon from '../components/DiamondIcon.vue'
 /* The rank-up takeover. There is no watcher that forces this open: the one
    App.vue used to have was removed when the jackpot draw moved to
    "the player opens it", and the same reasoning applies here — a takeover

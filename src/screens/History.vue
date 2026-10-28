@@ -98,7 +98,7 @@
 
       <div v-for="p in detail.promotions" :key="p.id" class="promo">
         PROMOTED — {{ p.label }}
-        <span v-if="p.reward.diamonds">· ◆{{ p.reward.diamonds }}</span>
+        <span v-if="p.reward.diamonds">· <DiamondIcon :size="18" />{{ p.reward.diamonds }}</span>
         <span v-if="p.reward.tickets">· <Icon name="ticket" />{{ p.reward.tickets }}</span>
       </div>
 
@@ -111,6 +111,7 @@
 </template>
 
 <script setup>
+import DiamondIcon from '../components/DiamondIcon.vue'
 import { ref, computed, watch, onUnmounted } from 'vue'
 import Icon from '../components/Icon.vue'
 import CardFace from '../components/CardFace.vue'

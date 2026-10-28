@@ -57,7 +57,7 @@
       <span class="p-body">
         <span class="pt">PROMOTED — {{ p.label }}</span>
         <span class="pr">
-          <span v-if="p.reward.diamonds">◆ {{ p.reward.diamonds }}</span>
+          <span v-if="p.reward.diamonds"><DiamondIcon :size="19" /> {{ p.reward.diamonds }}</span>
           <span v-if="p.reward.tickets"><Icon name="ticket" /> {{ p.reward.tickets }} jackpot tickets</span>
         </span>
         <span class="ph">tap to celebrate</span>
@@ -84,6 +84,7 @@
 </template>
 
 <script setup>
+import DiamondIcon from '../components/DiamondIcon.vue'
 import { computed } from 'vue'
 import Icon from '../components/Icon.vue'
 import CountUp from '../components/CountUp.vue'
