@@ -185,15 +185,29 @@
 }
 /* Full spectrum, WITH GAPS. The old stops ran 0%->100% unbroken and covered
    .951 of the card; the transparent stops at 22 / 52 / 84% are where the gold
-   body is allowed to speak for itself. */
+   body is allowed to speak for itself.
+
+   THE FOIL MAY RELIGHT, IT MAY NOT REPAINT. Measured on the first real
+   illustration: the kit went from 346.8 to 309.7 degrees of hue, which reads
+   as a stage light on cloth and is fine — it still clears the team colours by
+   52.8 dE against a threshold of 20. The player's hair went green, which
+   reads as a different person. Peaks came down with the green (.38 -> .32,
+   .34 -> .30, .30 -> .28) because the 27% of kit saturation that went missing
+   is the same blow-out. */
 .r-L {
   --holo-foil:
     var(--holo-sparkle),
     linear-gradient(112deg,
-      rgba(255,70,110,.34) 0%, rgba(255,180,60,.30) 14%, transparent 22%,
-      rgba(120,255,170,.34) 32%, rgba(90,190,255,.38) 44%, transparent 52%,
-      rgba(180,120,255,.34) 62%, rgba(255,70,180,.30) 76%, transparent 84%,
-      rgba(255,200,90,.30) 100%);
+      rgba(255,70,110,.30) 0%, rgba(255,180,60,.28) 14%, transparent 22%,
+      /* cyan, not green, and quieter. A saturated green at .34 colour-dodged
+         over a mid-value warm turned the player's brown hair GREEN — the one
+         thing in the frame that cannot be relit, because hair and skin are
+         identity and the kit is only costume. Cyan reads as light; green
+         reads as paint. */
+      rgba(170,255,225,.24) 32%,
+      rgba(90,190,255,.32) 44%, transparent 52%,
+      rgba(180,120,255,.30) 62%, rgba(255,70,180,.28) 76%, transparent 84%,
+      rgba(255,200,90,.28) 100%);
   /* the counter-reflection rides the gloss layer, which already travels the
      other way — a second sweep against the first is what it physically is,
      and it is where Legendary's extra moved to when it came out of alpha:
