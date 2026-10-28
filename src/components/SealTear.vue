@@ -1,25 +1,12 @@
 <template>
-  <!-- Two layers holding the SAME content, each clipped to its side of the
-       rip, so the pack reads as one card until it stops being one. Both are
-       always in the DOM: nothing the timeline touches is behind a v-if. -->
-  <div class="seal" :class="tier === 'gold' ? 'pack-gold' : 'pack-std'" ref="sealEl" @click="tear">
-    <div class="seal-half pack-face top" ref="tearA">
-      <div class="seal-in">
-        <div class="seal-crest"><PackCrest /></div>
-        <div class="seal-top">{{ title }}</div>
-        <div class="seal-mid">◆ {{ price }}</div>
-        <div class="seal-hint muted">{{ hint }}</div>
-      </div>
+  <div class="seal-wrap">
+    <div class="seal" ref="sealEl" role="button" tabindex="0" :aria-label="`Tear open ${title}`" @click="tear" @keydown.enter.prevent="tear" @keydown.space.prevent="tear">
+      <div class="seal-half top" ref="tearA"><PackArtwork :tier="tier" /></div>
+      <div class="seal-half bot" ref="tearB"><PackArtwork :tier="tier" /></div>
+      <div class="seal-rip" ref="ripEl"></div>
     </div>
-    <div class="seal-half pack-face bot" ref="tearB">
-      <div class="seal-in">
-        <div class="seal-crest"><PackCrest /></div>
-        <div class="seal-top">{{ title }}</div>
-        <div class="seal-mid">◆ {{ price }}</div>
-        <div class="seal-hint muted">{{ hint }}</div>
-      </div>
-    </div>
-    <div class="seal-rip" ref="ripEl"></div>
+    <p class="seal-caption">{{ title }} <span>· ◆ {{ price }}</span></p>
+    <p class="seal-hint">{{ hint }}</p>
   </div>
 </template>
 
@@ -36,7 +23,7 @@ import { ref, onUnmounted } from 'vue'
 import gsap from 'gsap'
 import { uiPlay, UI_TIME } from '../ui/motion.js'
 
-import PackCrest from './PackCrest.vue'
+import PackArtwork from './PackArtwork.vue'
 
 defineProps({
   title: { type: String, default: 'Pack' },
@@ -94,25 +81,16 @@ defineExpose({ tear, reset })
 </script>
 
 <style scoped>
-.seal { position: relative; width: 190px; height: 260px; cursor: pointer; }
-/* The clip line and the two insets have to add up to 100% or the seam shows.
-   Each half carries the WHOLE face and is then clipped, so the top seal band
-   lands on the top half and the bottom one on the bottom half with nothing
-   extra to arrange. .pack-face (base.css) paints it; the shop thumbnail wears
-   the same class. */
-.seal-half {
-  position: absolute; inset: 0; border-radius: 10px;
-}
-.seal-half.top { clip-path: inset(0 0 56% 0); }
-.seal-half.bot { clip-path: inset(44% 0 0 0); }
-.seal-crest { width: 62px; height: 62px; }
-.seal-in {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-}
-.seal-top { font-weight: 800; letter-spacing: .06em; }
-.seal-mid { color: var(--diamond); font-weight: 700; }
-.seal-hint { font-size: 11px; }
+.seal-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.seal { position:relative; width:190px; height:260px; cursor:pointer; }
+.seal:focus-visible { outline:2px solid var(--cta); outline-offset:3px; border-radius:8px; }
+/* Both layers contain the identical complete asset; their clips meet at the tear line. */
+.seal-half { position:absolute; inset:0; }
+.seal-half.top { clip-path:inset(0 0 56% 0); }
+.seal-half.bot { clip-path:inset(44% 0 0 0); }
+.seal-caption { margin:0; color:#e0e7f1; font-size:12px; font-weight:600; }
+.seal-caption span { color:var(--diamond); font-size:11px; }
+.seal-hint { margin:0; color:#b8c5d7; font-size:11px; }
 .seal-rip {
   position: absolute; left: -6px; right: -6px; top: 44%;
   height: 3px; opacity: 0;

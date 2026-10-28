@@ -529,6 +529,34 @@ export const CASES = [
 
   /* ------------------------------------------------ Shop */
   { id: 'shop/affordable', screen: 'shop', group: 'shop-packs', setup () { reset(); store.diamonds = 900 } },
+  { id: 'shop/standard-only', screen: 'shop', setup () { reset(); store.diamonds = 100 }, act () {
+    if (document.querySelector('[data-pack="standard"]').disabled || !document.querySelector('[data-pack="gold"]').disabled) throw new Error('100 diamonds must enable only the Standard Pack')
+  } },
+  { id: 'shop/gold-rates', screen: 'shop', setup () { reset() }, async act ({ click }) {
+    await click('[data-odds="gold"]')
+    const rates = [...document.querySelectorAll('.orow strong')].map(el => el.textContent.trim())
+    if (rates.join(',') !== '50%,20%,28%,2%') throw new Error('Gold drop-rate sheet must show the published per-card probabilities')
+  } },
+  { id: 'shop/odds-dismiss', screen: 'shop', setup () { reset() }, async act ({ click, nextTick }) {
+    await click('[data-odds="standard"]')
+    document.querySelector('.close-odds').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await nextTick(); await nextTick()
+    if (document.querySelector('.sheet') || document.activeElement !== document.querySelector('[data-odds="standard"]')) throw new Error('Escape must close the sheet and restore focus to its trigger')
+  } },
+  ...['standard', 'gold'].map(id => ({ id: `shop/purchase-${id}`, screen: 'shop', setup () { reset(); store.diamonds = 1000 }, async act ({ click, sleep }) {
+    const copies = () => Object.values(store.ownedCards).reduce((n, e) => n + (e.level > 0 ? 1 : 0) + e.shards, 0)
+    const before = copies()
+    const image = document.querySelector(`.${id} .pack-artwork`).src
+    await click(`[data-pack="${id}"]`); await sleep(450)
+    const pack = PACKS.find(p => p.id === id)
+    if (store.diamonds !== 1000 - pack.price || copies() - before !== 5 || store.currentScreen !== 'packopen') throw new Error('Buying must charge once and grant all five cards before the reveal')
+    const halves = [...document.querySelectorAll('.seal .pack-artwork')]
+    if (halves.length !== 2 || halves.some(el => el.src !== image)) throw new Error('Shop and both tear halves must share exactly the same pack asset')
+    game.go('shop')
+  } })),
+  { id: 'shop/pity-demo', screen: 'shop', setup () { reset() }, act () {
+    if (document.querySelector('.demo-label')?.textContent.trim() !== 'Demo' || document.querySelector('.pity [role="progressbar"], .pity .bar')) throw new Error('Illustrative pity counters must be labelled Demo without a live progress bar')
+  } },
   {
     /* "Need N more" appears under the buy button in both pack cards */
     id: 'shop/too-poor',
@@ -782,6 +810,10 @@ export const CASES = [
     screen: 'packopen',
     setup () { reset(); richCollection(); store.diamonds = 900; boughtPack('gold') }
   },
+  { id: 'packopen/gold-reveal', screen: 'packopen', setup () { reset(); richCollection(); store.diamonds = 900; boughtPack('gold') }, async act ({ click, raf }) {
+    await openPack(click, raf)
+    if (!document.querySelector('.reveal-card') || document.querySelector('.seal')) throw new Error('The new Gold artwork must tear into the existing card reveal')
+  } },
   {
     /* mid-rip. The halves are supposed to move, so the group is scoped to the
        button underneath them: the thing a thumb is already reaching for must

@@ -401,6 +401,8 @@ onUnmounted(() => { if (tl) tl.kill(); stopIdle() })
 }
 /* the real seal is 190x260 — shown at 0.58 so the lab keeps one screenful */
 .uiseal { transform: scale(.58); }
+/* The compact lab stage already supplies its own instruction and pack label. */
+.uiseal :deep(.seal-caption), .uiseal :deep(.seal-hint) { display:none; }
 .uinum { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--cta); }
 .uinum.small { font-size: 13px; font-weight: 700; color: var(--text-2); letter-spacing: .06em; }
 .uisrc { font-size: 26px; color: var(--diamond); }
