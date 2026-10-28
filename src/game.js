@@ -188,13 +188,15 @@ export function claimTask (id) {
   return t.reward
 }
 
-/* ---------- pack (scripted for the demo, PRD §6.2 Phase 0) ---------- */
+/* ---------- pack (demo rarity lineups) ---------- */
 
-/* The FIRST pack is scripted, because the demo's narrative depends on it
-   (2 duplicates -> shards, a new Rare, Okonkwo last). Every pack after that is
-   drawn for real from the published rate table, so the odds screen is not
-   decoration — PRD §6.2. */
-export const PACK_SCRIPT = ['F1', 'F4', 'F2', 'F11', 'F12']   // dupe, new, dupe, new R, Okonkwo E
+/* Demo-only game-layer override requested for every pack, including repeat
+   purchases and existing saves. Player identities still vary within each tier.
+   The engine sampler and the published probability tables remain unchanged. */
+export const DEMO_PACK_RARITIES = Object.freeze({
+  standard: Object.freeze(['C', 'C', 'C', 'R', 'R']),
+  gold: Object.freeze(['C', 'C', 'R', 'E', 'L'])
+})
 
 /* THREE FUNCTIONS, BECAUSE THERE WERE THREE MOMENTS.
 
@@ -218,13 +220,13 @@ export const PACK_SCRIPT = ['F1', 'F4', 'F2', 'F11', 'F12']   // dupe, new, dupe
    charging for them, and charge at the tear. */
 export function canBuyPack (pack) { return store.diamonds >= pack.price }
 
-/* WHICH five, decided without taking anything. Reads the seen-flag, so it has
-   to run before payForPack sets it — which is also the right order for the
-   player: the pack you are about to tear is the one you were promised. */
+/* Choose players for the fixed demo tiers without touching the rate tables. */
 export function rollPackPulls (pack) {
-  const defs = store.flags.packOpened
-    ? rollPack(pack, CATALOGUE)
-    : PACK_SCRIPT.map(id => BY_ID[id])
+  const tiers = DEMO_PACK_RARITIES[pack.id]
+  const defs = tiers ? tiers.map(rarity => {
+    const pool = CATALOGUE.filter(c => c.rarity === rarity)
+    return pool[Math.floor(Math.random() * pool.length)]
+  }) : rollPack(pack, CATALOGUE)
   // a real draw can repeat a card inside one pack, so "new" has to account for
   // the earlier cards in this same pack, not just what was owned beforehand
   const seen = new Set()

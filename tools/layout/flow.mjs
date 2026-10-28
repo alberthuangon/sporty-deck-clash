@@ -124,7 +124,8 @@ export async function measurePackLedger ({ chromePath, url }) {
         reached = document.querySelector('.counter').textContent.trim()
         for (let i = 0; i < exit.taps; i++) {
           const was = document.querySelector('.counter')?.textContent
-          await click('.stage .btn-cta', 'the next card')
+          for(const name of ['cardReveal','cardEpicReveal','cardLegendaryReveal']) window.__motion.last(name)?.skip()
+          await click('.card-hit', 'the next card')
           await until(() => document.querySelector('.counter')?.textContent !== was ||
                             !!document.querySelector('.sum-grid'), 'card ' + (i + 2))
         }

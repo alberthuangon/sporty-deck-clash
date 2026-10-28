@@ -13,7 +13,7 @@
 
 import { store, resetStore } from '../../src/store.js'
 import * as game from '../../src/game.js'
-import { uiRunning, uiLast, UI_TIME } from '../../src/ui/motion.js'
+import { uiRunning, uiLast, UI_TIME, setReduced } from '../../src/ui/motion.js'
 import { PACKS } from '../../src/engine/economy.js'
 
 /* The engine is deterministic given its rng, but the game layer reaches for
@@ -192,7 +192,11 @@ function timeline () {
    — which is the correct behaviour and a useless state to measure. */
 function boughtPack (id = 'standard') {
   store.pendingPack = id
-  store.pendingPulls = game.purchasePack(PACKS.find(p => p.id === id))
+  store.pendingPulls = seeded(1000, () => game.purchasePack(PACKS.find(p => p.id === id)))
+}
+
+function finishPackReveal() {
+  for (const name of ['cardReveal','cardEpicReveal','cardLegendaryReveal']) uiLast(name)?.skip()
 }
 
 async function openPack (click, raf) {
@@ -201,6 +205,18 @@ async function openPack (click, raf) {
   if (!run) throw new Error('the pack did not tear')
   run.skip()
   await raf()
+  await raf()
+  finishPackReveal()
+  await raf()
+}
+
+async function advancePack(click, raf) {
+  finishPackReveal()
+  await click('.card-hit')
+  uiLast('cardToss')?.skip()
+  await raf()
+  await raf()
+  finishPackReveal()
   await raf()
 }
 
@@ -552,6 +568,9 @@ export const CASES = [
     if (store.diamonds !== 1000 - pack.price || copies() - before !== 5 || store.currentScreen !== 'packopen') throw new Error('Buying must charge once and grant all five cards before the reveal')
     const halves = [...document.querySelectorAll('.seal .pack-artwork')]
     if (halves.length !== 2 || halves.some(el => el.src !== image)) throw new Error('Shop and both tear halves must share exactly the same pack asset')
+    await click('.skip-results')
+    const actual=[...document.querySelectorAll('.sum-grid .cf')].map(el=>['C','R','E','L'].find(r=>el.classList.contains('r-'+r))).join('')
+    if(actual!==(id==='gold'?'CCREL':'CCCRR'))throw new Error('Every demo pack must use its exact requested rarity composition')
     game.go('shop')
   } })),
   { id: 'shop/pity-demo', screen: 'shop', setup () { reset() }, act () {
@@ -859,7 +878,7 @@ export const CASES = [
     screen: 'packopen',
     group: 'packopen-reveal',
     setup () { reset(); richCollection(); boughtPack() },
-    async act ({ click, raf }) { await openPack(click, raf); await click('.btn-cta'); await click('.btn-cta') }
+    async act ({ click, raf }) { await openPack(click, raf); await advancePack(click, raf); await advancePack(click, raf) }
   },
   {
     /* the fifth card is the same screen two taps later, and it grows a
@@ -868,13 +887,13 @@ export const CASES = [
     screen: 'packopen',
     group: 'packopen-reveal',
     setup () { reset(); richCollection(); boughtPack() },
-    async act ({ click, raf }) { await openPack(click, raf); for (let i = 0; i < 4; i++) await click('.btn-cta') }
+    async act ({ click, raf }) { await openPack(click, raf); for (let i = 0; i < 4; i++) await advancePack(click, raf) }
   },
   {
     id: 'packopen/summary',
     screen: 'packopen',
     setup () { reset(); richCollection(); boughtPack() },
-    async act ({ click, raf }) { await openPack(click, raf); for (let i = 0; i < 5; i++) await click('.btn-cta') }
+    async act ({ click, raf }) { await openPack(click, raf); for (let i = 0; i < 5; i++) await advancePack(click, raf) }
   },
   {
     /* one of the five, looked at full size. The summary's cards are 5:7 now
@@ -887,11 +906,105 @@ export const CASES = [
     setup () { reset(); richCollection(); boughtPack() },
     async act ({ click, raf }) {
       await openPack(click, raf)
-      for (let i = 0; i < 5; i++) await click('.btn-cta')
+      for (let i = 0; i < 5; i++) await advancePack(click, raf)
       await click('.sum-slot')
       await raf()
     }
   },
+
+  ...[false,true].map(complete=>({id:'packopen/drag-'+(complete?'tear':'cancel'),screen:'packopen',setup(){reset();richCollection();boughtPack()},async act({raf,sleep}){
+    const el=document.querySelector('.seal'),r=el.getBoundingClientRect(),x=r.left+r.width*.15,y=r.top+r.height*.12,dx=r.width*(complete?.6:.12)
+    el.dispatchEvent(new PointerEvent('pointerdown',{pointerId:2,clientX:x,clientY:y,bubbles:true}))
+    el.dispatchEvent(new PointerEvent('pointermove',{pointerId:2,clientX:x+dx,clientY:y,bubbles:true}))
+    el.dispatchEvent(new PointerEvent('pointerup',{pointerId:2,clientX:x+dx,clientY:y,bubbles:true}))
+    if(complete){if(!uiLast('tear'))throw new Error('Dragging across the seam must tear the pack');if(document.querySelector('.reveal-card'))throw new Error('The pack must conceal results until torn');uiLast('tear').skip();await raf();await raf();finishPackReveal();await raf()}
+    else{await sleep(300);if(uiLast('tear')||!document.querySelector('.seal'))throw new Error('A short drag must return to a sealed pack')}
+  }})),
+  ...[null,0,2,4,5].map(taps=>({id:'opening-ledger/exit-'+(taps===null?'sealed':taps),screen:'shop',setup(){reset();richCollection();store.diamonds=2000},async act({click,raf,sleep}){
+    const copies=()=>Object.values(store.ownedCards).reduce((n,c)=>n+(c.level>=1?1:0)+c.shards,0)
+    const gems=store.diamonds,held=copies()
+    await click('.buy[data-pack="standard"]');await sleep(450)
+    if(taps!==null){await openPack(click,raf);for(let i=0;i<taps;i++)await advancePack(click,raf)}
+    await click('.tb-back');await sleep(450)
+    if(store.currentScreen!=='shop'||gems-store.diamonds!==100||copies()-held!==5||document.querySelector('.ui-skip')||document.querySelector('.fly'))throw new Error('Every pack exit must preserve a single charge, all five cards, and no animation blockers')
+  }})),
+
+  // New gesture flow: skipping and interrupted gestures must never settle goods again.
+  { id:'packopen/reveal-all-sealed', screen:'packopen', setup(){ reset(); richCollection(); boughtPack() }, async act({click}) {
+    const before=JSON.stringify(store.ownedCards), gems=store.diamonds
+    await click('.skip-results')
+    if(document.querySelectorAll('.sum-slot').length!==5 || document.querySelector('.seal') || JSON.stringify(store.ownedCards)!==before || store.diamonds!==gems) throw new Error('Reveal all must show five already-granted cards without changing the ledger')
+  } },
+  { id:'packopen/skip-flipping', screen:'packopen', setup(){ reset(); richCollection(); boughtPack() }, async act({click,raf}) {
+    await click('[data-sfx="tear"]'); uiLast('tear').skip(); await raf(); await raf()
+    await click('.skip-results'); await raf()
+    if(!document.querySelector('.sum-grid') || document.querySelector('.ui-skip') || document.querySelector('.fly')) throw new Error('Skipping a flip must cancel every active effect')
+  } },
+  { id:'packopen/keyboard-next', screen:'packopen', setup(){ reset(); richCollection(); boughtPack() }, async act({click,raf}) {
+    await openPack(click,raf)
+    document.querySelector('.card-hit').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))
+    uiLast('cardToss').skip(); await raf(); await raf(); finishPackReveal(); await raf()
+    if(!document.querySelector('.counter').textContent.includes('2 / 5')) throw new Error('Enter must reveal the second player')
+  } },
+  { id:'packopen/swipe-next', screen:'packopen', setup(){ reset(); richCollection(); boughtPack() }, async act({click,raf}) {
+    await openPack(click,raf)
+    const el=document.querySelector('.card-hit'), r=el.getBoundingClientRect(), x=r.left+r.width/2,y=r.top+r.height/2
+    el.dispatchEvent(new PointerEvent('pointerdown',{pointerId:1,clientX:x,clientY:y,bubbles:true}))
+    el.dispatchEvent(new PointerEvent('pointermove',{pointerId:1,clientX:x,clientY:y-90,bubbles:true}))
+    el.dispatchEvent(new PointerEvent('pointerup',{pointerId:1,clientX:x,clientY:y-90,bubbles:true}))
+    uiLast('cardToss')?.skip(); await raf(); await raf(); finishPackReveal(); await raf()
+    if(!document.querySelector('.counter').textContent.includes('2 / 5')) throw new Error('An upward swipe must advance exactly one card')
+  } },
+  { id:'packopen/rapid-clicks', screen:'packopen', setup(){ reset(); richCollection(); boughtPack() }, async act({click,raf}) {
+    await openPack(click,raf); const hit=document.querySelector('.card-hit')
+    hit.click();hit.click();hit.click();uiLast('cardToss').skip();await raf();await raf();finishPackReveal();await raf()
+    if(!document.querySelector('.counter').textContent.includes('2 / 5')) throw new Error('Rapid input must not discard more than one card')
+  } },
+  ...['R','E','L'].map(rarity=>({ id:'packopen/rarity-'+rarity,screen:'packopen',setup(){reset();richCollection();store.diamonds=900;boughtPack(rarity==='R'?'standard':'gold')},async act({click,raf}){
+    await openPack(click,raf);for(let i=0;i<(rarity==='E'?3:4);i++)await advancePack(click,raf)
+    if(!document.querySelector('.reveal-card').classList.contains('r-'+rarity))throw new Error('The requested rarity must reach its own reveal treatment')
+  }})),
+  ...['E','L'].map(rarity=>({id:'packopen/charge-'+rarity,screen:'packopen',setup(){reset();richCollection();store.diamonds=900;boughtPack('gold')},async act({click,raf,at}){
+    await openPack(click,raf)
+    const count=rarity==='E'?3:4
+    for(let i=0;i<count-1;i++)await advancePack(click,raf)
+    await click('.card-hit');uiLast('cardToss').skip();await raf();await raf()
+    const anim=uiLast(rarity==='E'?'cardEpicReveal':'cardLegendaryReveal')
+    if(!anim || !anim.record.interruptible)throw new Error('High-rarity charge must be skippable')
+    anim.timeline.pause(at===null?(rarity==='E'?.50:.90):at)
+    await raf()
+    if(document.querySelector('.verdict').getAttribute('aria-hidden')!=='true')throw new Error('The player result must stay concealed during the charge')
+  }})),
+  {id:'packopen/skip-legendary-charge',screen:'packopen',setup(){reset();richCollection();store.diamonds=900;boughtPack('gold')},async act({click,raf}){
+    await openPack(click,raf);for(let i=0;i<3;i++)await advancePack(click,raf)
+    await click('.card-hit');uiLast('cardToss').skip();await raf();await raf()
+    const run=uiLast('cardLegendaryReveal');run.skip();await raf()
+    if(document.querySelector('.ui-skip')||document.querySelector('.verdict').getAttribute('aria-hidden')==='true')throw new Error('Skipping Legendary charge must reveal the card and remove the blocker')
+    await click('.skip-results');await raf()
+    if(!document.querySelector('.sum-grid')||document.querySelector('.fly'))throw new Error('Reveal all must clean up high-rarity effects')
+  }},
+  { id:'packopen/ambient-active',screen:'packopen',setup(){reset();richCollection();store.diamonds=900;boughtPack('gold')},async act({click,raf,sleep}){
+    await openPack(click,raf);for(let i=0;i<4;i++)await advancePack(click,raf)
+    await sleep(100)
+    const rays=document.querySelector('.legendary-rays'),canvas=document.querySelector('.pack-particles')
+    const read=()=>({angle:getComputedStyle(rays,'::before').getPropertyValue('--pack-beam-angle'),pixels:canvas.toDataURL()})
+    const a=read();await sleep(240);const b=read()
+    if(a.angle===b.angle||a.pixels===b.pixels)throw new Error('Legendary beams and canvas particles must actually animate between frames')
+  } },
+  { id:'packopen/reduced-motion',screen:'packopen',setup(){reset();richCollection();store.diamonds=900;boughtPack('gold')},async act({click,raf,sleep}){
+    setReduced(true)
+    try{
+      await openPack(click,raf);for(let i=0;i<4;i++)await advancePack(click,raf)
+      await sleep(100)
+      const rays=document.querySelector('.legendary-rays'),canvas=document.querySelector('.pack-particles'),card=document.querySelector('.reveal-card')
+      if(getComputedStyle(rays,'::before').animationName!=='none')throw new Error('Reduced motion must stop the beam rotation and pulse')
+      const pixels=canvas.toDataURL(),transform=getComputedStyle(card).transform
+      await sleep(180)
+      if(pixels!==canvas.toDataURL()||transform!==getComputedStyle(card).transform)throw new Error('Reduced motion must freeze the card and particle field')
+      await advancePack(click,raf)
+      if(!document.querySelector('.sum-grid')||document.querySelector('.ui-skip'))throw new Error('Reduced motion must reach summary without a blocker')
+    }finally{setReduced(false)}
+  } },
 
   /* ------------------------------------------------ Upgrade */
   { id: 'upgrade/no-card', screen: 'upgrade', setup () { reset() } },

@@ -32,10 +32,14 @@ import gsap from 'gsap'
    cap moving to meet the dial is the one direction this discipline cannot
    check for itself, so it is a decision, written down, rather than a drift. */
 export const UI_BUDGET = Object.freeze({
-  tear: 1.20,        // tap -> first card visible
+  tear: 1.20,        // tap -> sealed artwork exits and card stack arrives
   radar: 0.90,       // the radar shape morphing to next level
   payout: 1.10,      // the payout figure rolling
   rankUp: 1.80,      // the promotion burst
+  cardReveal: 0.90, // charge + flip + settle; tap fast-forwards
+  cardEpicReveal: 1.45,
+  cardLegendaryReveal: 1.90,
+  cardToss: 0.28,   // discard to the next card
   flyIn: 1.00        // diamonds / shards flying to the wallet
 })
 
@@ -48,7 +52,11 @@ export const UI_TIME = reactive({
   radar: 0.90,
   payout: 0.80,
   rankUp: 1.80,
-  flyIn: 1.00
+  flyIn: 1.00,
+  cardReveal: 0.90,
+  cardEpicReveal: 1.45,
+  cardLegendaryReveal: 1.90,
+  cardToss: 0.28
 })
 
 /* Past this, an animation has to be interruptible — same semantics as the

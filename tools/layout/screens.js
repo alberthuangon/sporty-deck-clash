@@ -108,6 +108,7 @@ function swayOf () {
      leaning card" if it is the sweep's own pin that gets measured. */
   const back = read(PIN_HI)
   return {
+    profile: cf.closest('.card-hit') ? 'opening' : 'standard',
     at: +Math.abs(back.yaw).toFixed(4),
     spread: +Math.max(Math.abs(hi.top - lo.top), Math.abs(hi.h - lo.h)).toFixed(2)
   }
@@ -307,6 +308,8 @@ window.__screens = async () => {
       const want = q.get('scroll')
       const el = want && document.querySelector(want)
       if (el) { el.scrollIntoView({ block: 'center' }); await raf() }
+      // A live preview releases the camera pin only AFTER geometry is measured.
+      if (q.get('live') === '1') htmlEl.classList.remove(PIN_HI, PIN_LO, PIN_MID)
       return { shot: rec.id }      // leave the screen up to be photographed
     }
     trace(`done  ${String(rec.id).padEnd(26)} rendered=${rec.rendered} nodes=${String(rec.nodes).padStart(4)} ` +

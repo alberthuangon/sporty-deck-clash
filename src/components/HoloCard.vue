@@ -55,7 +55,9 @@ import { reduced } from '../ui/motion.js'
 
 const props = defineProps({
   /* 9deg at the far edge; the ladder's values live in tokens.css */
-  tilt: { type: Number, default: 9 }
+  tilt: { type: Number, default: 9 },
+  idleAmplitude: { type:Number, default:1 },
+  idleDuration: { type:Number, default:7 }
 })
 
 const rootEl = ref(null)
@@ -190,6 +192,8 @@ const vars = computed(() => {
     /* the one tilt constant, shared with the drift's own amplitude in CSS so
        there is no second number to keep in step with this one */
     '--holo-tilt': props.tilt + 'deg',
+    '--holo-idle-gain': props.idleAmplitude,
+    '--holo-duration': props.idleDuration + 's',
     '--holo-rx': ((py.value - 0.5) * props.tilt * 2 * g).toFixed(2) + 'deg',
     '--holo-ry': ((0.5 - px.value) * props.tilt * 2 * g).toFixed(2) + 'deg',
     '--holo-sx': ((px.value - 0.5) * -14 * g).toFixed(1) + 'px',
@@ -226,14 +230,14 @@ const vars = computed(() => {
   --holo-on: 1;
   /* up and down still scrolls the page; sideways is the card's */
   touch-action: pan-y;
-  animation: holo-idle 7s ease-in-out infinite;
+  animation: holo-idle var(--holo-duration, 7s) ease-in-out infinite;
 
   /* WHERE THE DRIFT IS LOOKING. 50% +/- 16% horizontally and +/- 8%
      vertically: over a third of the card one way and a sixth the other, which
      is a card held in a hand that is not quite still rather than a scanner
      sweeping it. */
-  --holo-dx: calc(50% + var(--holo-d) * 16%);
-  --holo-dy: calc(50% + var(--holo-d) * 8%);
+  --holo-dx: calc(50% + var(--holo-d) * 16% * var(--holo-idle-gain, 1));
+  --holo-dy: calc(50% + var(--holo-d) * 8% * var(--holo-idle-gain, 1));
   --holo-x: calc(var(--holo-dx) + (var(--holo-px, 50%) - var(--holo-dx)) * var(--holo-g));
   --holo-y: calc(var(--holo-dy) + (var(--holo-py, 50%) - var(--holo-dy)) * var(--holo-g));
 
@@ -246,8 +250,8 @@ const vars = computed(() => {
      At the default 9deg that is +/-2.9deg of yaw and +/-1.4 of pitch.
      Sideways dominates because that is the gesture: someone turning a card in
      their fingers to catch the light, not nodding it. */
-  --holo-dry: calc(var(--holo-d) * var(--holo-tilt, 9deg) * -0.32);
-  --holo-drx: calc(var(--holo-d) * var(--holo-tilt, 9deg) * 0.16);
+  --holo-dry: calc(var(--holo-d) * var(--holo-tilt, 9deg) * -0.32 * var(--holo-idle-gain, 1));
+  --holo-drx: calc(var(--holo-d) * var(--holo-tilt, 9deg) * 0.16 * var(--holo-idle-gain, 1));
   /* the same lean applied to the shadow's 14px, so the card and the thing it
      casts agree about which way it is facing */
   --holo-dsx: calc(var(--holo-d) * -2.24px);

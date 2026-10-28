@@ -428,11 +428,16 @@ const holoPainting = holo.filter(h => h.solidBg)
    Together these replace "the geometry never moves", and they are weaker
    than what they replaced — they bound the movement instead of forbidding
    it, which is what it means to have asked for the movement. */
-const SWAY_CAP = 6
-const SWAY_YAW = 0.0502
-const sway = screens.results.filter(r => r.rendered && r.sway).map(r => ({ state: r.id, ...r.sway }))
-const swayFlat = sway.filter(s => s.at < SWAY_YAW / 2)
-const swayBig = sway.filter(s => s.spread > SWAY_CAP || s.at > SWAY_YAW * 1.5)
+// Opening Pack intentionally has a stronger presentation sway (user request).
+// Other card views keep the original 2.9-degree profile and its existing cap.
+const SWAY_PROFILES = {
+  standard: { yaw:.0502, cap:6, low:.5, high:1.5 },
+  opening: { yaw:.1399, cap:8, low:.8, high:1.2 }
+}
+const sway = screens.results.filter(r => r.rendered && r.sway).map(r => ({ state:r.id, ...r.sway }))
+const swayProfile = s => SWAY_PROFILES[s.profile || 'standard']
+const swayFlat = sway.filter(s => s.at < swayProfile(s).yaw * swayProfile(s).low)
+const swayBig = sway.filter(s => s.spread > swayProfile(s).cap || s.at > swayProfile(s).yaw * swayProfile(s).high)
 /* The piece of the invariance claim the anchors can no longer carry.
 
    `a card's geometry may not depend on WHICH card it is` used to be one
@@ -443,7 +448,7 @@ const swayBig = sway.filter(s => s.spread > SWAY_CAP || s.at > SWAY_YAW * 1.5)
    yaw every state was photographed at has to be the same yaw. An angle, not
    a distance: the hero is 280px and the pack reveal is 320, and the same
    rotation on a bigger card moves more pixels on purpose. */
-const swayYaws = [...new Set(sway.map(s => s.at))]
+const swayYaws = Object.keys(SWAY_PROFILES).map(profile => ({profile,values:[...new Set(sway.filter(s=>s.profile===profile).map(s=>s.at))]})).filter(g=>g.values.length>1)
 
 const early = screens.results.filter(r => r.tooEarly).map(r => ({ state: r.id }))
 
@@ -501,7 +506,7 @@ check('packs that charge without delivering', ledger.length,
   !ledger.length && packLedger.length === PACK_EXITS.length)
 check('holo cards measured standing still', swayFlat.length, !swayFlat.length && !!sway.length)
 check('holo sway past its budget', swayBig.length, !swayBig.length)
-check('cards that lean by different amounts', swayYaws.length, swayYaws.length === 1)
+check('cards that lean by different amounts within a profile', swayYaws.length, !swayYaws.length)
 
 /* THE BASELINE LIVES HERE, in the line that prints every run, because the
    alternative is somebody's memory or a file in a scratchpad.
@@ -603,7 +608,7 @@ if (holo.length) {
 if (sway.length) {
   const worst = sway.reduce((a, b) => (b.spread > a.spread ? b : a))
   console.log(`\n  note: holo sway measured in ${sway.length} state(s) — worst ${worst.spread}px ` +
-    `(${worst.state}), pinned at yaw ${worst.at} of a ${SWAY_CAP}px cap`)
+    `(${worst.state}), pinned at yaw ${worst.at} of a ${swayProfile(worst).cap}px cap`)
 }
 
 if (ellipsised.length) {
@@ -665,11 +670,11 @@ if (fail.length) {
   holoTappable.forEach(h => console.log(`  foil takes taps: ${h.state}  ${h.key} pointer-events: ${h.pointer}`))
   if (!sway.length) console.log('  sway never measured: no state in the sweep shows a holo card')
   swayFlat.forEach(s2 => console.log(`  measured flat: ${s2.state} was photographed at yaw ${s2.at} — the pin is off the sway`))
-  swayBig.forEach(s2 => console.log(`  sways too far: ${s2.state} leans ${s2.at} (cap ${(SWAY_YAW * 1.5).toFixed(4)}) ` +
-    `and moves ${s2.spread}px between the ends of its drift (cap ${SWAY_CAP})`))
-  if (swayYaws.length > 1) {
-    console.log(`  leans differ: yaw takes values ${swayYaws.join(', ')}`)
-    for (const y of swayYaws) console.log(`    ${y}  ${sway.filter(s2 => s2.at === y).map(s2 => s2.state).join(' ')}`)
+  swayBig.forEach(s2 => console.log(`  sways too far: ${s2.state} leans ${s2.at} (cap ${(swayProfile(s2).yaw * swayProfile(s2).high).toFixed(4)}) ` +
+    `and moves ${s2.spread}px between the ends of its drift (cap ${swayProfile(s2).cap})`))
+  for (const group of swayYaws) {
+    console.log(`  leans differ within ${group.profile}: ${group.values.join(', ')}`)
+    for (const y of group.values) console.log(`    ${y}  ${sway.filter(s=>s.profile===group.profile&&s.at===y).map(s=>s.state).join(' ')}`)
   }
   console.log('')
   process.exit(1)
