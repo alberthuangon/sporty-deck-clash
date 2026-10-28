@@ -404,6 +404,50 @@ export const CASES = [
 
   /* ------------------------------------------------ Cards */
   { id: 'cards/sparse', screen: 'cards', setup () { reset() } },
+  { id: 'cards/filter-owned', screen: 'cards', setup () { reset() }, async act ({ click }) {
+    await click('[data-filter="owned"]')
+    if (document.querySelectorAll('.grid .slot').length !== 4 || document.querySelector('.grid .cf.locked')) throw new Error('Owned filter must show exactly the four owned cards')
+  } },
+  { id: 'cards/filter-uncollected', screen: 'cards', setup () { reset() }, async act ({ click }) {
+    await click('[data-filter="uncollected"]')
+    if (document.querySelectorAll('.grid .slot').length !== 16 || document.querySelectorAll('.grid .cf.locked').length !== 16) throw new Error('Uncollected filter must show sixteen locked cards')
+  } },
+  { id: 'cards/filter-empty', screen: 'cards', setup () { reset() }, async act ({ click, nextTick }) {
+    await click('[data-filter="owned"]')
+    const select = document.querySelector('[aria-label="Filter by rarity"]')
+    select.value = 'L'; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    if (!document.querySelector('.collection-empty') || document.querySelector('.grid')) throw new Error('Owned Legendary filter must show the empty state')
+  } },
+  { id: 'cards/filter-reset', screen: 'cards', setup () { reset() }, async act ({ click, nextTick }) {
+    await click('[data-filter="owned"]')
+    const select = document.querySelector('[aria-label="Filter by rarity"]')
+    select.value = 'L'; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    await click('.collection-empty .btn')
+    if (document.querySelectorAll('.grid .slot').length !== 20) throw new Error('Reset must restore all twenty cards')
+  } },
+  { id: 'cards/sort-rarity', screen: 'cards', setup () { reset() }, async act ({ nextTick }) {
+    const select = document.querySelector('[aria-label="Sort cards"]')
+    select.value = 'rarity'; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    const cards = [...document.querySelectorAll('.grid .cf-rar')].map(el => el.textContent.trim())
+    const order = { L: 3, E: 2, R: 1, C: 0 }
+    if (cards.length !== 20 || cards.some((r, i) => i > 0 && order[r] > order[cards[i - 1]])) throw new Error('Rarity sort must run from Legendary to Common')
+  } },
+  { id: 'cards/filter-back', screen: 'cards', setup () { reset() }, async act ({ click }) {
+    await click('[data-filter="owned"]'); await click('.card-open'); await click('.tb-back')
+    if (document.querySelectorAll('.grid .slot').length !== 4 || document.querySelector('[data-filter="owned"]').getAttribute('aria-pressed') !== 'true') throw new Error('Back must preserve the owned filter')
+  } },
+  { id: 'cards/sort-level', screen: 'cards', setup () { reset(); richCollection() }, async act ({ nextTick }) {
+    const select = document.querySelector('[aria-label="Sort cards"]')
+    select.value = 'level'; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    const levels = [...document.querySelectorAll('.grid .cf-lv')].map(el => Number(el.textContent.replace('Lv.', '')))
+    if (levels[0] !== 4 || levels.some((n, i) => i > 0 && n > levels[i - 1])) throw new Error('Level sort must put the highest owned levels first')
+  } },
+  { id: 'cards/sort-name', screen: 'cards', setup () { reset() }, async act ({ nextTick }) {
+    const select = document.querySelector('[aria-label="Sort cards"]')
+    select.value = 'name'; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    const names = [...document.querySelectorAll('.grid .cf-name')].map(el => el.textContent.trim())
+    if (names[0] !== 'Adeyemi' || names[names.length - 1] !== 'Zuberi') throw new Error('Alphabetical sort must run from Adeyemi to Zuberi')
+  } },
   {
     id: 'cards/full',
     screen: 'cards',
