@@ -194,18 +194,20 @@
    the green (.38 -> .32, .34 -> .30, .30 -> .28) because the 27% of kit
    saturation that went missing is the same blow-out.
 
-   THIRTY-SEVEN DEGREES IS AN OPEN QUESTION, NOT A REASSURANCE, and this
-   comment used to say the opposite. It quoted a kit-vs-venue margin against
-   a dE-76 threshold of 20 that had already been replaced elsewhere by a hue
-   angle of 15 degrees from --home and --away, or dE-2000 of 15. A kit that
-   clears the new rule on hue alone has 15 degrees of room and the foil moves
-   it by 37, so a shirt can pass as a file and fail on the screen. The right
-   number is the WORST case across the whole sweep of --holo-x / --holo-y, per
-   rarity, and it is being measured; until it exists no margin belongs here.
+   Thirty-seven degrees of relight is allowed on purpose, and there is no
+   margin to quote any more, because there is nothing on the card to compare
+   the shirt against: .cf-venue stopped being a --home / --away swatch and
+   became a neutral badge. The shirt rule survives (15 degrees of hue from
+   --home and --away, or dE-2000 of 15) and is checked ON THE FILE, where the
+   opponent for the comparison actually is — the scoreboard, the cut-in and
+   the shootout. It no longer has to hold up under the foil.
 
-   The lesson is in how long that line survived: the threshold changed, the
-   change did not reach this file, and a premise overturned somewhere else sat
-   here looking settled while the foil was tuned against it. */
+   This line said something different twice before, and both times it read as
+   settled. It quoted a dE-76 threshold of 20 that had been replaced
+   elsewhere, and after that it quoted the replacement against a worst case
+   nobody had measured. The habit worth keeping is the one that caught it:
+   when a comment states a MARGIN, it is making a claim about two things at
+   once, and either can move without touching this file. */
 .r-L {
   --holo-foil:
     var(--holo-sparkle),

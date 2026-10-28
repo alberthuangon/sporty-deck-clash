@@ -245,7 +245,7 @@ const venueMark = computed(() =>
   position: absolute; left: 0; right: 0; bottom: 3cqw; z-index: 2;
   font-size: 5.4cqw; line-height: 1.2;
 }
-.cf-full .cf-venue { width: 3.4cqw; height: 5cqw; }
+.cf-full .cf-venue.home, .cf-full .cf-venue.away { padding: 0 0.9cqw; }
 /* Only as tall as the type it carries, and transparent for most of that: the
    bottom fifth is where the name lives and the picture's own safe area is. */
 .cf-scrim {
@@ -263,22 +263,33 @@ const venueMark = computed(() =>
    inline-flex is scoped to the two real venues on purpose: a neutral card's
    span must stay a 0x11 inline box, because that is the box the gate's
    invariance anchors were measured against. */
-/* The swatch is positioned OUT of the line box, with padding reserving its
-   room. Measured the obvious way first — inline-flex with the swatch as a flex
-   child — and it made the role line 0.6px taller on a home/away card than on a
-   neutral one, which walked the four rows under it by 0.6px and failed the
-   packopen-reveal invariance group. Absolute means the span's box is still
-   pure text, identical to the empty neutral one. */
+/* A NEUTRAL BADGE, in the same family as .cf-pos, and the colour it used to
+   spend is the point of the change.
+
+   It was a solid --home / --away swatch, which put a team colour on the card
+   face — and the Rare foil is a sheet of --r-r (#4C9BFF) colour-dodged across
+   the whole card, with --away (#2F7BE8) a near neighbour of it. Two of the
+   three semantic colour families on one card, one of them painted edge to
+   edge by the finish. The information stays: .cf-venue is not which team the
+   player belongs to, it is where he plays better (engine: home HOM 20 / AWY
+   16), and that is real. Only the encoding changes, to the one .cf-pos
+   already argued for — role takes shape and letters, rarity takes colour.
+   --home and --away keep the places where they genuinely mean two teams: the
+   scoreboard, the goal cut-in, the shootout.
+
+   box-shadow, not border, and no vertical padding. A border on an inline box
+   adds to the line, and this line's height is load-bearing: an inline-flex
+   swatch made it 0.6px taller on a home/away card than on a neutral one,
+   which walked the four rows beneath it and failed packopen-reveal. A
+   box-shadow ring costs no layout at all, so a neutral card's empty span is
+   still exactly the box the invariance anchors were measured against. */
 .cf-venue { position: relative; margin-left: 4px; font-weight: 800; }
-.cf-venue.home, .cf-venue.away { padding-left: 9px; }
-.cf-venue.home::before, .cf-venue.away::before {
-  content: ''; position: absolute; left: 0; top: 50%; margin-top: -4px;
-  width: 6px; height: 8px; border-radius: 1.5px;
+.cf-venue.home, .cf-venue.away {
+  color: #D4D8E0;
+  padding: 0 3px;
+  border-radius: var(--r-sm);
+  box-shadow: inset 0 0 0 1px var(--divider);
 }
-.cf-venue.home { color: #FF8A93; }
-.cf-venue.home::before { background: var(--home); }
-.cf-venue.away { color: #8FC0FF; }
-.cf-venue.away::before { background: var(--away); }
 .sm .cf-name { font-size: 11px; }
 .lg .cf-name { font-size: 16px; }
 .lg .cf-role { font-size: 11px; }
