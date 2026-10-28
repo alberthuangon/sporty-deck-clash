@@ -337,6 +337,29 @@ check('foil layers you cannot see through', holoSolid.length, !holoSolid.length 
 check('foil layers that could eat a tap', holoTappable.length, !holoTappable.length)
 check('foil layers painting instead of blending', holoPainting.length, !holoPainting.length)
 
+/* THE BASELINE LIVES HERE, in the line that prints every run, because the
+   alternative is somebody's memory or a file in a scratchpad.
+
+   Taken once the rarity ladder settled into a count of colours rather than a
+   count of lumens, and once the finish lit the player without repainting him.
+   When twenty illustrations land and the card grows from 190 to 320 the
+   foil's area grows with it, and alpha has to come DOWN to keep the same
+   average contribution over the whole card. These two numbers are what "the
+   same" means.
+
+   Measured beside them by differencing a frame against itself with the finish
+   hidden (scratchpad foildiff.py / hair.py), at 190x266:
+
+     mean contribution   C 4.96   R 21.71   E 32.12   L 38.19
+     coverage            C .130   R .563    E .635    L .861
+     hue spread          C .222   R .361    E .694    L .833
+     hair hue, lit       C 16.8   R 296.2   E 339.2   L 18.1   (unlit 16.8)
+
+   Drift is not a failure — the art is still arriving and these will be
+   retuned on purpose. It prints so that the retune is a decision somebody
+   makes rather than something that happens to them. */
+const HOLO_BASELINE = { 'i.cf-foil': 0.45, 'i.cf-gloss': 0.26 }
+
 /* Printed even when every one of them passes. The three checks above are the
    price of sitting over the card's own name, and a layer that quietly stopped
    being found would buy that exemption in silence — so the roster is the
@@ -356,7 +379,11 @@ if (holo.length) {
   }
   console.log(`\n  note: ${roster.size} compositing layer(s) over card content, ${holo.length} sighting(s):`)
   for (const h of roster.values()) {
-    console.log(`    ${h.key}  ${h.blend}  worst alpha x opacity ${h.effective}  pointer-events ${h.pointer}` +
+    const base = HOLO_BASELINE[h.key]
+    const drift = base === undefined ? '  (no baseline)'
+      : h.effective === base ? `  = baseline`
+      : `  vs baseline ${base}  ${h.effective > base ? '+' : ''}${(h.effective - base).toFixed(2)}`
+    console.log(`    ${h.key}  ${h.blend}  worst alpha x opacity ${h.effective}${drift}  pointer-events ${h.pointer}` +
       (h.solidBg ? '  SOLID BACKGROUND' : ''))
   }
 }

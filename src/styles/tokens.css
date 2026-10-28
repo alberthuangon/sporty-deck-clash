@@ -188,12 +188,24 @@
    body is allowed to speak for itself.
 
    THE FOIL MAY RELIGHT, IT MAY NOT REPAINT. Measured on the first real
-   illustration: the kit went from 346.8 to 309.7 degrees of hue, which reads
-   as a stage light on cloth and is fine — it still clears the team colours by
-   52.8 dE against a threshold of 20. The player's hair went green, which
-   reads as a different person. Peaks came down with the green (.38 -> .32,
-   .34 -> .30, .30 -> .28) because the 27% of kit saturation that went missing
-   is the same blow-out. */
+   illustration: the kit moved 37 degrees of hue, which reads as a stage light
+   on cloth, and the player's hair went green, which reads as a different
+   person. Cloth is costume; hair and skin are identity. Peaks came down with
+   the green (.38 -> .32, .34 -> .30, .30 -> .28) because the 27% of kit
+   saturation that went missing is the same blow-out.
+
+   THIRTY-SEVEN DEGREES IS AN OPEN QUESTION, NOT A REASSURANCE, and this
+   comment used to say the opposite. It quoted a kit-vs-venue margin against
+   a dE-76 threshold of 20 that had already been replaced elsewhere by a hue
+   angle of 15 degrees from --home and --away, or dE-2000 of 15. A kit that
+   clears the new rule on hue alone has 15 degrees of room and the foil moves
+   it by 37, so a shirt can pass as a file and fail on the screen. The right
+   number is the WORST case across the whole sweep of --holo-x / --holo-y, per
+   rarity, and it is being measured; until it exists no margin belongs here.
+
+   The lesson is in how long that line survived: the threshold changed, the
+   change did not reach this file, and a premise overturned somewhere else sat
+   here looking settled while the foil was tuned against it. */
 .r-L {
   --holo-foil:
     var(--holo-sparkle),
