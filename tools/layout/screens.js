@@ -113,6 +113,15 @@ function swayOf () {
   }
 }
 
+/* READ-ONLY, and for the harness only. Some claims are about what the player
+   OWNS rather than about what is on screen — "the diamonds left and the cards
+   did not" cannot be read off a collection count, because a pack whose cards
+   are already owned pays shards and moves no count at all. Exposed for
+   reading; the cases still drive the app by clicking real elements, because
+   reaching in to set state would be testing a reachability the player does
+   not have. */
+window.__store = store
+
 const errors = []
 const app = createApp(App)
 app.config.errorHandler = (err, inst, info) => {

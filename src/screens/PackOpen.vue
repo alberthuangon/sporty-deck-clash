@@ -60,13 +60,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import CardFace from '../components/CardFace.vue'
 import SealTear from '../components/SealTear.vue'
 import HoloCard from '../components/HoloCard.vue'
 import { flyTo } from '../ui/flyIn.js'
 import { artFor } from '../ui/art.js'
-import { store, go, buyPack, commitPull, entry, canUpgrade, upgradeCost, BY_ID } from '../game.js'
+import { store, go, canBuyPack, rollPackPulls, payForPack, commitPull, entry, canUpgrade, upgradeCost, BY_ID } from '../game.js'
 import { buildCard } from '../engine/cards.js'
 import { PACKS } from '../engine/economy.js'
 
@@ -79,9 +79,26 @@ const cardRef = ref(null)
 const shardLine = ref(null)
 const sealRef = ref(null)
 
+/* how many of `pulls` the player actually holds, and the ONLY thing allowed
+   to hand one over. grantCard is not idempotent — a second call on the same
+   id turns the card into a shard — so "give them the rest" has to be a
+   function that cannot give the same card twice, rather than a loop somebody
+   remembers to bound correctly. */
+const granted = ref(0)
+const paid = ref(false)
+function commitUpTo (n) {
+  while (granted.value < n && granted.value < pulls.value.length) {
+    commitPull(pulls.value[granted.value])
+    granted.value += 1
+  }
+}
+
 onMounted(() => {
-  const res = buyPack(pack)
-  if (!res) { go('shop'); return }
+  /* ASKED, not taken. Nothing is charged until the pack is torn — see the
+     three ways out in game.js. The Shop already disables a pack you cannot
+     afford, so this is the second line rather than the first. */
+  if (!canBuyPack(pack)) { go('shop'); return }
+  const res = rollPackPulls(pack)
   pulls.value = res
   /* The five cards are already decided here, several seconds before the pack
      is torn — the tear is the only place in the app where an animation is
@@ -120,24 +137,38 @@ function shardFlight () {
 /* The card is granted and shown at the END of the tear, never before — the
    one place in step 6 where the animation is allowed to gate information,
    because the whole point of a sealed pack is not knowing yet (§2.1). */
-function tear () { if (sealRef.value) sealRef.value.tear() }
+/* WHERE THE MONEY MOVES. Everything after this point is the player's whether
+   they watch it or not; everything before it costs nothing. */
+function tear () {
+  if (!paid.value) {
+    if (!payForPack(pack)) { go('shop'); return }
+    paid.value = true
+  }
+  if (sealRef.value) sealRef.value.tear()
+}
 function revealFirst () {
   stage.value = 'reveal'
   index.value = 0
-  commitPull(pulls.value[0])
+  commitUpTo(1)
   shardFlight()
 }
 function next () {
   if (index.value === pulls.value.length - 1) {
     upgradable.value = pulls.value.map(p => p.id).filter(id => canUpgrade(id))
-    store.flags.packOpened = true
     stage.value = 'summary'
     return
   }
   index.value += 1
-  commitPull(pulls.value[index.value])
+  commitUpTo(index.value + 1)
   shardFlight()
 }
+
+/* LEAVING IS NOT LOSING. Whatever route takes the player off this screen —
+   the back arrow, a tab, anything — the cards they paid for arrive. Granting
+   them HERE rather than up front is what keeps the one-at-a-time reveal
+   honest: the shard line reads live state, so handing over all five at the
+   start would make the first card show the final count. */
+onUnmounted(() => { if (paid.value) commitUpTo(pulls.value.length) })
 function goUpgrade (id) { store.upgradeTarget = id; go('upgrade') }
 </script>
 

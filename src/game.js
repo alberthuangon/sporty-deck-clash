@@ -193,9 +193,32 @@ export function claimTask (id) {
    decoration — PRD §6.2. */
 export const PACK_SCRIPT = ['F1', 'F4', 'F2', 'F11', 'F12']   // dupe, new, dupe, new R, Okonkwo E
 
-export function buyPack (pack) {
-  if (store.diamonds < pack.price) return null
-  store.diamonds -= pack.price
+/* THREE FUNCTIONS, BECAUSE THERE WERE THREE MOMENTS.
+
+   This was one `buyPack` that charged, rolled and marked the first pack as
+   seen, all at the instant the screen mounted — and the cards are handed over
+   one tap at a time, several seconds later. Everything between those two
+   moments was a window the player could walk out of, and all three ways out
+   were broken:
+
+     left on the sealed pack   100 diamonds gone, nothing granted
+     left after two of five    100 gone, two granted, three lost
+     left and bought again     the scripted five ran a second time, because
+                               the "seen" flag was only set at the summary
+
+   Charging later only narrows that window. What closes it is that money and
+   cards move together: nothing is charged until the pack is torn, and from
+   the moment it IS charged every card in it belongs to the player, whether
+   they stay to watch or not (PackOpen's unmount hands over the rest).
+
+   So: ask before the screen commits to anything, decide the cards without
+   charging for them, and charge at the tear. */
+export function canBuyPack (pack) { return store.diamonds >= pack.price }
+
+/* WHICH five, decided without taking anything. Reads the seen-flag, so it has
+   to run before payForPack sets it — which is also the right order for the
+   player: the pack you are about to tear is the one you were promised. */
+export function rollPackPulls (pack) {
   const defs = store.flags.packOpened
     ? rollPack(pack, CATALOGUE)
     : PACK_SCRIPT.map(id => BY_ID[id])
@@ -207,6 +230,16 @@ export function buyPack (pack) {
     seen.add(def.id)
     return { id: def.id, def, isNew }
   })
+}
+
+/* The one moment money changes hands. The flag moves here from the summary
+   screen for the same reason: a pack that has been torn has been opened, and
+   deciding that three taps later is what let the demo script replay. */
+export function payForPack (pack) {
+  if (store.diamonds < pack.price) return false
+  store.diamonds -= pack.price
+  store.flags.packOpened = true
+  return true
 }
 
 export function commitPull (pull) { return grantCard(pull.id) }
