@@ -8,13 +8,13 @@
           <div class="side">
             <MatchCrest :label="GAME_MONOGRAM" />
             <div class="s-name">You</div>
-            <PowerStars :q="myPower" />
+            <span class="s-power">Squad Power <b>{{ powerScore(myPower) }}</b></span>
           </div>
           <span class="vs-x">VS</span>
           <div class="side">
             <MatchCrest :label="matchView.opponentName.slice(0, 2).toUpperCase()" />
             <div class="s-name">{{ matchView.opponentName }}</div>
-            <PowerStars :q="matchView.opponentPower" />
+            <span class="s-power">Squad Power <b>{{ powerScore(matchView.opponentPower) }}</b></span>
           </div>
         </div>
         <details class="lineups">
@@ -102,7 +102,7 @@ import { GAME_MONOGRAM } from '../branding.js'
 import { ref, computed } from 'vue'
 import MatchCrest from '../components/MatchCrest.vue'
 import PlayerArt from '../components/PlayerArt.vue'
-import PowerStars from '../components/PowerStars.vue'
+import { powerScore } from '../engine/model.js'
 import Icon from '../components/Icon.vue'
 import { store, go, matchView, ctx, cardOf, deckPower, confirmBet, stakeRange, abandonMatch, branchQuotes, TIERS } from '../game.js'
 import { MARGIN } from '../engine/model.js'
@@ -133,6 +133,7 @@ function cancel () { abandonMatch(); go('home') }
 </script>
 
 <style scoped>
+.s-power { display:flex; align-items:center; justify-content:center; gap:7px; font-size:10px; color:#b7cbd9; }.s-power b { font-size:16px; color:#fff; font-variant-numeric:tabular-nums; }
 .cf { display: flex; flex-direction: column; min-height: 0; background: linear-gradient(180deg,#1019239c,#10151e 360px),url('../assets/shop-art/stadium.webp') center top/auto 340px no-repeat,#10151e; }
 .confirm-content { display: flex; flex-direction: column; gap: 10px; min-height: 0; padding: 15px 18px 14px; scrollbar-width: none; }
 .confirm-content::-webkit-scrollbar { display: none; }
@@ -203,7 +204,7 @@ button:focus-visible, summary:focus-visible, .slider:focus-visible { outline: 2p
   .vs { padding: 10px 7px; }
   .s-name { font-size: 12px; }
   .side :deep(.match-crest) { width: 36px; height: 40px; }
-  .side :deep(.ps) { font-size: 11px; }
+  .s-power { font-size: 11px; }
   .stake, .returns { padding: 11px; }
   .quote { padding: 9px 7px; }
   .quote-rate { font-size: 11px; padding: 2px 5px; }

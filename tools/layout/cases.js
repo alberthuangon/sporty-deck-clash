@@ -1476,6 +1476,51 @@ export const CASES = [
     act: ({ click }) => click('.slot', 1)
   },
 
+  {
+    id: 'deckedit/no-scroll', screen: 'deckedit', setup () { resetStore(); setReduced(false); game.abandonMatch() },
+    async act ({ click, nextTick }) {
+      function check () {
+        const content = document.querySelector('.de-content'), frame = content.getBoundingClientRect()
+        if (content.scrollHeight > content.clientHeight + 1 || getComputedStyle(content).overflowY !== 'hidden') throw new Error('Squad editor must not scroll')
+        for (const el of document.querySelectorAll('.slot, .optimize, .hint')) {
+          const r = el.getBoundingClientRect()
+          if (r.top < frame.top - 1 || r.bottom > frame.bottom + 1) throw new Error('Squad controls do not fit available height')
+        }
+      }
+      check(); await click('.optimize'); await nextTick(); check()
+    }
+  },
+  { id: 'deckedit/demo', screen: 'deckedit', setup () { resetStore(); setReduced(false); game.abandonMatch(); store.deck = { gk: 'G3', df: 'F15', mf: 'F3', fw: 'F12' } } },
+  {
+    id: 'deckedit/save-swap', screen: 'deckedit', setup () { resetStore(); setReduced(false); game.abandonMatch() },
+    async act ({ click, nextTick }) {
+      await click('.slot-df'); await click('.pick-option', 0); await nextTick()
+      if (store.deck.df !== 'F3') throw new Error('draft changed saved deck before Save')
+      await click('.actions .btn-cta')
+      if (store.deck.df !== 'F1' || store.deck.fw !== 'F3' || new Set(Object.values(store.deck)).size !== 4) throw new Error('swap/save did not preserve four unique players')
+    }
+  },
+  {
+    id: 'deckedit/cancel', screen: 'deckedit', setup () { resetStore(); setReduced(false); game.abandonMatch() },
+    async act ({ click }) {
+      const before = JSON.stringify(store.deck)
+      await click('.slot-gk')
+      if (document.querySelectorAll('.pick-option').length !== 2) throw new Error('goalkeeper picker must only contain owned goalkeepers')
+      await click('.pick-option', 1); await click('.actions .cancel')
+      if (JSON.stringify(store.deck) !== before) throw new Error('Cancel saved a draft')
+    }
+  },
+  {
+    id: 'deckedit/optimize', screen: 'deckedit', setup () { resetStore(); setReduced(false); game.abandonMatch() },
+    async act ({ click }) {
+      const before = game.deckPower(), ids = Object.values(store.deck).sort().join(), saved = JSON.stringify(store.deck)
+      await click('.optimize')
+      if (JSON.stringify(store.deck) !== saved) throw new Error('Optimize saved without confirmation')
+      await click('.actions .btn-cta')
+      if (game.deckPower() < before - 1e-10 || Object.values(store.deck).sort().join() !== ids) throw new Error('Optimize reduced power or changed selected players')
+    }
+  },
+
   /* ------------------------------------------------ Pack opening */
   {
     id: 'packopen/sealed',
