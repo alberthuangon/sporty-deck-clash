@@ -5,7 +5,7 @@
       <div class="ko-glow" ref="glowEl"></div>
       <div class="ko-ring" ref="ringEl"></div>
       <div class="ko-token" ref="tokenEl">
-        <div class="ko-coin" ref="coinEl" :class="kickoff.home ? 'home' : 'away'"><svg viewBox="0 0 128 128"><text x="64" y="33" class="ko-brand">SPORTYKICKDECK</text><text x="64" y="86" class="ko-letter">{{ kickoff.home ? 'H' : 'A' }}</text><text x="64" y="104" class="ko-label">{{ kickoff.home ? 'HOME' : 'AWAY' }}</text></svg></div>
+        <div class="ko-coin" ref="coinEl" :class="kickoff.home ? 'home' : 'away'"><svg viewBox="0 0 128 128"><text x="64" y="33" class="ko-brand">{{ GAME_NAME_UPPER }}</text><text x="64" y="86" class="ko-letter">{{ kickoff.home ? 'H' : 'A' }}</text><text x="64" y="104" class="ko-label">{{ kickoff.home ? 'HOME' : 'AWAY' }}</text></svg></div>
         <img ref="ballEl" class="ko-ball" :src="football" width="640" height="640" alt="" aria-hidden="true" decoding="async" />
       </div>
     </div>
@@ -13,6 +13,7 @@
   </div>
 </template>
 <script setup>
+import { GAME_NAME_UPPER } from '../branding.js'
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import gsap from 'gsap'
 import { kickoff } from '../ui/kickoff.js'
@@ -80,7 +81,7 @@ onBeforeUnmount(() => {
 .ko-token { position:absolute; left:0; top:0; transform-origin:50% 50%; will-change:transform; }
 .ko-coin { position:absolute; inset:0; border-radius:50%; border:5px solid #e5c16b; background:radial-gradient(circle at 30% 20%,#fff2b8,#b98b37 52%,#ecd489 80%,#9c6b28); color:#594018; box-shadow:inset 0 0 0 2px #71501d,inset 0 0 0 6px #f9dd8e,inset 0 0 18px #6f451e88,0 12px 24px #0006; }
 .ko-coin::after { content:''; position:absolute; inset:10px; border:1px dashed #77531999; border-radius:50%; }.ko-coin.home { border-color:#f3a098; }.ko-coin.away { border-color:#9bc7fa; }
-.ko-coin svg { display:block; width:100%; height:100%; fill:currentColor; text-anchor:middle; font-family:inherit; }.ko-brand { font-size:6px; font-weight:900; letter-spacing:.1em; }.ko-letter { font-size:54px; font-weight:900; }.ko-label { font-size:8px; font-weight:900; letter-spacing:.17em; }
+.ko-coin svg { display:block; width:100%; height:100%; fill:currentColor; text-anchor:middle; font-family:inherit; }.ko-brand { font-size:5px; font-weight:900; letter-spacing:.1em; }.ko-letter { font-size:54px; font-weight:900; }.ko-label { font-size:8px; font-weight:900; letter-spacing:.17em; }
 .ko-ball { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:contain; opacity:0; filter:drop-shadow(0 8px 14px #0006); }
 .ko-glow { position:absolute; width:240px; height:240px; margin:-120px 0 0 -120px; background:radial-gradient(circle,#ffe9aa99,#ffe5a624 40%,transparent 70%); border-radius:50%; opacity:0; }
 .ko-ring { position:absolute; width:170px; height:170px; margin:-85px 0 0 -85px; border:1px solid #ffe6a477; border-radius:50%; opacity:0; }

@@ -5,7 +5,8 @@
   </span>
 </template>
 <script setup>
-defineProps({ label: { type: String, default: 'SK' }, tone: { type: String, default: '' } })
+import { GAME_MONOGRAM } from '../branding.js'
+defineProps({ label: { type: String, default: GAME_MONOGRAM }, tone: { type: String, default: '' } })
 </script>
 <style scoped>
 .match-crest {

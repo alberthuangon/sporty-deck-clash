@@ -160,7 +160,7 @@ function calibrate () {
 /* ---------------- gate ---------------- */
 function gate () {
   const N = 10000
-  console.log('\nSportyKickDeck engine sanity check')
+  console.log('\nSporty Deck Clash engine sanity check')
   console.log('league constants: ' + JSON.stringify(LEAGUE) + '  margin ' + MARGIN + '\n')
 
   console.log('10,000 matched pairings, true sampling, stake ₦10,000 each side')

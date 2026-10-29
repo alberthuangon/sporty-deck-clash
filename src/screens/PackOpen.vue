@@ -18,7 +18,7 @@
         <div class="card-particles" aria-hidden="true"><i v-for="n in 52" :key="n" :style="{ '--n':n }"></i></div>
         <div v-if="index < pulls.length - 1" class="waiting-card waiting-two" aria-hidden="true"></div><div v-if="index < pulls.length - 1" class="waiting-card waiting-one" aria-hidden="true"></div>
         <div class="card-hit" ref="hitEl" @dragstart.prevent role="button" tabindex="0" :aria-label="index === pulls.length - 1 ? 'View pack summary' : 'Reveal next player'" @pointerdown="cardDown" @pointermove="cardMove" @pointerup="cardUp" @pointercancel="cardCancel" @click="cardClick" @keydown.enter.prevent="next" @keydown.space.prevent="next" @keydown.up.prevent="next">
-          <div class="card-flipper" ref="flipEl"><div v-show="!faceShown" class="card-back" aria-hidden="true"><PackCrest /><span>SPORTYKICK</span><small>THE NEXT GREAT SIGNING</small></div><HoloCard :aria-hidden="!faceShown" :style="{ visibility: faceShown ? 'visible' : 'hidden' }" class="card-front" :tilt="14" :idle-amplitude="1.8" :idle-duration="5.8"><CardFace ref="cardRef" :card="currentCard" size="lg" :radar="false" full foil class="reveal-card" /></HoloCard></div>
+          <div class="card-flipper" ref="flipEl"><div v-show="!faceShown" class="card-back" aria-hidden="true"><PackCrest /><span>{{ GAME_NAME_UPPER }}</span><small>THE NEXT GREAT SIGNING</small></div><HoloCard :aria-hidden="!faceShown" :style="{ visibility: faceShown ? 'visible' : 'hidden' }" class="card-front" :tilt="14" :idle-amplitude="1.8" :idle-duration="5.8"><CardFace ref="cardRef" :card="currentCard" size="lg" :radar="false" full foil class="reveal-card" /></HoloCard></div>
         </div>
       </div>
       <div class="verdict" :style="{ visibility: faceShown ? 'visible' : 'hidden' }" :aria-hidden="!faceShown" aria-live="polite"><div class="result-tag" :class="{ 'new-tag':current.isNew, 'dup-tag':!current.isNew }">{{ current.isNew ? 'NEW SIGNING' : 'DUPLICATE · +1 SHARD' }}</div><p ref="shardLine">{{ current.isNew ? `${currentCard.name} joins your collection` : `${currentCard.name} · ${shardText}` }}</p></div>
@@ -48,6 +48,7 @@
 </template>
 
 <script setup>
+import { GAME_NAME_UPPER } from '../branding.js'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import gsap from 'gsap'
 import CardFace from '../components/CardFace.vue'
@@ -184,7 +185,7 @@ function goUpgrade(id) { store.upgradeTarget=id; go('upgrade') }
 .card-front :deep(.cf) { width:100%; height:100%; }
 .card-back { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:14px; border:1px solid #89a7ca; border-radius:12px; background:repeating-linear-gradient(135deg,transparent 0 9px,#adc7ee08 9px 10px),radial-gradient(ellipse at 50% 28%,#34577c,#0b1a2a 70%); box-shadow:inset 0 0 0 7px #122033,inset 0 0 0 8px #6e91bc77,0 20px 40px #0007; --pack-ink:#b4cbe7; }
 .card-back .pack-crest { width:82px; height:82px; }
-.card-back span { font-size:17px; letter-spacing:.14em; font-weight:800; color:#dce7f4; }
+.card-back span { font-size:15px; letter-spacing:.07em; font-weight:800; color:#dce7f4; }
 .card-back small { font-size:8px; letter-spacing:.14em; color:#a4bbd7; }
 .waiting-card { position:absolute; top:38px; width:min(100%,300px); aspect-ratio:5/7; border-radius:12px; background:linear-gradient(150deg,#294365,#101b2b); box-shadow:inset 0 0 0 1px #768da867; }
 .waiting-one { transform:translate(7px,7px) rotate(2deg); }.waiting-two { transform:translate(-7px,13px) rotate(-3deg); }

@@ -13,7 +13,7 @@
       <div class="duel-space" :class="{ searching: !ready && !failed }">
         <div class="duel-row">
           <div class="team you">
-            <div class="crest-stage"><DuelCrest label="SK" /></div>
+            <div class="crest-stage"><DuelCrest :label="GAME_MONOGRAM" /></div>
             <div class="team-name">You</div>
             <div class="team-power">POWER {{ myScore }}</div>
           </div>
@@ -53,6 +53,7 @@
 </template>
 
 <script setup>
+import { GAME_MONOGRAM } from '../branding.js'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import DuelCrest from '../components/DuelCrest.vue'
 import { store, go, startMatchmaking, deckPower, powerScore, abandonMatch, matchView, TIERS } from '../game.js'

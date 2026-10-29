@@ -5,7 +5,7 @@
         <span class="complete-pill">MATCH COMPLETE</span>
         <div class="summary-emblem">
           <img v-if="match.won" :src="emblemArt" width="256" height="256" alt="" aria-hidden="true" />
-          <DuelCrest v-else label="SK" />
+          <DuelCrest v-else :label="GAME_MONOGRAM" />
         </div>
         <h1 ref="headingEl" tabindex="-1" aria-describedby="summary-description">{{ match.won ? 'VICTORY' : 'DEFEAT' }}</h1>
         <p id="summary-description">{{ match.wentToPk ? (match.won ? 'You won the shootout.' : 'Lost on penalties.') : (match.won ? 'Your squad wins.' : 'Full-time result.') }}</p>
@@ -15,12 +15,12 @@
         <h2>{{ match.wentToPk ? 'PENALTY SHOOTOUT' : 'FULL TIME' }}</h2>
         <div class="summary-score-grid">
           <div class="summary-team home">
-            <DuelCrest :label="match.aIsHome ? 'SK' : opponentInitials" />
+            <DuelCrest :label="match.aIsHome ? GAME_MONOGRAM : opponentInitials" />
             <span class="team-label"><i aria-hidden="true"></i>{{ homeName }}</span>
           </div>
           <div class="primary-score"><b>{{ primaryHome }}</b><span>:</span><b>{{ primaryAway }}</b></div>
           <div class="summary-team away">
-            <DuelCrest :label="match.aIsHome ? opponentInitials : 'SK'" />
+            <DuelCrest :label="match.aIsHome ? opponentInitials : GAME_MONOGRAM" />
             <span class="team-label"><i aria-hidden="true"></i>{{ awayName }}</span>
           </div>
         </div>
@@ -46,6 +46,7 @@
   </section>
 </template>
 <script setup>
+import { GAME_MONOGRAM } from '../branding.js'
 import { computed, ref, onMounted } from 'vue'
 import DuelCrest from './DuelCrest.vue'
 import Icon from './Icon.vue'

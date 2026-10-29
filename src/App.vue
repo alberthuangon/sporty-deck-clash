@@ -33,6 +33,7 @@ import gsap from 'gsap'
 import { store, go, isTab, screenBack } from './store.js'
 import { canUpgrade, CATALOGUE } from './game.js'
 import TopBar from './components/TopBar.vue'
+import { GAME_NAME } from './branding.js'
 import KickoffTransition from './components/KickoffTransition.vue'
 import { kickoff } from './ui/kickoff.js'
 import { reduced } from './ui/motion.js'
@@ -59,7 +60,7 @@ import MotionLab from './screens/MotionLab.vue'
 import History from './screens/History.vue'
 
 const SCREENS = {
-  home: { c: Home, title: 'SportyKickDeck', back: null },
+  home: { c: Home, title: GAME_NAME, back: null },
   tasks: { c: Tasks, title: 'Daily Missions', back: null },
   shop: { c: Shop, title: 'Card Packs', back: null },
   cards: { c: Cards, title: 'My Collection', back: null },

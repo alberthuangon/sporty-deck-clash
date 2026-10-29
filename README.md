@@ -1,4 +1,4 @@
-# SportyKickDeck — Hackathon Demo (Phase 0)
+# Sporty Deck Clash — Hackathon Demo (Phase 0)
 
 Football card collection × real-player PvP betting simulation.
 Pure front-end single-player demo: the model runs on the client, the opponent is

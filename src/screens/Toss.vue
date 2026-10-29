@@ -4,7 +4,7 @@
     <header class="flow-heading"><span class="eyebrow">THE FINAL CALL</span><h1>Let the coin decide.</h1><p>Home or away. Your match starts here.</p></header>
     <div class="coin-stage" :class="{ landed: revealed }" aria-hidden="true">
       <div ref="coinEl" class="coin" :class="[{ done: revealed }, revealed ? side : '']" data-sfx="toss">
-        <span class="coin-face front"><svg class="coin-engraving" viewBox="0 0 128 128"><text v-if="revealed" x="64" y="33" class="coin-brand">SPORTYKICKDECK</text><text x="64" y="86" class="coin-letter">{{ revealed ? (iAmHome ? 'H' : 'A') : '?' }}</text><text v-if="revealed" x="64" y="104" class="coin-label">{{ revealed ? (iAmHome ? 'HOME' : 'AWAY') : 'MATCHDAY' }}</text></svg></span>
+        <span class="coin-face front"><svg class="coin-engraving" viewBox="0 0 128 128"><text v-if="revealed" x="64" y="33" class="coin-brand">{{ GAME_NAME_UPPER }}</text><text x="64" y="86" class="coin-letter">{{ revealed ? (iAmHome ? 'H' : 'A') : '?' }}</text><text v-if="revealed" x="64" y="104" class="coin-label">{{ revealed ? (iAmHome ? 'HOME' : 'AWAY') : 'MATCHDAY' }}</text></svg></span>
         <span class="coin-face back"><svg class="coin-engraving" viewBox="0 0 128 128"><circle cx="64" cy="64" r="32" fill="none" stroke="currentColor" stroke-width="2"/><path d="m64 46 17 12-6 20H53l-6-20 17-12Zm0-14v14M34 54l13 4m34 0 13-4M45 90l8-12m22 0 8 12" fill="currentColor" fill-opacity=".75" stroke="currentColor" stroke-width="2"/></svg></span>
       </div>
       <div class="coin-shadow"></div>
@@ -42,6 +42,7 @@
 </template>
 
 <script setup>
+import { GAME_NAME_UPPER } from '../branding.js'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { runToss, matchView, branchQuotes } from '../game.js'
 
@@ -359,7 +360,7 @@ p {
   font-family:inherit;
 }
 .coin-brand {
-  font-size:6px;
+  font-size:5px;
   font-weight:900;
   letter-spacing:.1em;
 }

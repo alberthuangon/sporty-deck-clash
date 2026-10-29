@@ -125,9 +125,9 @@
         <div class="pi-kicker"><span>90′</span> FULL TIME · ALL SQUARE</div>
         <h2><span>THE DECIDING MOMENT</span>Penalty Shootout</h2>
         <div class="pi-matchup">
-          <div class="pi-team home"><DuelCrest :label="homeIsMe ? 'SK' : homeName.slice(0,2).toUpperCase()" /><span class="pi-name"><i></i>{{ homeName }}</span></div>
+          <div class="pi-team home"><DuelCrest :label="homeIsMe ? GAME_MONOGRAM : homeName.slice(0,2).toUpperCase()" /><span class="pi-name"><i></i>{{ homeName }}</span></div>
           <div class="pi-tally"><div class="pi-score">{{ scoreHome }} <span>:</span> {{ scoreAway }}</div><span class="pi-level">AFTER 90 MINUTES</span></div>
-          <div class="pi-team away"><DuelCrest :label="homeIsMe ? awayName.slice(0,2).toUpperCase() : 'SK'" /><span class="pi-name"><i></i>{{ awayName }}</span></div>
+          <div class="pi-team away"><DuelCrest :label="homeIsMe ? awayName.slice(0,2).toUpperCase() : GAME_MONOGRAM" /><span class="pi-name"><i></i>{{ awayName }}</span></div>
         </div>
         <div class="pi-visual" ref="pkIntroVisualEl" aria-hidden="true">
           <svg viewBox="0 0 200 72" fill="none"><defs><pattern id="pi-net" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M7 0H0V7" stroke="#bcd8e4" stroke-opacity=".2" stroke-width=".7"/></pattern></defs><path d="M34 49V6h132v43" stroke="#8daab9" stroke-width="1.5"/><path d="m34 6-10 10v41m142-51 10 10v41" stroke="#7f9da9" stroke-opacity=".5"/><path d="M24 57V16h152v41Z" fill="url(#pi-net)" stroke="#dcecf3" stroke-width="2"/><path d="M14 59h172M59 67h82" stroke="#7de9b4" stroke-opacity=".25"/></svg>
@@ -213,6 +213,7 @@
 </template>
 
 <script setup>
+import { GAME_MONOGRAM } from '../branding.js'
 import { ref, reactive, computed, onMounted } from 'vue'
 import PlayerArt from '../components/PlayerArt.vue'
 import DuelCrest from '../components/DuelCrest.vue'

@@ -36,9 +36,9 @@
         </header>
         <section class="detail-score panel" aria-label="Final score">
           <div class="score-grid">
-            <div class="score-team home"><DuelCrest :label="detail.aIsHome ? 'SK' : initials(detail.opponent.handle)" /><span><i aria-hidden="true"></i>{{ detail.aIsHome ? 'You' : detail.opponent.handle }}</span></div>
+            <div class="score-team home"><DuelCrest :label="detail.aIsHome ? GAME_MONOGRAM : initials(detail.opponent.handle)" /><span><i aria-hidden="true"></i>{{ detail.aIsHome ? 'You' : detail.opponent.handle }}</span></div>
             <div class="score-tally"><h2>{{ detail.wentToPk ? 'PENALTY SHOOTOUT' : 'FULL TIME' }}</h2><div class="sc">{{ detail.wentToPk ? detail.pk.home : detail.homeScore }}<span>:</span>{{ detail.wentToPk ? detail.pk.away : detail.awayScore }}</div><div v-if="detail.wentToPk" class="regular-score">{{ detail.homeScore }} : {{ detail.awayScore }}<span>after 90′</span></div></div>
-            <div class="score-team away"><DuelCrest :label="detail.aIsHome ? initials(detail.opponent.handle) : 'SK'" /><span><i aria-hidden="true"></i>{{ detail.aIsHome ? detail.opponent.handle : 'You' }}</span></div>
+            <div class="score-team away"><DuelCrest :label="detail.aIsHome ? initials(detail.opponent.handle) : GAME_MONOGRAM" /><span><i aria-hidden="true"></i>{{ detail.aIsHome ? detail.opponent.handle : 'You' }}</span></div>
           </div>
           <details class="goals-panel"><summary><Icon name="play" :size="16" /><span>Match goals</span><small>{{ detailGoals.length }} {{ detailGoals.length === 1 ? 'goal' : 'goals' }} · 90′</small><i aria-hidden="true">⌄</i></summary><div v-if="detailGoals.length" class="goals"><div v-for="(g,i) in detailGoals" :key="i" class="goal-row" :class="g.side.toLowerCase()"><span class="goal-minute">{{ g.minute }}′</span><div><b>{{ g.actorName }}</b><span class="goal-team"><i aria-hidden="true"></i>{{ teamOf(g.side) }}</span></div><span class="goal-word">GOAL</span></div></div><p v-else class="no-goals">No goals in regular time.</p></details>
         </section>
@@ -55,6 +55,7 @@
 </template>
 
 <script setup>
+import { GAME_MONOGRAM } from '../branding.js'
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import DiamondIcon from '../components/DiamondIcon.vue'
 import Icon from '../components/Icon.vue'

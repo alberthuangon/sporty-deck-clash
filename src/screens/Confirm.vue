@@ -6,7 +6,7 @@
       <section class="matchup panel" aria-label="Matchup">
         <div class="vs">
           <div class="side">
-            <MatchCrest label="SK" />
+            <MatchCrest :label="GAME_MONOGRAM" />
             <div class="s-name">You</div>
             <PowerStars :q="myPower" />
           </div>
@@ -98,6 +98,7 @@
 </template>
 
 <script setup>
+import { GAME_MONOGRAM } from '../branding.js'
 import { ref, computed } from 'vue'
 import MatchCrest from '../components/MatchCrest.vue'
 import PlayerArt from '../components/PlayerArt.vue'
