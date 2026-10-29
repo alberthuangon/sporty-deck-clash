@@ -4,7 +4,7 @@
     <div class="board">
       <div class="side" :class="{ me: homeIsMe }">
         <i class="jersey home"></i>
-        <span class="nm">{{ homeName }}</span>
+        <span class="team-id"><small>HOME</small><span class="nm">{{ homeName }}</span></span>
       </div>
       <div class="sc-wrap">
         <div class="sc">
@@ -13,7 +13,7 @@
         <div class="sc-pk">{{ pkScore ? 'pens ' + pkScore : '' }}</div>
       </div>
       <div class="side right" :class="{ me: !homeIsMe }">
-        <span class="nm">{{ awayName }}</span>
+        <span class="team-id"><small>AWAY</small><span class="nm">{{ awayName }}</span></span>
         <i class="jersey away"></i>
       </div>
     </div>
@@ -119,6 +119,16 @@
       </div>
     </div>
 
+    <div class="pk-intro" ref="pkIntroEl" role="status" aria-label="Penalty shootout transition">
+      <div class="pi-body" ref="pkIntroBodyEl">
+        <div class="pi-kicker">FULL TIME · ALL SQUARE</div>
+        <div class="pi-score">{{ scoreHome }} <span>:</span> {{ scoreAway }}</div>
+        <h2>Penalty<br />Shootout</h2>
+        <p>Level after 90 minutes.<br />The match will be decided from the spot.</p>
+        <div class="pi-track" aria-hidden="true"><i ref="pkIntroProgressEl"></i></div>
+      </div>
+    </div>
+
     <!-- penalty showdown: the decisive kick leaves the pitch entirely and
          becomes shooter card vs keeper card (PRD §16.4) -->
     <div class="pk" ref="pkEl">
@@ -132,12 +142,12 @@
       <div class="pk-faceoff" ref="pkFaceEl">
         <div class="pk-slot" :class="pkSide">
           <div class="pk-slot-tag">{{ pkSide === 'home' ? homeName : awayName }}</div>
-          <CardFace :card="pkShooterCard" size="md" class="pk-card shooter" />
+          <CardFace :card="pkShooterCard" size="md" full class="pk-card shooter" />
         </div>
         <div class="pk-vs">VS</div>
         <div class="pk-slot" :class="keepSide">
           <div class="pk-slot-tag">{{ keepSide === 'home' ? homeName : awayName }}</div>
-          <CardFace :card="pkKeeperCard" size="md" class="pk-card keeper" />
+          <CardFace :card="pkKeeperCard" size="md" full class="pk-card keeper" />
         </div>
       </div>
 
@@ -153,7 +163,7 @@
           <div class="pk-post right"></div>
           <div class="pk-ripple" ref="pkRippleEl"></div>
         </div>
-        <div class="pk-gk" :class="keepSide" ref="pkGkEl">{{ initials(pkKeeperCard) }}</div>
+        <div class="pk-gk" :class="keepSide" ref="pkGkEl"><PlayerArt :card-id="pkKeeperCard.id" kind="portrait" fill eager /></div>
         <div class="pk-spot"></div>
         <div class="pk-pball" ref="pkBallEl"></div>
         <div class="pk-shooter-name" :class="pkSide">
@@ -178,6 +188,7 @@
     <div class="final" ref="finalEl">
       <div class="fi-bg" :class="winSide" ref="finalBgEl"></div>
       <div class="fi-body" ref="finalBodyEl">
+        <div class="fi-emblem" aria-hidden="true"><svg viewBox="0 0 64 72" fill="none"><path d="M32 3 59 13v23c0 16-15 27-27 33C20 63 5 52 5 36V13L32 3Z" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="2"/><path d="m21 35 8 8 15-18" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <div class="fi-tag">FULL TIME</div>
         <div class="fi-score">
           <span class="fi-team home" :class="{ dim: winSide !== 'home' }">{{ homeName }}</span>
@@ -194,6 +205,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import PlayerArt from '../components/PlayerArt.vue'
 import CardFace from '../components/CardFace.vue'
 import { SLOTS, basePos } from './stageModel.js'
 
@@ -229,7 +241,6 @@ const keepSide = computed(() => (pkSide.value === 'home' ? 'away' : 'home'))
    elements to animate; setPk only swaps which card they show */
 const pkShooterCard = computed(() => pkShooter.value || props.home.cards.fw)
 const pkKeeperCard = computed(() => pkKeeper.value || props.away.cards.gk)
-function initials (card) { return card ? card.name.slice(0, 2).toUpperCase() : '' }
 /* the running shootout score — counting green dots is not a thing anyone
    should have to do at 0.55s a kick */
 function pkCount (side) { return (pkBoard.value[side] || []).filter(k => k === 'goal').length }
@@ -249,6 +260,9 @@ const ciCardEl = ref(null)
 const scoreHomeEl = ref(null)
 const scoreAwayEl = ref(null)
 const pkEl = ref(null)
+const pkIntroEl = ref(null)
+const pkIntroBodyEl = ref(null)
+const pkIntroProgressEl = ref(null)
 const pkVigEl = ref(null)
 const pkHeadEl = ref(null)
 const pkFaceEl = ref(null)
@@ -313,6 +327,7 @@ const api = {
       ball: pkBallEl.value, stamp: pkStampEl.value
     }
   },
+  pkIntro: () => ({ root: pkIntroEl.value, body: pkIntroBodyEl.value, progress: pkIntroProgressEl.value }),
   setPk: (shooter, keeper, label, board, side) => {
     pkShooter.value = shooter; pkKeeper.value = keeper
     pkLabel.value = label || ''
@@ -501,6 +516,7 @@ onMounted(() => { /* refs are live from here on */ })
 
 /* beat 1 — face-off */
 .pk-faceoff {
+  opacity: 0;
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between;
   padding: 0 18px;
 }
@@ -650,4 +666,23 @@ onMounted(() => { /* refs are live from here on */ })
 .ci-text.home { color: var(--home-hi); text-shadow: 0 3px 18px rgba(var(--home-rgb), .5); }
 .ci-text.away { color: var(--away-hi); text-shadow: 0 3px 18px rgba(var(--away-rgb), .5); }
 .ci-sub { font-size: 12px; font-weight: 700; color: #fff; }
+
+/* Matchday broadcast treatment. Keep the scoreboard above animated cut-ins. */
+.stage{flex:none;background:linear-gradient(180deg,#1e2a39,#0d1824);box-shadow:0 8px 24px #0003}.board{background:linear-gradient(135deg,#2b3949,#1b2634);padding:15px 18px 9px;border-bottom:1px solid #ffffff0b}.nm{font-size:12px}.side.me .nm{color:#fff}.team-id{display:flex;flex-direction:column;gap:2px;min-width:0}.team-id small{font-size:7px;font-weight:800;letter-spacing:.12em;color:#9fb3c8}.side.right .team-id{text-align:right}.sc{font-size:31px;gap:9px}.sc-pk{color:#e4cb8f}.jersey{box-shadow:0 1px 7px #0005;border:1px solid #ffffff30}.clockbar{background:#101c2a;padding:7px;min-height:30px}.clk{font-size:11px;color:#c4d1df}.arena{background:linear-gradient(180deg,#07111cb0,#09121dd9),url('../assets/shop-art/stadium.webp') center/cover}.pitch{height:226px;margin:14px 16px;border-radius:10px;box-shadow:0 0 0 1px #b8e3cd33,0 7px 28px #0008}.turf{background:radial-gradient(ellipse at 50% 30%,#ffffff0b,transparent 60%),repeating-linear-gradient(90deg,#ffffff08 0 32px,transparent 32px 64px),linear-gradient(180deg,#193d30,#0e2a20)}
+.pk-bg{background:linear-gradient(180deg,#091421c9,#0a1521ed),url('../assets/shop-art/stadium.webp') center/cover}.pk-vig{background:radial-gradient(ellipse at center,transparent 40%,#0008)}.pk-head{top:10px;font-size:9px;letter-spacing:.1em;color:#d2deea}.pk-reg{color:#9dadbf}.pk-faceoff{padding:30px 30px 54px;gap:12px;justify-content:center}.pk-slot{width:106px;flex:0 0 106px;gap:8px}.pk-slot-tag{font-size:9px;padding:4px 5px;min-height:21px}.pk-card{width:106px}.pk-vs{font-size:14px;flex:none;width:27px;text-align:center;color:#d7c89e}.pk-board{bottom:11px;gap:5px}.pk-row{width:min(280px,85%);padding:2px 7px;background:#0a101bb3;border-radius:5px}.pk-row.home .pk-team{color:#ff9ca2}.pk-row.away .pk-team{color:#9bc5ff}.pk-pips{flex-wrap:wrap;gap:4px}.pk-pip{flex:none}.pk-count{font-size:16px}.pk-frame{top:17%;height:30%;filter:drop-shadow(0 8px 15px #0008)}.pk-keeper-name{top:44px;font-size:10px}.pk-gk{width:36px;height:36px;overflow:hidden;border:2px solid #eaf1f6cc;top:36%}.pk-gk :deep(.pa){width:100%;height:100%}.pk-shooter-name{top:65%;font-size:11px}.pk-stamp{top:66%;font-size:25px}.pk-spot,.pk-pball{top:56%}.pk-mesh{background:repeating-linear-gradient(90deg,#fff3 0 1px,transparent 1px 11px),repeating-linear-gradient(0deg,#fff3 0 1px,transparent 1px 11px),linear-gradient(180deg,#142e4266,#040c1488)}
+.ci-bg{background:#0c1620e8}.ci-body{gap:5px}.ci-card-slot{width:84px}.ci-text{font-size:31px}.ci-team{font-size:10px}.ci-sub{font-size:11px}
+.fi-bg.home{background:radial-gradient(ellipse at 50% 30%,#a82b3355,transparent 65%),linear-gradient(180deg,#101824d9,#080f19f2),url('../assets/shop-art/stadium.webp') center/cover}.fi-bg.away{background:radial-gradient(ellipse at 50% 30%,#285a9c55,transparent 65%),linear-gradient(180deg,#101824d9,#080f19f2),url('../assets/shop-art/stadium.webp') center/cover}.fi-body{gap:10px;padding:15px}.fi-emblem{width:50px;height:56px;color:#d9c083}.fi-emblem svg{width:100%;height:100%}.fi-tag{font-size:10px;letter-spacing:.23em}.fi-score{width:100%;justify-content:center;gap:12px}.fi-score b{font-size:39px;white-space:nowrap;flex:none}.fi-team{width:90px;min-width:0;overflow-wrap:anywhere;font-size:12px}.fi-win{font-size:27px;max-width:100%}.fi-pk{font-size:11px}
+@media(max-width:350px){.board{padding:12px 12px 8px;gap:5px}.nm{font-size:10px}.side.me .nm::after{content:''}.sc{font-size:27px}.pitch{margin:12px;height:220px}.pk-faceoff{padding-left:12px;padding-right:12px;gap:8px}.pk-slot,.pk-card{width:96px}.pk-slot{flex-basis:96px}.ci-card-slot{width:76px}.fi-score{gap:7px}.fi-score b{font-size:32px}.fi-team{width:76px;font-size:10px}.fi-win{font-size:24px}}
+
+/* A readable bridge between the final whistle and the first penalty. */
+.pk-intro { position: absolute; inset: 0; visibility: hidden; pointer-events: none; z-index: 33; background: radial-gradient(ellipse at 50% 48%,#1d725b30,transparent 70%),linear-gradient(180deg,#0b1829f5,#07111cf5),url('../assets/shop-art/stadium.webp') center/cover; }
+.pi-body { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 18px; text-align: center; }
+.pi-kicker { color: #b4c7d9; font-size: 9px; font-weight: 800; letter-spacing: .16em; }
+.pi-score { font-size: 29px; font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.pi-score span { color: #8ea3b9; padding: 0 9px; }
+.pi-body h2 { font-size: 33px; font-weight: 900; line-height: 1.02; letter-spacing: -.035em; color: #e9f9f1; text-shadow: 0 0 25px #51efa72b; }
+.pi-body p { margin: 1px 0 0; color: #c0cfdd; font-size: 11px; line-height: 1.6; }
+.pi-track { width: 100px; height: 3px; background: #c8e4d522; border-radius: 99px; overflow: hidden; margin-top: 5px; }
+.pi-track i { display: block; height: 100%; background: #70eab0; transform-origin: left; }
+@media (max-width: 350px) { .pi-body { gap: 8px; padding: 15px; } .pi-body h2 { font-size: 30px; } .pi-body p { font-size: 10px; } }
 </style>

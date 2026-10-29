@@ -30,6 +30,7 @@ function seeded (seed, fn) {
 
 export function reset () {
   resetStore()
+  setReduced(false)
   game.abandonMatch()
   store.currentScreen = 'home'
 }
@@ -79,11 +80,11 @@ function flow (upto, { fee = 50, stake = null, wantPk = true, seed = 7 } = {}) {
   return seeded(seed, () => {
     const found = game.startMatchmaking(fee)
     if (!found) throw new Error('no opponent for fee ' + fee)
-    if (upto === 'matchmaking') return
+    if (upto === 'matchmaking' || upto === 'confirm') return
     game.confirmBet(stake === null ? fee : stake)
-    if (upto === 'confirm') return
+    if (upto === 'toss') return
     game.runToss()
-    if (upto === 'toss' || upto === 'match') return
+    if (upto === 'match') return
     game.finishMatch()
   })
 }
@@ -170,6 +171,40 @@ function timeline () {
   const tl = window.__match && window.__match.timeline
   if (!tl) throw new Error('match screen exposed no compiled timeline')
   return tl
+}
+
+
+/* Reach a named presentation beat through the actual compiled timeline. */
+async function seekMatchBeat (name, offset, raf) {
+  const tl = timeline()
+  const at = tl.labels[name]
+  if (at === undefined) throw new Error('missing match beat: ' + name)
+  tl.pause(0)
+  for (let t = 0; t < at + offset; t += .2) { tl.time(t, false); await raf() }
+  tl.time(at + offset, false); await raf()
+  return { tl } // GSAP timelines are thenable; returning one would await its end.
+}
+function assertPenaltyIntro () {
+  if (getComputedStyle(document.querySelector('.pk-intro')).visibility !== 'visible') throw new Error('penalty intro not visible')
+  if (getComputedStyle(document.querySelector('.pk')).visibility !== 'hidden') throw new Error('penalty camera appeared before intro ended')
+  if (timeline().timeScale() !== 1) throw new Error('intro accelerated by fast mode or cap')
+  const score = document.querySelector('.pi-score').textContent.replace(/\s/g, '')
+  if (score !== game.matchView.homeScore + ':' + game.matchView.awayScore) throw new Error('intro shows wrong regular-time score')
+  if (Math.abs(timeline().labels['penalty-first-faceoff'] - timeline().labels['penalty-intro'] - 2.98) > .01) throw new Error('intro reading time changed')
+}
+
+
+function assertFaceoff (event) {
+  const face = document.querySelector('.pk-faceoff')
+  if (Number(getComputedStyle(face).opacity) < .99) throw new Error('face-off not fully visible')
+  if (Number(getComputedStyle(document.querySelector('.pk-goal')).opacity) > .01) throw new Error('camera replaced the cards too soon')
+  for (const kind of ['shooter', 'keeper']) {
+    const card = document.querySelector('.pk-card.' + kind)
+    if (Number(getComputedStyle(card).opacity) < .99) throw new Error(kind + ' card not fully visible')
+    if (card.querySelector('.cf-name').textContent !== event[kind + 'Name']) throw new Error('wrong ' + kind + ' shown in face-off')
+  }
+  if (timeline().timeScale() > 1) throw new Error('face-off accelerated')
+  if (timeline().labels['penalty-first-camera'] - timeline().labels['penalty-first-faceoff'] < 2.39) throw new Error('face-off hold too short')
 }
 
 /* Seek the payout roll to a named point. uiLast keeps the timeline alive
@@ -725,26 +760,103 @@ export const CASES = [
     id: 'matchmaking/searching',
     screen: 'matchmaking',
     group: 'matchmaking-button',
-    scope: '.mm > .btn',
+    scope: '.match-actions .btn',
     setup () { reset(); richCollection(); store.pendingTier = 50 }
   },
   {
-    /* the log streams in underneath; the button below it must not walk away
-       from the thumb reaching for it */
+    /* Search and reveal share one persistent, fixed footer button. */
     id: 'matchmaking/found',
     screen: 'matchmaking',
     group: 'matchmaking-button',
-    scope: '.mm > .btn',
+    scope: '.match-actions .btn',
     wait: 3400,
     setup () { reset(); richCollection(); store.pendingTier = 50 }
   },
+  {
+    id: 'matchmaking/reveal', screen: 'matchmaking', group: 'matchmaking-button', scope: '.match-actions .btn', wait: 1700,
+    setup () { reset(); richCollection(); store.pendingTier = 50 }
+  },
+  {
+    id: 'matchmaking/reduced', screen: 'matchmaking', group: 'matchmaking-button', scope: '.match-actions .btn',
+    setup () { reset(); richCollection(); store.pendingTier = 50; setReduced(true) }
+  },
+  {
+    id: 'matchmaking/button-stability', screen: 'matchmaking', group: 'matchmaking-button', scope: '.match-actions .btn',
+    setup () { reset(); richCollection(); store.pendingTier = 50 },
+    async act ({ sleep }) {
+      const button = document.querySelector('.match-actions .btn')
+      const initial = button.getBoundingClientRect()
+      const labels = new Set()
+      const rotations = new Set()
+      const cash = store.cash
+      for (let i = 0; i < 44; i++) {
+        const current = document.querySelector('.match-actions .btn')
+        if (current !== button) throw new Error('matchmaking replaced the action button')
+        const rect = current.getBoundingClientRect()
+        for (const key of ['x','y','width','height']) {
+          if (Math.abs(rect[key] - initial[key]) > .1) throw new Error('matchmaking button moved: ' + key)
+        }
+        labels.add(current.querySelector('span').textContent)
+        if (document.querySelector('.duel-space.searching')) rotations.add(getComputedStyle(document.querySelector('.rival .crest-stage'), '::after').transform)
+        await sleep(50)
+      }
+      if (!labels.has('Cancel search') || !labels.has('Review match')) throw new Error('did not observe both matchmaking states')
+      if (rotations.size < 2) throw new Error('search scanner did not animate')
+      if (store.cash !== cash || store.pendingBet) throw new Error('matchmaking charged a stake')
+      if (/Candidates in queue|Both inside|Win chance/.test(document.querySelector('.mm').textContent)) throw new Error('technical log visible')
+    }
+  },
   { id: 'confirm/open', screen: 'confirm', setup () { reset(); richCollection(); flow('confirm') } },
-  { id: 'confirm/no-match', screen: 'confirm', setup () { reset() } },
+  { id: 'confirm/insufficient-cash', screen: 'confirm', setup () { reset(); richCollection(); flow('confirm'); store.cash = 49 } },
+  { id: 'confirm/rules-open', screen: 'confirm', setup () { reset(); richCollection(); flow('confirm') }, act: ({ click }) => click('.fineprint summary') },
+  { id: 'confirm/practice', screen: 'confirm', setup () { reset(); richCollection(); flow('confirm', { fee: 10 }) } },
+  { id: 'confirm/pro', screen: 'confirm', setup () { reset(); richCollection(); flow('confirm', { fee: 200 }) } },
+  { id: 'confirm/lineups-open', screen: 'confirm', setup () { reset(); richCollection(); flow('confirm') }, act: ({ click }) => click('.lineups summary') },
+  {
+    id: 'confirm/typed-stake', screen: 'confirm', setup () { reset(); richCollection(); flow('confirm') },
+    async act ({ nextTick }) {
+      const input = document.querySelector('#match-stake')
+      input.value = '137'; input.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
+      if (!document.querySelector('[data-sfx="confirm"]').textContent.includes('137')) throw new Error('typed stake did not update confirmation')
+      const q = game.branchQuotes()
+      const returns = [...document.querySelectorAll('.quote-return')].map(el => el.textContent.trim())
+      if (returns[0] !== '₦' + Math.floor(137 * q.home).toLocaleString() || returns[1] !== '₦' + Math.floor(137 * q.away).toLocaleString()) throw new Error('typed stake did not update both returns')
+    }
+  },
+  {
+    id: 'confirm/invalid-stakes', screen: 'confirm', setup () { reset(); richCollection(); flow('confirm') },
+    async act ({ nextTick }) {
+      const input = document.querySelector('#match-stake')
+      const cash = store.cash
+      for (const amount of ['', '0', '-1', '50.5', '200', 'NaN', '1e2', '99999999999999999']) {
+        input.value = amount; input.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
+        const button = document.querySelector('[data-sfx="confirm"]')
+        if (!button.disabled || !document.querySelector('#stake-error')) throw new Error('invalid stake accepted: ' + amount)
+        button.click(); await nextTick()
+        if (store.cash !== cash || store.pendingBet) throw new Error('invalid stake charged the wallet')
+        if ([...document.querySelectorAll('.quote-return')].some(el => el.textContent.trim() !== '—')) throw new Error('invalid stake displayed a return')
+      }
+    }
+  },
+  {
+    id: 'confirm/stepper-and-presets', screen: 'confirm', setup () { reset(); richCollection(); flow('confirm') },
+    async act ({ click }) {
+      if (!document.querySelector('[aria-label="Decrease stake"]').disabled) throw new Error('minimum decrement enabled')
+      await click('[aria-label="Increase stake"]')
+      if (document.querySelector('#match-stake').value !== '51') throw new Error('increment failed')
+      await click('[aria-label="Decrease stake"]')
+      if (document.querySelector('#match-stake').value !== '50') throw new Error('decrement failed')
+      await click('.presets button', 3)
+      if (document.querySelector('#match-stake').value !== '199' || !document.querySelector('[aria-label="Increase stake"]').disabled) throw new Error('maximum preset failed')
+      if (document.querySelector('.slider').value !== '199') throw new Error('slider not synchronized')
+    }
+  },
+  { id: 'confirm/no-match' , screen: 'confirm', setup () { reset() } },
   {
     id: 'toss/spinning',
     screen: 'toss',
     group: 'toss-above-the-fold',
-    scope: '.coin, .t-status, .locks',
+    scope: '.t-status, .locks',
     setup () { reset(); richCollection(); flow('toss') }
   },
   {
@@ -753,12 +865,120 @@ export const CASES = [
     id: 'toss/landed',
     screen: 'toss',
     group: 'toss-above-the-fold',
-    scope: '.coin, .t-status, .locks',
+    scope: '.t-status, .locks',
     wait: 2200,
     setup () { reset(); richCollection(); flow('toss') }
   },
 
   /* ------------------------------------------------ Match */
+
+  {
+    id: 'match/faceoff-before-entry', screen: 'match', setup () { reset(); richCollection(); flow('match') },
+    async act ({ raf }) {
+      await seekMatchBeat('penalty-first-faceoff', -.14, raf)
+      if (Number(getComputedStyle(document.querySelector('.pk-faceoff')).opacity) > .01) throw new Error('stale cards flashed before the real entrance')
+      for (const card of document.querySelectorAll('.pk-card')) if (Number(getComputedStyle(card).opacity) > .01) throw new Error('uninitialized card visible')
+    }
+  },
+  {
+    id: 'match/faceoff-first', screen: 'match', setup () { reset(); richCollection(); flow('match') },
+    async act ({ raf }) { await seekMatchBeat('penalty-first-faceoff', .55, raf); assertFaceoff(game.ctx.script.penalty.events[0]) }
+  },
+  {
+    id: 'match/faceoff-fast', screen: 'match', setup () { reset(); richCollection(); flow('match'); store.settings.fastMatch = true },
+    async act ({ raf, sleep }) {
+      const { tl } = await seekMatchBeat('penalty-first-faceoff', .4, raf)
+      tl.play(); await sleep(1400); tl.pause()
+      assertFaceoff(game.ctx.script.penalty.events[0])
+    }
+  },
+  {
+    id: 'match/faceoff-replay', screen: 'match',
+    setup () { reset(); richCollection(); const row = settledMatch({ wantPk: true, wantWin: true }); game.startReplay(row); store.settings.fastMatch = true },
+    async act ({ raf }) {
+      const cash = store.cash, played = store.stats.played
+      await seekMatchBeat('penalty-first-faceoff', .55, raf)
+      assertFaceoff(game.ctx.script.penalty.events[0])
+      if (store.cash !== cash || store.stats.played !== played) throw new Error('replay changed settlement')
+    }
+  },
+  {
+    id: 'match/faceoff-decider', screen: 'match', setup () { reset(); richCollection(); flow('match') },
+    async act ({ raf }) {
+      await seekMatchBeat('penalty-decider-faceoff', .55, raf)
+      assertFaceoff(game.ctx.script.penalty.events.filter(e => e.decisive).at(-1))
+    }
+  },
+  {
+    id: 'match/faceoff-skip', screen: 'match', setup () { reset(); richCollection(); flow('match') },
+    async act ({ raf, click }) {
+      await seekMatchBeat('penalty-first-faceoff', .55, raf)
+      const cash = store.cash
+      await click('.ctrl .btn')
+      if (getComputedStyle(document.querySelector('.final')).visibility !== 'visible' || getComputedStyle(document.querySelector('.pk')).visibility !== 'hidden') throw new Error('Skip did not clear face-off')
+      if (store.cash !== cash) throw new Error('Skip settled the bet')
+    }
+  },
+
+
+  {
+    id: 'match/transition-intro', screen: 'match', setup () { reset(); richCollection(); flow('match') },
+    async act ({ raf }) { await seekMatchBeat('penalty-intro', .45, raf); assertPenaltyIntro() }
+  },
+  {
+    id: 'match/transition-fast', screen: 'match', setup () { reset(); richCollection(); flow('match'); store.settings.fastMatch = true },
+    async act ({ raf, sleep }) {
+      const { tl } = await seekMatchBeat('penalty-intro', .45, raf)
+      assertPenaltyIntro()
+      const before = tl.time(), started = performance.now()
+      tl.play(); await sleep(500); tl.pause()
+      const rate = (tl.time() - before) / ((performance.now() - started) / 1000)
+      if (rate < .75 || rate > 1.3) throw new Error('fast mode did not preserve real intro time: ' + rate)
+      assertPenaltyIntro()
+    }
+  },
+  {
+    id: 'match/transition-first-kick', screen: 'match', setup () { reset(); richCollection(); flow('match') },
+    async act ({ raf }) {
+      await seekMatchBeat('penalty-first-kick', .08, raf)
+      if (timeline().timeScale() > 1) throw new Error('first penalty accelerated past reading speed')
+      if (getComputedStyle(document.querySelector('.pk-intro')).visibility !== 'hidden') throw new Error('intro still covers first penalty')
+      if (getComputedStyle(document.querySelector('.pk')).visibility !== 'visible') throw new Error('first penalty missing')
+    }
+  },
+  {
+    id: 'match/transition-skip', screen: 'match', setup () { reset(); richCollection(); flow('match') },
+    async act ({ raf, click }) {
+      await seekMatchBeat('penalty-intro', .45, raf)
+      const cash = store.cash
+      await click('.ctrl .btn')
+      if (getComputedStyle(document.querySelector('.pk-intro')).visibility !== 'hidden') throw new Error('Skip left intro visible')
+      if (getComputedStyle(document.querySelector('.final')).visibility !== 'visible') throw new Error('Skip did not reach result')
+      if (store.cash !== cash) throw new Error('Skip settled the bet')
+    }
+  },
+  {
+    id: 'match/transition-reduced', screen: 'match', setup () { reset(); richCollection(); flow('match'); setReduced(true) },
+    act () {
+      if (getComputedStyle(document.querySelector('.pk-intro')).visibility !== 'hidden') throw new Error('reduced motion left the intro active')
+      if (getComputedStyle(document.querySelector('.final')).visibility !== 'visible') throw new Error('reduced motion did not reach final state')
+    }
+  },
+  {
+    id: 'match/transition-no-pk', screen: 'match', setup () { reset(); richCollection(); flow('match', { wantPk: false }) },
+    async act ({ click }) {
+      if (timeline().labels['penalty-intro'] !== undefined) throw new Error('non-penalty match received a shootout intro')
+      await click('.ctrl .btn')
+      if (getComputedStyle(document.querySelector('.pk-intro')).visibility !== 'hidden') throw new Error('non-penalty match shows shootout intro')
+    }
+  },
+
+  {
+    id: 'match/penalty-faceoff', screen: 'match',
+    setup () { reset(); richCollection(); flow('match') },
+    act: ({ raf }) => seekMatchBeat('penalty-decider-faceoff', .55, raf)
+  },
+  { id: 'match/reduced-motion', screen: 'match', setup () { reset(); richCollection(); flow('match'); setReduced(true) } },
   { id: 'match/kickoff', screen: 'match', setup () { reset(); richCollection(); flow('match') } },
   {
     id: 'match/goal-cutin',

@@ -1,18 +1,20 @@
 <template>
-  <div class="scroll pad rs">
-    <div class="verdict" :class="matchView.won ? 'win' : 'lose'">
+  <div class="rs" :class="{ 'result-won': matchView.won }">
+    <div class="result-content scroll">
+    <div class="result-label">MATCH COMPLETE</div>
+    <h1 class="verdict" :class="matchView.won ? 'win' : 'lose'">
       {{ matchView.won ? 'YOU WIN' : 'YOU LOSE' }}
-    </div>
+    </h1>
 
-    <div class="score card">
+    <div class="score card"><div class="result-teams"><div><MatchCrest label="H" tone="home" /><span>{{ homeName }}</span></div><span class="score-label">FULL TIME</span><div><MatchCrest label="A" tone="away" /><span>{{ awayName }}</span></div></div>
       <div class="sc">{{ matchView.homeScore }} : {{ matchView.awayScore }}</div>
       <div v-if="matchView.wentToPk" class="pk muted">
         after penalties {{ matchView.pkHome }} : {{ matchView.pkAway }}
       </div>
-      <div class="names muted">{{ homeName }} vs {{ awayName }}</div>
+
     </div>
 
-    <div class="money card">
+    <div class="money card"><div class="ledger-title">MATCH SETTLEMENT</div>
       <div class="mrow"><span class="muted">Stake</span><span>₦{{ matchView.stake }}</span></div>
       <div class="mrow">
         <span class="muted">Your price ({{ matchView.aIsHome ? 'home' : 'away' }})</span>
@@ -35,7 +37,7 @@
       </div>
     </div>
 
-    <div class="rank card">
+    <div class="rank card"><div class="ledger-title">YOUR RANK PROGRESS</div>
       <div class="rk-head">
         <span>{{ rankLabel(store.rank.tierIndex, store.rank.subtier) }}</span>
         <span :class="matchView.rankDelta > 0 ? 'green' : 'red'">
@@ -76,6 +78,7 @@
       </div>
     </div>
 
+    </div>
     <div class="btn-row">
       <button class="btn" @click="home">Back home</button>
       <button class="btn btn-cta" @click="again">Play again</button>
@@ -84,6 +87,7 @@
 </template>
 
 <script setup>
+import MatchCrest from '../components/MatchCrest.vue'
 import DiamondIcon from '../components/DiamondIcon.vue'
 import { computed } from 'vue'
 import Icon from '../components/Icon.vue'
@@ -102,52 +106,316 @@ function celebrate (p) {
   store.overlay = 'rankup'
 }
 function home () { abandonMatch(); go('home') }
-function again () { abandonMatch(); go('tierselect') }
+function again () {
+  const tierFee = matchView.tierFee
+  abandonMatch()
+  store.pendingTier = tierFee
+  go('matchmaking')
+}
 </script>
 
 <style scoped>
-.rs { display: flex; flex-direction: column; gap: 10px; }
-.verdict { text-align: center; font-size: 26px; font-weight: 800; letter-spacing: .06em; padding: 6px 0; }
-.verdict.win { color: var(--cta); }
-/* A loss painted in the same grey as .muted reads as "nothing happened". */
-.verdict.lose { color: var(--loss); }
-.score { text-align: center; padding: 14px; }
-.sc { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.pk { font-size: 12px; margin-top: 2px; }
-.names { font-size: 11px; margin-top: 6px; }
-.money { padding: 4px 12px; }
-.mrow { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--divider); font-size: 13px; }
-.r-cell { padding: 3px 10px; font-size: 15px; }
-.mrow.big { font-size: 17px; font-weight: 800; border-bottom: 0; }
-.fine { font-size: 10px; padding-bottom: 10px; }
-.rank { padding: 12px; }
-.rk-head { display: flex; justify-content: space-between; font-weight: 700; font-size: 14px; }
-.red { color: var(--red); }
-.bar { height: 7px; background: var(--surface-hi); border-radius: 999px; overflow: hidden; margin: 8px 0 5px; }
-.bar i { display: block; height: 100%; background: var(--green); }
-.rk-sub { font-size: 11px; }
-/* Still a button — it says TAP TO CELEBRATE and removing the affordance
-   would be worse than the problem. But a screen gets one solid mint button,
-   and that one is Play again, so this keeps the colour and loses the fill.
-   The 1px inner ring is what says "pressable" alongside the label; no arrow
-   pseudo-element, because "you can tap this" is information and information
-   belongs in a real element. */
+.rs {
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding:25px 18px 20px;
+  background:linear-gradient(180deg,#111b27ad,#10151e 380px),url('../assets/shop-art/stadium.webp') center top/auto 380px no-repeat,#10151e;
+}
+.result-label {
+  text-align:center;
+  color:#aabccc;
+  font-weight:800;
+  letter-spacing:.2em;
+  font-size:9px;
+}
+.verdict {
+  text-align:center;
+  font-size:35px;
+  line-height:1.1;
+  font-weight:900;
+  letter-spacing:-.035em;
+}
+.verdict.win {
+  color:#63e99a;
+  text-shadow:0 0 35px #32ce6240;
+}
+.verdict.lose {
+  color:var(--loss);
+}
+.score {
+  padding:15px 16px 19px;
+  text-align:center;
+  background:linear-gradient(135deg,#273340d9,#17222de6);
+  border:1px solid #91a6b43b;
+  border-radius:17px;
+}
+.result-teams {
+  display:flex;
+  align-items:center;
+  justify-content:space-around;
+  gap:6px;
+}
+.result-teams>div {
+  width:100px;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  flex-direction:column;
+  gap:7px;
+  font-weight:700;
+  font-size:12px;
+}
+.result-teams>div>span {
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+.score-label {
+  font-size:9px;
+  letter-spacing:.14em;
+  color:#a7b7c8;
+  flex:none;
+}
+.sc {
+  font-size:45px;
+  font-weight:900;
+  letter-spacing:.04em;
+  font-variant-numeric:tabular-nums;
+  margin-top:5px;
+}
+.pk {
+  font-size:11px;
+  color:#d9c284;
+}
+.ledger-title {
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.13em;
+  color:#a7bdcb;
+  margin-bottom:8px;
+}
+.money {
+  padding:15px 16px;
+  background:linear-gradient(130deg,#253239,#1b2530);
+  border:1px solid #839aa32c;
+  border-radius:15px;
+}
+.result-won .money {
+  border-color:#5bce8e50;
+}
+.mrow {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid #ffffff10;
+  font-size:12px;
+}
+.r-cell {
+  padding:3px 12px;
+  font-size:16px;
+}
+.mrow.big {
+  border:0;
+  font-size:16px;
+  font-weight:800;
+  padding:14px 0 8px;
+}
+.mrow.big>span:last-child {
+  font-size:27px;
+  font-variant-numeric:tabular-nums;
+}
+.fine {
+  font-size:10px;
+  line-height:1.6;
+  padding:0 0 3px;
+}
+.rank {
+  padding:16px;
+  background:#1e2934;
+  border:1px solid #91a6b42b;
+  border-radius:14px;
+}
+.rk-head {
+  display:flex;
+  justify-content:space-between;
+  font-weight:800;
+  font-size:14px;
+}
+.red {
+  color:var(--red);
+}
+.bar {
+  height:7px;
+  background:#080e1680;
+  border-radius:999px;
+  overflow:hidden;
+  margin:12px 0 7px;
+}
+.bar i {
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,#25995a,#63e99a);
+  border-radius:inherit;
+}
+.rk-sub {
+  font-size:10px;
+}
 .promo {
-  background: linear-gradient(90deg, rgba(50,206,98,.20), rgba(50,206,98,.07));
-  box-shadow: inset 3px 0 0 var(--cta), inset 0 0 0 1px rgba(50,206,98,.35);
-  color: var(--cta);
-  border-radius: var(--r-md); padding: 12px; text-align: left;
-  width: 100%; min-height: 44px;
-  display: flex; align-items: center; gap: 10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  min-height:64px;
+  padding:14px;
+  border-radius:14px;
+  background:linear-gradient(120deg,#32ce6222,#32ce6208);
+  box-shadow:inset 0 0 0 1px #32ce6266;
+  color:#7cedad;
+  text-align:left;
 }
-.p-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.p-body {
+  flex:1;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+}
+.pt {
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.03em;
+}
+.pr {
+  display:flex;
+  gap:14px;
+  margin-top:6px;
+  font-size:12px;
+  font-weight:700;
+}
+.pr>span {
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+.ph {
+  font-size:9px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  opacity:.8;
+  margin-top:7px;
+}
 .p-go {
-  flex: none; width: 22px; height: 22px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px; font-weight: 800; font-style: normal; line-height: 1;
-  color: var(--cta); box-shadow: inset 0 0 0 1px rgba(50,206,98,.5);
+  font-style:normal;
+  font-size:24px;
 }
-.pt { font-weight: 800; font-size: 13px; letter-spacing: .05em; }
-.pr { display: flex; gap: 14px; margin-top: 6px; font-size: 13px; font-weight: 700; }
-.ph { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; opacity: .75; margin-top: 7px; }
+.scorers {
+  padding:14px;
+  background:#1b2530;
+  border:1px solid #91a6b425;
+  border-radius:14px;
+}
+.goal-row {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:11px;
+  padding:8px 0;
+  border-top:1px solid #ffffff0b;
+}
+.g-min {
+  width:28px;
+  color:#a8b8c8;
+  font-variant-numeric:tabular-nums;
+}
+.g-who {
+  flex:1;
+  font-weight:700;
+}
+.g-team {
+  display:flex;
+  align-items:center;
+  gap:5px;
+  font-size:10px;
+  max-width:40%;
+  color:#a8b8c8;
+}
+.g-jersey {
+  width:7px;
+  height:9px;
+  border-radius:2px;
+  flex:none;
+}
+.home .g-jersey {
+  background:var(--home);
+}
+.away .g-jersey {
+  background:var(--away);
+}
+.btn-row {
+  margin-top:auto;
+}
+.btn-row .btn {
+  flex: 1;
+  min-width: 0;
+  border-radius:12px;
+}
+.btn-row .btn:first-child {
+  background:transparent;
+  border:1px solid #71849677;
+}
+@media(max-width:350px) {
+  .rs {
+    padding:20px 12px;
+    gap:12px;
+  }
+  .score-label {
+    font-size:8px;
+  }
+  .mrow.big>span:last-child {
+    font-size:24px;
+  }
+  .result-teams :deep(.match-crest) {
+    width:47px;
+    height:54px;
+  }
+}
+.rs {
+  padding:0;
+  gap:0;
+}
+.result-content {
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  min-height:0;
+  padding:25px 18px 20px;
+  scrollbar-width:none;
+}
+.result-content::-webkit-scrollbar {
+  display:none;
+}
+.result-content>* {
+  flex-shrink:0;
+}
+.rs>.btn-row {
+  flex:none;
+  margin:0;
+  padding:14px 18px 18px;
+  background:#141e2b;
+  border-top:1px solid #8c9aae22;
+}
+@media(max-width:350px) {
+  .rs {
+    padding:0;
+  }
+  .result-content {
+    padding:20px 12px;
+    gap:12px;
+  }
+  .rs>.btn-row {
+    padding-left:12px;
+    padding-right:12px;
+  }
+}
 </style>

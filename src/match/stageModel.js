@@ -22,7 +22,7 @@ export const GOAL = { home: [3, 50], away: [97, 50] }
 /* Beat lengths in seconds. The motion lab writes to this object live, so
    retuning the rhythm never needs a reload. */
 export const BEAT = {
-  // Whole-match cap is 30s INCLUDING the shootout, so every beat is tight.
+  // Script budget targets 30s; the renderer adds protected shootout reading time.
   buildUp: 0.40,       // tokens surge, defenders drop
   pass: 0.22,          // one pass leg
   carry: 0.30,         // ball carrier drives into the box
@@ -43,9 +43,15 @@ export const BEAT = {
   // 30s cap absorbs this on its own.
   pkKick: 0.72,        // an ordinary kick, start to resolution
   pkSuddenDeath: 0.55, // deep sudden death compresses further
-  pkShowdown: 1.30,    // shooter card vs keeper card, held
+  pkShowdown: 1.30,    // script budget; renderer applies the readable face-off floor
   pkStrike: 1.04,      // the slow-motion strike
   pkReveal: 0.78,      // the answer
+
+  // Presentation-only reading time, protected from fast-match/cap speed-up.
+  pkPause: 0.70,
+  pkIntro: 2.70,
+  pkReadKick: 1.40,
+  pkReadFaceoff: 2.40, // entrance + at least two seconds with both cards readable
 
   final: 1.60,         // the full-time card: result, shootout score, winner
 
@@ -137,8 +143,8 @@ export function waveDuration (outcome, beat = BEAT) {
   return base + beat.shot
 }
 
-/* Wall-clock length of a shootout. The decisive kick carries the showdown;
-   everything before it is brisk, and deep sudden death is brisker still. */
+/* Shootout script budget. The renderer adds protected reading time and
+   an opening face-off without changing the generated events or results. */
 export function pkDuration (kickCount, beat = BEAT) {
   if (!kickCount) return 0
   let total = 0
@@ -148,8 +154,8 @@ export function pkDuration (kickCount, beat = BEAT) {
   return total + beat.pkShowdown + beat.pkStrike + beat.pkReveal
 }
 
-/* Wall-clock length of a whole match, shootout included. This is the number
-   that has to stay under the 30 second cap. */
+/* Script-budget estimate for the 30-second generation target. The renderer
+   may add protected presentation time for the intro and readable shootout. */
 export function matchDuration (counts, beat = BEAT) {
   const { goals = 0, saves = 0, misses = 0, pkKicks = 0 } = counts
   const events = goals + saves + misses

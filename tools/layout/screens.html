@@ -51,6 +51,18 @@
     document.getElementById('out').textContent = 'ERR ' + m + '\n' + (e && e.stack)
   }
 </script>
+<!-- Responsive QA uses the same harness, at an explicit phone frame. -->
+<script>
+  const frameQuery = new URLSearchParams(location.search)
+  const frameWidth = Number(frameQuery.get('width'))
+  const frameHeight = Number(frameQuery.get('height'))
+  if (Number.isInteger(frameWidth) && frameWidth >= 280 && frameWidth <= 1024 &&
+      Number.isInteger(frameHeight) && frameHeight >= 500 && frameHeight <= 1400) {
+    const frameStyle = document.createElement('style')
+    frameStyle.textContent = `html,body{width:${frameWidth}px!important;height:${frameHeight}px!important}.phone{height:${frameHeight}px!important;max-width:${frameWidth}px!important}`
+    document.head.appendChild(frameStyle)
+  }
+</script>
 <script type="module" src="./screens.js"></script>
 <script type="module">
   setTimeout(async () => {

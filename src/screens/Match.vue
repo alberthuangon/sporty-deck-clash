@@ -8,7 +8,8 @@
       :home-is-me="matchView.aIsHome"
     />
 
-    <div class="feed scroll" ref="feedEl">
+    <div class="feed-title"><span>{{ finished ? 'MATCH HIGHLIGHTS' : 'LIVE COMMENTARY' }}</span><span class="live-indicator" :class="{ ended: finished }">{{ finished ? 'FULL TIME' : '● LIVE' }}</span></div>
+    <div class="feed scroll" ref="feedEl" role="log" aria-label="Match commentary">
       <div v-for="(e,i) in feed" :key="i" class="ev" :class="e.cls">
         <span class="em">{{ e.when }}</span>
         <span class="et">{{ e.text }}</span>
@@ -25,11 +26,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import gsap from 'gsap'
 import Stage from '../match/Stage.vue'
 import { store, go, ctx, matchView, finishMatch, endReplay } from '../game.js'
 import { compileMatch, resetStage, startIdle, stopIdle } from '../match/player.js'
+import { reduced } from '../ui/motion.js'
 import { BEAT } from '../match/stageModel.js'
 
 const stageRef = ref(null)
@@ -37,6 +39,7 @@ const feedEl = ref(null)
 const feed = ref([])
 const finished = ref(false)
 let compiled = null
+let protectedPacing = false
 
 const teams = computed(() => ({
   home: ctx.result ? ctx.result.home : ctx.playerTeam,
@@ -87,22 +90,30 @@ onMounted(async () => {
   if (!api) return
 
   resetStage(api)
-  startIdle(api, BEAT.idle)
+  if (!reduced.value) startIdle(api, BEAT.idle)
 
   const onSfx = () => {}          // step 8 maps these labels to audio files
   const onRate = (rate) => {
     if (!compiled) return
-    gsap.to(compiled.timeline, { timeScale: rate * baseRate.value, duration: .12, ease: 'power2.out' })
+    gsap.to(compiled.timeline, { timeScale: rate * (protectedPacing ? 1 : baseRate.value), duration: .12, ease: 'power2.out', overwrite: true })
+  }
+  const onPacing = (protectedPhase) => {
+    protectedPacing = protectedPhase
+    if (!compiled) return
+    gsap.killTweensOf(compiled.timeline)
+    compiled.timeline.timeScale(protectedPhase ? 1 : baseRate.value)
+    if (protectedPhase) stopIdle()
   }
 
   compiled = compileMatch(api, ctx.script, ctx.result, BEAT, {
-    onSfx, onRate, onEvent: push, onEnd: () => { finished.value = true }
+    onSfx, onRate, onPacing, onEvent: push, onEnd: () => { finished.value = true }
   })
 
   // compileMatch already applied any cap compression; fast match multiplies it
   capScale.value = compiled.timeline.timeScale()
   compiled.timeline.timeScale(baseRate.value)
-  compiled.timeline.play()
+  if (reduced.value) skip()
+  else compiled.timeline.play()
   /* the compiled timeline is the hatch tools/layout drives to reach a cut-in,
      and the one Claude in Chrome scrubs by hand — same reasoning as __skd */
   window.__match = compiled
@@ -118,13 +129,15 @@ const capScale = ref(1)
 const baseRate = computed(() => capScale.value * (store.settings.fastMatch ? 3 : 1))
 
 onUnmounted(() => {
-  if (compiled) compiled.timeline.kill()
+  if (compiled) { gsap.killTweensOf(compiled.timeline); compiled.timeline.kill() }
   stopIdle()
 })
 
 function skip () {
   if (!compiled) return
-  compiled.timeline.progress(1, false)
+  gsap.killTweensOf(compiled.timeline)
+  compiled.timeline.progress(1, false).pause()
+  gsap.killTweensOf(compiled.timeline)
   // rebuild the feed from the script rather than relying on which callbacks
   // the jump happened to pass, and set the terminal state from data
   feed.value = []
@@ -134,6 +147,8 @@ function skip () {
   finished.value = true
 }
 
+watch(reduced, value => { if (value && compiled) { stopIdle(); skip() } })
+
 function toResult () {
   if (ctx.replay) { endReplay(); return }    // settles nothing, scores nothing
   finishMatch()
@@ -142,18 +157,95 @@ function toResult () {
 </script>
 
 <style scoped>
-.mt { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.replay-bar {
-  background: var(--r-l); color: #2A1C00; text-align: center;
-  font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 4px;
+.mt {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  background:linear-gradient(180deg,#111b27,#10151e);
 }
-.feed { flex: 1; padding: 6px 12px 0; min-height: 0; }
-.ev { display: flex; gap: 8px; font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--divider); }
-.ev.goal { font-weight: 700; }
-.ev.goal.home { color: var(--home-on); }
-.ev.goal.away { color: var(--away-on); }
-.ev.meta { color: var(--text-3); }
-.em { width: 34px; flex: 0 0 34px; font-variant-numeric: tabular-nums; color: var(--text-2); }
-.ctrl { display: flex; gap: 8px; padding: 10px 12px; }
-.ctrl .btn { flex: 1; }
+.replay-bar {
+  background:#e9ca7c;
+  color:#33280d;
+  text-align:center;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.1em;
+  padding:7px;
+}
+.feed-title {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:17px 18px 10px;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.12em;
+  color:#a8bdcc;
+  border-top:1px solid #8296b126;
+}
+.live-indicator {
+  font-size:9px;
+  color:#75e7a2;
+  letter-spacing:.06em;
+}
+.live-indicator.ended {
+  color:#b9c5d1;
+}
+.feed {
+  flex:1;
+  min-height:0;
+  padding:0 18px 12px;
+}
+.ev {
+  display:flex;
+  gap:12px;
+  font-size:12px;
+  padding:11px 0;
+  border-bottom:1px solid #ffffff0b;
+  line-height:1.5;
+}
+.ev.goal {
+  font-weight:700;
+}
+.ev.goal.home {
+  color:var(--home-on);
+}
+.ev.goal.away {
+  color:var(--away-on);
+}
+.ev.meta {
+  color:#94a6b6;
+}
+.em {
+  width:34px;
+  flex:none;
+  font-weight:800;
+  font-size:10px;
+  color:#93a9ba;
+  font-variant-numeric:tabular-nums;
+  padding-top:2px;
+}
+.et {
+  flex:1;
+  min-width:0;
+}
+.ctrl {
+  display:flex;
+  gap:10px;
+  padding:14px 18px 18px;
+  background:#141e2b;
+  border-top:1px solid #8394aa25;
+}
+.ctrl .btn {
+  flex:1;
+  border-radius:12px;
+}
+.ctrl .btn:first-child {
+  flex:.65;
+  background:transparent;
+  border:1px solid #7b8eaa66;
+}
+.feed { scrollbar-width: none; }
+.feed::-webkit-scrollbar { display: none; }
 </style>

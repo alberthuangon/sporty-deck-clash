@@ -12,6 +12,7 @@ export function createFakeStage (home, away) {
   }
   const parts = {
     ball: el(), pitch: el(), flash: el(), shock: el(), trail: el(),
+    pkIntro: { root: el(), body: el(), progress: el() },
     cutin: { root: el(), bg: el(), body: el(), text: el(), streaks: el(), tint: el() },
     pk: {
       root: el(), bg: el(), vig: el(), head: el(), faceoff: el(), goal: el(),
@@ -40,6 +41,7 @@ export function createFakeStage (home, away) {
     trail: () => parts.trail,
     cutin: () => parts.cutin,
     pk: () => parts.pk,
+    pkIntro: () => parts.pkIntro,
     final: () => parts.final,
     scoreEl: (side) => parts.scores[side],
     card: (side, slot) => (side === 'home' ? home : away).cards[slot],

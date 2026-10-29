@@ -358,6 +358,12 @@ export function buildFinalWhistle (stage, { winSide, winText, pk }, beat = BEAT,
 
 /* Put every element back where it started, for replays. */
 export function resetStage (stage) {
+  const intro = stage.pkIntro && stage.pkIntro()
+  if (intro) {
+    gsap.set(intro.root, { visibility: 'hidden' })
+    gsap.set(intro.body, { clearProps: 'all' })
+    gsap.set(intro.progress, { scaleX: 0 })
+  }
   for (const side of ['home', 'away']) {
     for (const slot of SLOTS) {
       const el = stage.token(side, slot)
@@ -385,6 +391,8 @@ export function resetStage (stage) {
   const pk = stage.pk && stage.pk()
   if (pk && pk.root) {
     gsap.set(pk.root, { visibility: 'hidden' })
+    gsap.set([pk.faceoff, pk.goal].filter(Boolean), { opacity: 0, scale: 1 })
+    gsap.set([pk.shooter, pk.keeper].filter(Boolean), { opacity: 0, x: 0, y: 0, scale: 1, rotate: 0 })
     gsap.set([pk.bg, pk.vig, pk.head, pk.stage, pk.stamp].filter(Boolean), { clearProps: 'all' })
   }
   const ci = stage.cutin()
@@ -439,7 +447,8 @@ function pkCommon (stage, tl, opts, beat, onSfx, at) {
   const lean = dive === 'LEFT' ? -14 : dive === 'RIGHT' ? 14 : 0
   tl.to(pk.gk, {
     left: dived.x + '%', top: dived.y + '%',
-    scaleX: lean ? 1.45 : 1.1, scaleY: lean ? 0.8 : 1.3, rotate: lean,
+    // Keep the portrait circular while the keeper dives across the goal.
+    scaleX: 1.1, scaleY: 1.1, rotate: lean,
     duration: strike * .92, ease: 'power3.out'
   }, at + strike * .06)
   sfx(tl, at, 'pk_strike', onSfx)
@@ -485,22 +494,27 @@ function pkCommon (stage, tl, opts, beat, onSfx, at) {
 }
 
 /* ---------------------------------------------------------------- *
- * The kick that settles it (PRD §16.4). Three beats: a face-off hold,
+ * Opening/decisive shootout kicks. Three beats: a readable face-off hold,
  * then a CUT to the penalty camera for the strike and the answer.
  *
  * All of the tension sits before contact, so a goal and a save are pre-rolled
  * identically — the performance cannot leak the result.
  * ---------------------------------------------------------------- */
+const PK_CAMERA_CUT = .16
+const showdownHold = beat => Math.max(beat.pkShowdown, beat.pkReadFaceoff)
+
 export function buildPkShowdown (stage, opts, beat = BEAT, onSfx = null, onRate = null) {
   const { shooter, keeper, label = '', board, standalone = true, side } = opts
   const pk = stage.pk()
   const tl = gsap.timeline()
+  const hold = showdownHold(beat)
 
   tl.call(() => { stage.setPk(shooter, keeper, label, board, side); stage.setPkStamp('') })
   tl.set(pk.root, { visibility: 'visible' })
   tl.set(pk.stamp, { opacity: 0 })
   tl.set(pk.goal, { opacity: 0 })
-  tl.set(pk.faceoff, { opacity: 1 })
+  tl.set(pk.faceoff, { opacity: 1, scale: 1 })
+  tl.set([pk.shooter, pk.keeper], { opacity: 0 })
 
   /* ---- beat 1: the face-off -------------------------------------- */
   if (standalone) fromTo(tl, pk.bg, { opacity: 0 }, { opacity: 1, duration: .20, ease: 'power2.out' }, 0)
@@ -508,17 +522,17 @@ export function buildPkShowdown (stage, opts, beat = BEAT, onSfx = null, onRate 
   fromTo(tl, pk.shooter, { x: -150, opacity: 0 }, { x: 0, opacity: 1, duration: .34, ease: 'power3.out' }, .04)
   fromTo(tl, pk.keeper, { x: 150, opacity: 0 }, { x: 0, opacity: 1, duration: .34, ease: 'power3.out' }, .04)
   fromTo(tl, pk.vig, { opacity: .55 },
-    { opacity: 1, duration: beat.pkShowdown / 2.4, ease: 'sine.inOut', yoyo: true, repeat: 1 }, .12)
+    { opacity: 1, duration: hold / 2.4, ease: 'sine.inOut', yoyo: true, repeat: 1 }, .12)
   // he is guessing, and you can see him guess
-  tl.to(pk.keeper, { x: 7, duration: beat.pkShowdown / 3, ease: 'sine.inOut' }, .34)
-  tl.to(pk.keeper, { x: -6, duration: beat.pkShowdown / 3, ease: 'sine.inOut' }, .34 + beat.pkShowdown / 3)
+  tl.to(pk.keeper, { x: 7, duration: hold / 3, ease: 'sine.inOut' }, .34)
+  tl.to(pk.keeper, { x: -6, duration: hold / 3, ease: 'sine.inOut' }, .34 + hold / 3)
   sfx(tl, .12, 'pk_heartbeat', onSfx)
 
   /* ---- cut to the penalty camera ---------------------------------- */
-  let t = beat.pkShowdown
-  const cut = .16
+  let t = hold
+  const cut = PK_CAMERA_CUT
   tl.to(pk.faceoff, { opacity: 0, scale: 1.08, duration: cut, ease: 'power2.in' }, t)
-  fromTo(tl, pk.goal, { opacity: 0, scale: 1.1 },
+  fromTo(tl, pk.goal, { opacity: 0, scale: .98 },
     { opacity: 1, scale: 1, duration: cut * 1.6, ease: 'power2.out' }, t + cut * .6)
   tl.to(pk.vig, { opacity: .7, duration: cut }, t)
   t += cut
@@ -540,8 +554,10 @@ export function buildPkShowdown (stage, opts, beat = BEAT, onSfx = null, onRate 
   return tl
 }
 
-/* An ordinary shootout kick: straight to the penalty camera, no face-off and
-   no camera move. Same picture as the decider, just quick. */
+const PK_KICK_LEAD = .18
+const PK_KICK_FLIGHT = .30
+
+/* Leave most of an ordinary kick to reading the answer, rather than flight. */
 export function buildPkKick (stage, opts, beat = BEAT, onSfx = null) {
   const { shooter, keeper, label, board, side, duration = beat.pkKick } = opts
   const pk = stage.pk()
@@ -551,8 +567,22 @@ export function buildPkKick (stage, opts, beat = BEAT, onSfx = null) {
   tl.set(pk.faceoff, { opacity: 0 })
   fromTo(tl, pk.goal, { opacity: .35 }, { opacity: 1, duration: duration * .2 }, 0)
 
-  const lead = duration * .2
-  pkCommon(stage, tl, { ...opts, strike: duration * .5, reveal: duration * .3 }, beat, onSfx, lead)
+  const lead = duration * PK_KICK_LEAD
+  pkCommon(stage, tl, {
+    ...opts, strike: duration * PK_KICK_FLIGHT,
+    reveal: duration * (1 - PK_KICK_LEAD - PK_KICK_FLIGHT)
+  }, beat, onSfx, lead)
+  return tl
+}
+
+export function buildPkIntro (stage, beat = BEAT) {
+  const intro = stage.pkIntro()
+  const tl = gsap.timeline()
+  tl.set(intro.root, { visibility: 'visible' }, 0)
+  fromTo(tl, intro.body, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .28, ease: 'power2.out' }, 0)
+  fromTo(tl, intro.progress, { scaleX: 0 }, { scaleX: 1, duration: beat.pkIntro - .25, ease: 'none' }, 0)
+  tl.to(intro.body, { opacity: 0, y: -6, duration: .22, ease: 'power1.in' }, beat.pkIntro - .22)
+  tl.set(intro.root, { visibility: 'hidden' }, beat.pkIntro)
   return tl
 }
 
@@ -564,7 +594,7 @@ export function buildPkKick (stage, opts, beat = BEAT, onSfx = null) {
  * jumping to the end cannot change anything.
  * ---------------------------------------------------------------- */
 
-const MATCH_CAP = 30            // seconds, whole match including the shootout
+const MATCH_TARGET = 30         // readability takes priority for long shootouts
 
 function slotOf (team, cardId) {
   for (const slot of SLOTS) if (team.cards[slot].id === cardId) return slot
@@ -591,7 +621,7 @@ function clockRun (tl, stage, from, to, at, duration, label) {
 }
 
 export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
-  const { onSfx = null, onRate = null, onEnd = null, onEvent = null } = cbs
+  const { onSfx = null, onRate = null, onEnd = null, onEvent = null, onPacing = null } = cbs
   const announce = (ev, at) => { if (onEvent) master.call(() => onEvent(ev), null, at) }
   const home = result.home
   const away = result.away
@@ -608,6 +638,9 @@ export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
   let h = 0
   let a = 0
   let goalIndex = 0
+  let protectedRaw = 0
+  let protectedSlowmo = 0
+  let capScale = 1
   /* Slow motion is applied at RUNTIME via timeScale, so it stretches wall-clock
      time without lengthening the timeline. The cap has to be checked against
      wall time, not master.duration(), or every goal silently overruns it. */
@@ -686,7 +719,25 @@ export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
   if (script.penalty) {
     const pk = stage.pk()
     const evs = script.penalty.events
+    const protectedStart = t
+    master.addLabel('penalty-pause', t)
+    master.call(() => {
+      master.timeScale(1)
+      if (onPacing) onPacing(true)
+      stage.setClock("90'")
+      stage.setPhase('FULL TIME')
+    }, null, t)
+    t += beat.pkPause
+    master.addLabel('penalty-intro', t)
+    master.call(() => stage.setPhase('PENALTY SHOOTOUT'), null, t)
+    master.add(buildPkIntro(stage, beat), t)
+    t += beat.pkIntro
+    master.addLabel('penalty-first-faceoff', t + .28)
     master.call(() => stage.setPhase('PENALTIES'), null, t)
+    // Both views are mounted from the start. Park them BEFORE revealing the
+    // background so stale/default cards cannot flash during its fade-in.
+    master.set([pk.faceoff, pk.goal], { opacity: 0, scale: 1 }, t)
+    master.set([pk.shooter, pk.keeper], { opacity: 0 }, t)
     master.set(pk.root, { visibility: 'visible' }, t)
     master.fromTo(pk.bg, { opacity: 0 }, { opacity: 1, duration: .28, ease: 'power2.out' }, t)
     master.fromTo(pk.vig, { opacity: 0 }, { opacity: .8, duration: .28 }, t)
@@ -706,16 +757,22 @@ export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
         boardAfter: pkBoardUpTo(evs, i),       // lit when the ball arrives
         standalone: false
       }
-      if (e.decisive) {
+      if (i === 0 || e.decisive) {
+        if (i === 0) {
+          master.addLabel('penalty-first-camera', t + showdownHold(beat))
+          master.addLabel('penalty-first-kick', t + showdownHold(beat) + PK_CAMERA_CUT)
+        }
+        if (e.decisive) master.addLabel('penalty-decider-faceoff', t)
         const sd = buildPkShowdown(stage, opts, beat, onSfx, onRate)
         master.add(sd, t)
-        announce(e, t + beat.pkShowdown + beat.pkStrike)
+        announce(e, t + showdownHold(beat) + PK_CAMERA_CUT + beat.pkStrike)
         t += sd.duration()
+        if (onRate) protectedSlowmo += (beat.pkStrike + beat.pkReveal * .5) * (1 / .55 - 1)
       } else {
-        const dur = i >= 5 ? beat.pkSuddenDeath : beat.pkKick
+        const dur = Math.max(beat.pkReadKick, i >= 5 ? beat.pkSuddenDeath : beat.pkKick)
         const k = buildPkKick(stage, { ...opts, duration: dur }, beat, onSfx)
         master.add(k, t)
-        announce(e, t + dur * 0.74)
+        announce(e, t + dur * (PK_KICK_LEAD + PK_KICK_FLIGHT))
         t += dur
       }
     })
@@ -723,6 +780,11 @@ export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
     master.to([pk.bg, pk.vig, pk.head, pk.stage], { opacity: 0, duration: .26 }, t)
     master.set(pk.root, { visibility: 'hidden' }, t + .26)
     t += .26
+    protectedRaw = t - protectedStart
+    master.call(() => {
+      master.timeScale(capScale)
+      if (onPacing) onPacing(false)
+    }, null, t)
   }
 
   /* ---- full time ------------------------------------------------- */
@@ -742,6 +804,7 @@ export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
      directly, rather than hoping the callbacks replay. One definition, used
      by both the played-through path and Skip. */
   const applyEnd = () => {
+    gsap.set(stage.pkIntro().root, { visibility: 'hidden' })
     stage.setScore(h, a)
     stage.setClock("90'")
     stage.setPhase(script.penalty ? 'PENALTIES' : 'FULL TIME')
@@ -749,20 +812,25 @@ export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
     stage.setFinal(winSide, winText)
   }
 
-  /* 30-second cap is hard. The script generator gets within it 98% of the
-     time; for the high-scoring draws that cannot fit, compress the whole
-     timeline rather than cutting a beat out of the drama. */
+  /* Keep regular-time pacing within its target without speeding it up to
+     pay for the new reading time. Intro/shootout are additional protected
+     presentation time, including in fast mode. */
   const raw = master.duration()
-  const expected = raw + goalIndex * slowmoExtra
-  if (expected > MATCH_CAP) master.timeScale(expected / MATCH_CAP)
+  const protectedWall = protectedRaw + protectedSlowmo
+  const regularExpected = raw - protectedRaw + goalIndex * slowmoExtra
+  const regularBudget = MATCH_TARGET
+  capScale = Math.max(1, regularExpected / regularBudget)
+  const expected = regularExpected + protectedWall
+  master.timeScale(capScale)
 
   return {
     timeline: master,
     applyEnd,
     rawDuration: raw,
     expectedDuration: expected,            // what the clock on the wall will say
-    playedDuration: Math.min(expected, MATCH_CAP),
-    capScale: master.timeScale()
+    playedDuration: Math.min(regularExpected, regularBudget) + protectedWall,
+    protectedDuration: protectedWall,
+    capScale
   }
 }
 

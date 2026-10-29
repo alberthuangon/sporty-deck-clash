@@ -53,6 +53,10 @@ export const ICONS = {
   ],
 
   /* ---- glyphs used inline in the screens ---- */
+  info: [
+    ['circle', { cx: 12, cy: 12, r: 8.5 }],
+    ['path', { d: 'M12 10.5v6M12 7.5v.2' }]
+  ],
   lock: [
     ['rect', { x: 5, y: 10.5, width: 14, height: 10, rx: 2 }],
     ['path', { d: 'M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3' }]
