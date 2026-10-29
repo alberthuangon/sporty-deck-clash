@@ -897,7 +897,7 @@ export const CASES = [
     id: 'history/back-position', screen: 'history', setup () { reset(); richCollection(); settledMatch({ wantWin: true, seed: 3 }); settledMatch({ wantWin: true, seed: 9 }); settledMatch({ wantWin: false, seed: 5 }); const originals = [...store.history]; store.history = Array.from({ length: 15 }, (_, i) => ({ ...originals[i % originals.length], id: 'history-scroll-' + i, at: Date.now() - i * 3600000 })) },
     async act ({ click, nextTick }) {
       await click('[data-filter="wins"]'); const list = document.querySelector('.history-list'); list.scrollTop = 140; const y = list.scrollTop; if (y < 100) throw new Error('fixture must actually scroll')
-      await click('.row'); await click('.back'); await nextTick()
+      await click('.row'); await click('.tb-back'); await nextTick()
       if (Math.abs(document.querySelector('.history-list').scrollTop-y) > .1 || document.querySelector('[data-filter="wins"]').getAttribute('aria-pressed') !== 'true' || !document.activeElement.classList.contains('row')) throw new Error('back lost list position, filter or focus')
     }
   },
