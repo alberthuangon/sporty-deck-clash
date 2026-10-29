@@ -1,0 +1,56 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Promo capture — isolated demo</title><style>html,body{width:1100px!important;height:932px!important;margin:0;overflow:hidden!important}.phone-wrap{justify-content:flex-start!important;align-items:flex-start!important}.phone{height:932px!important;width:430px!important;max-width:430px!important}#controls{position:fixed;left:470px;top:30px;max-width:560px;color:#e7f3fc;font:17px system-ui;z-index:10000}#controls button{padding:14px 24px;background:#29df81;color:#042816;border-radius:8px;font-size:17px;margin:12px 8px 12px 0}#controls p{color:#a7c5d9}#status{white-space:pre-wrap;font:14px monospace}</style></head><body><div id="app"></div><aside id="controls"><h1>Promo capture</h1><p>Local test state only. Screen recording region: 0,0–430,932.</p><button id="start">Start take</button><button id="next">Next action</button><div id="status">Preparing…</div></aside><script type="module">
+import {createApp,nextTick} from 'vue'
+import gsap from 'gsap'
+import App from '../../src/App.vue'
+import '../../src/styles/tokens.css'
+import '../../src/styles/base.css'
+import {store,resetStore,go} from '../../src/store.js'
+import * as game from '../../src/game.js'
+import {PACKS} from '../../src/engine/economy.js'
+import {setReduced,uiLast} from '../../src/ui/motion.js'
+const q=new URLSearchParams(location.search), scene=q.get('scene')||'live'
+const status=document.querySelector('#status')
+const sleep=ms=>new Promise(r=>setTimeout(r,ms))
+const raf=()=>new Promise(requestAnimationFrame)
+function seed(n,fn){const save=Math.random;Math.random=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};try{return fn()}finally{Math.random=save}}
+function base(){resetStore();game.abandonMatch();setReduced(false);store.cash=10000;store.diamonds=5000;store.tickets=0;store.deck={gk:'G3',df:'F15',mf:'F3',fw:'F12'};store.rank={score:74,tierIndex:1,subtier:1,peakNodes:['b3','b2','b1','s3','s2']};store.settings.forcePkScenario=true;store.settings.fastMatch=false;store.pendingTier=50;store.overlay=null}
+function flow(upto){for(let i=0;i<400;i++){game.abandonMatch();seed(11+i*7,()=>{game.startMatchmaking(50);game.confirmBet(50);game.runToss()});if(game.matchView.won)break}if(!game.matchView.won)throw Error('no winning demo found');if(upto==='confirm'){store.pendingBet=null;store.cash=10000;go('confirm')}else if(upto==='toss')go('confirm');else go('match')}
+base()
+if(scene==='pack'){store.pendingPack='gold';store.pendingPulls=seed(7,()=>game.purchasePack(PACKS.find(p=>p.id==='gold')));go('packopen')}
+else if(scene==='squad')go('deckedit')
+else if(scene==='finding')go('home')
+else if(scene==='confirm')flow('confirm')
+else if(scene==='toss')flow('toss')
+else if(scene==='jackpot'||scene==='rank'){flow('match');game.finishMatch();go('rank')}
+else flow('match')
+createApp(App).mount('#app')
+let tl
+async function seek(at){tl.pause(0);for(let t=0;t<at;t+=.25){tl.time(t,false);await nextTick()}tl.time(at,false);await nextTick();await raf()}
+async function prepare(){await sleep(550);tl=window.__match?.timeline
+ if(['live','goal','intro','penalty','victory','summary'].includes(scene)){
+  if(!tl)throw Error('no compiled timeline');tl.pause(0)
+  if(scene==='goal'){
+   for(let t=0;t<tl.duration();t+=.08){tl.time(t,false);await nextTick();const el=document.querySelector('.cutin');if(el&&getComputedStyle(el).visibility==='visible'&&el.textContent.includes('GOAL')){await seek(Math.max(0,t-.3));break}}
+  }
+  if(scene==='intro')await seek(tl.labels['penalty-intro'])
+  if(scene==='penalty')await seek(tl.labels['penalty-decider-faceoff'])
+  if(scene==='summary'){tl.progress(1,false).pause();await nextTick();await sleep(4200)}
+ }
+ status.textContent='READY '+scene+'\n'+JSON.stringify({opponent:game.matchView.opponentName,won:game.matchView.won,tickets:store.tickets,labels:tl?.labels})
+}
+async function start(){
+ if(scene==='pack')document.querySelector('[data-sfx="tear"]').click()
+ else if(scene==='squad')document.querySelector('.optimize').click()
+ else if(scene==='finding'){store.pendingTier=50;go('matchmaking')}
+ else if(scene==='toss')go('toss')
+ else if(scene==='rank'){const p=game.matchView.promotions.find(p=>p.reward.tickets);store.rankUpView={label:p.label,reward:p.reward};store.overlay='rankup'}
+ else if(scene==='jackpot'){game.runSeasonDraw(true);store.overlay='draw'}
+ else if(scene==='victory'){tl.progress(1,false).pause()}
+ else tl?.play()
+ status.textContent='RECORDING '+scene
+}
+async function next(){if(scene==='pack')document.querySelector('.card-hit')?.click();else if(scene==='toss')document.querySelector('.toss-actions .btn')?.click();else if(scene==='rank'){store.overlay=null;go('rank');await nextTick();document.querySelector('.next-reward')?.scrollIntoView({block:'start'})}}
+document.querySelector('#start').onclick=()=>start().catch(e=>status.textContent='ERROR '+e.stack)
+document.querySelector('#next').onclick=()=>next().catch(e=>status.textContent='ERROR '+e.stack)
+prepare().catch(e=>status.textContent='ERROR '+e.stack)
+</script></body></html>

@@ -566,6 +566,35 @@ export const CASES = [
     }
   },
 
+  {
+    id: 'rankup/gold-league', screen: 'home', scope: '.ru', wait: 2200,
+    setup () { resetStore(); store.rank = { score: 8, tierIndex: 2, subtier: 3, peakNodes: ['b3','b2','b1','s3','s2','s1'] }; store.tickets = 10; store.diamonds = 5100; store.rankUpView = { label: 'Gold III', reward: { tickets: 10, diamonds: 100 } }; store.overlay = 'rankup' },
+    async act ({ sleep }) {
+      const canvas = document.querySelector('.ru canvas'), pixels = canvas?.toDataURL()
+      await sleep(150)
+      if (!canvas || canvas.toDataURL() === pixels) throw new Error('promotion particles must move')
+      if (document.querySelector('.ru-tier').textContent !== 'Gold III' || document.querySelector('.ru-path > span').textContent !== 'Silver I') throw new Error('promotion must show the real previous and new ranks')
+      if (!document.querySelector('.ru-ticket').textContent.includes('+10') || !document.querySelector('.ru-diamonds').textContent.includes('+100')) throw new Error('both milestone rewards must be visible')
+      const root = document.querySelector('.ru')
+      if (root.scrollHeight > root.clientHeight + 1) throw new Error('promotion must fit the viewport')
+    }
+  },
+  {
+    id: 'rankup/silver-reduced', screen: 'home', scope: '.ru',
+    setup () { reset(); setReduced(true); store.rankUpView = { label: 'Silver III', reward: { tickets: 3 } }; store.overlay = 'rankup' },
+    act () { if (document.querySelector('.ru-tier').textContent !== 'Silver III' || document.querySelector('.ru-shine').style.opacity !== '0') throw new Error('reduced motion must show the completed promotion') }
+  },
+  {
+    id: 'rankup/dismiss-no-double-credit', screen: 'home',
+    setup () { resetStore(); store.tickets = 10; store.rankUpView = { label: 'Gold III', reward: { tickets: 10, diamonds: 100 } }; store.overlay = 'rankup' },
+    async act ({ click, nextTick }) {
+      const before = JSON.stringify([store.cash,store.diamonds,store.tickets,store.rank,store.history])
+      await click('.ru-go'); await nextTick()
+      if (store.overlay || store.rankUpView || JSON.stringify([store.cash,store.diamonds,store.tickets,store.rank,store.history]) !== before) throw new Error('closing promotion modified game rewards')
+      if (document.querySelector('.phone .screen').inert) throw new Error('closing promotion left the game inert')
+    }
+  },
+
   /* ------------------------------------------------ Cards */
   { id: 'cards/sparse', screen: 'cards', setup () { reset() } },
   { id: 'cards/filter-owned', screen: 'cards', setup () { reset() }, async act ({ click }) {
