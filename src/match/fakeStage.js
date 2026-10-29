@@ -12,7 +12,7 @@ export function createFakeStage (home, away) {
   }
   const parts = {
     ball: el(), pitch: el(), flash: el(), shock: el(), trail: el(),
-    pkIntro: { root: el(), body: el(), progress: el() },
+    pkIntro: { root: el(), body: el(), progress: el(), visual: el(), sweep: el() },
     cutin: { root: el(), bg: el(), body: el(), text: el(), streaks: el(), tint: el() },
     pk: {
       root: el(), bg: el(), vig: el(), head: el(), faceoff: el(), goal: el(),

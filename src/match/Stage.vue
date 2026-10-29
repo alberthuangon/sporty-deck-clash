@@ -120,12 +120,21 @@
     </div>
 
     <div class="pk-intro" ref="pkIntroEl" role="status" aria-label="Penalty shootout transition">
+      <i class="pi-sweep" ref="pkIntroSweepEl" aria-hidden="true"></i>
       <div class="pi-body" ref="pkIntroBodyEl">
-        <div class="pi-kicker">FULL TIME · ALL SQUARE</div>
-        <div class="pi-score">{{ scoreHome }} <span>:</span> {{ scoreAway }}</div>
-        <h2>Penalty<br />Shootout</h2>
-        <p>Level after 90 minutes.<br />The match will be decided from the spot.</p>
-        <div class="pi-track" aria-hidden="true"><i ref="pkIntroProgressEl"></i></div>
+        <div class="pi-kicker"><span>90′</span> FULL TIME · ALL SQUARE</div>
+        <h2><span>THE DECIDING MOMENT</span>Penalty Shootout</h2>
+        <div class="pi-matchup">
+          <div class="pi-team home"><DuelCrest :label="homeIsMe ? 'SK' : homeName.slice(0,2).toUpperCase()" /><span class="pi-name"><i></i>{{ homeName }}</span></div>
+          <div class="pi-tally"><div class="pi-score">{{ scoreHome }} <span>:</span> {{ scoreAway }}</div><span class="pi-level">AFTER 90 MINUTES</span></div>
+          <div class="pi-team away"><DuelCrest :label="homeIsMe ? awayName.slice(0,2).toUpperCase() : 'SK'" /><span class="pi-name"><i></i>{{ awayName }}</span></div>
+        </div>
+        <div class="pi-visual" ref="pkIntroVisualEl" aria-hidden="true">
+          <svg viewBox="0 0 200 72" fill="none"><defs><pattern id="pi-net" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M7 0H0V7" stroke="#bcd8e4" stroke-opacity=".2" stroke-width=".7"/></pattern></defs><path d="M34 49V6h132v43" stroke="#8daab9" stroke-width="1.5"/><path d="m34 6-10 10v41m142-51 10 10v41" stroke="#7f9da9" stroke-opacity=".5"/><path d="M24 57V16h152v41Z" fill="url(#pi-net)" stroke="#dcecf3" stroke-width="2"/><path d="M14 59h172M59 67h82" stroke="#7de9b4" stroke-opacity=".25"/></svg>
+          <img :src="introFootball" width="640" height="640" alt="" />
+        </div>
+        <p>Decided from the spot.</p>
+        <div class="pi-countdown"><span>FIRST KICK COMING UP</span><div class="pi-track" aria-hidden="true"><i ref="pkIntroProgressEl"></i></div></div>
       </div>
     </div>
 
@@ -206,6 +215,8 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import PlayerArt from '../components/PlayerArt.vue'
+import DuelCrest from '../components/DuelCrest.vue'
+import introFootball from '../assets/kickoff-art/football.webp'
 import CardFace from '../components/CardFace.vue'
 import { SLOTS, basePos } from './stageModel.js'
 
@@ -263,6 +274,7 @@ const pkEl = ref(null)
 const pkIntroEl = ref(null)
 const pkIntroBodyEl = ref(null)
 const pkIntroProgressEl = ref(null)
+const pkIntroVisualEl = ref(null), pkIntroSweepEl = ref(null)
 const pkVigEl = ref(null)
 const pkHeadEl = ref(null)
 const pkFaceEl = ref(null)
@@ -327,7 +339,7 @@ const api = {
       ball: pkBallEl.value, stamp: pkStampEl.value
     }
   },
-  pkIntro: () => ({ root: pkIntroEl.value, body: pkIntroBodyEl.value, progress: pkIntroProgressEl.value }),
+  pkIntro: () => ({ root: pkIntroEl.value, body: pkIntroBodyEl.value, progress: pkIntroProgressEl.value, visual: pkIntroVisualEl.value, sweep: pkIntroSweepEl.value }),
   setPk: (shooter, keeper, label, board, side) => {
     pkShooter.value = shooter; pkKeeper.value = keeper
     pkLabel.value = label || ''
@@ -674,15 +686,16 @@ onMounted(() => { /* refs are live from here on */ })
 .fi-bg.home{background:radial-gradient(ellipse at 50% 30%,#a82b3355,transparent 65%),linear-gradient(180deg,#101824d9,#080f19f2),url('../assets/shop-art/stadium.webp') center/cover}.fi-bg.away{background:radial-gradient(ellipse at 50% 30%,#285a9c55,transparent 65%),linear-gradient(180deg,#101824d9,#080f19f2),url('../assets/shop-art/stadium.webp') center/cover}.fi-body{gap:10px;padding:15px}.fi-emblem{width:50px;height:56px;color:#d9c083}.fi-emblem svg{width:100%;height:100%}.fi-tag{font-size:10px;letter-spacing:.23em}.fi-score{width:100%;justify-content:center;gap:12px}.fi-score b{font-size:39px;white-space:nowrap;flex:none}.fi-team{width:90px;min-width:0;overflow-wrap:anywhere;font-size:12px}.fi-win{font-size:27px;max-width:100%}.fi-pk{font-size:11px}
 @media(max-width:350px){.board{padding:12px 12px 8px;gap:5px}.nm{font-size:10px}.side.me .nm::after{content:''}.sc{font-size:27px}.pitch{margin:12px;height:220px}.pk-faceoff{padding-left:12px;padding-right:12px;gap:8px}.pk-slot,.pk-card{width:96px}.pk-slot{flex-basis:96px}.ci-card-slot{width:76px}.fi-score{gap:7px}.fi-score b{font-size:32px}.fi-team{width:76px;font-size:10px}.fi-win{font-size:24px}}
 
-/* A readable bridge between the final whistle and the first penalty. */
-.pk-intro { position: absolute; inset: 0; visibility: hidden; pointer-events: none; z-index: 33; background: radial-gradient(ellipse at 50% 48%,#1d725b30,transparent 70%),linear-gradient(180deg,#0b1829f5,#07111cf5),url('../assets/shop-art/stadium.webp') center/cover; }
-.pi-body { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 18px; text-align: center; }
-.pi-kicker { color: #b4c7d9; font-size: 9px; font-weight: 800; letter-spacing: .16em; }
-.pi-score { font-size: 29px; font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.pi-score span { color: #8ea3b9; padding: 0 9px; }
-.pi-body h2 { font-size: 33px; font-weight: 900; line-height: 1.02; letter-spacing: -.035em; color: #e9f9f1; text-shadow: 0 0 25px #51efa72b; }
-.pi-body p { margin: 1px 0 0; color: #c0cfdd; font-size: 11px; line-height: 1.6; }
-.pi-track { width: 100px; height: 3px; background: #c8e4d522; border-radius: 99px; overflow: hidden; margin-top: 5px; }
-.pi-track i { display: block; height: 100%; background: #70eab0; transform-origin: left; }
-@media (max-width: 350px) { .pi-body { gap: 8px; padding: 15px; } .pi-body h2 { font-size: 30px; } .pi-body p { font-size: 10px; } }
+/* The transition stays within the stage and on the protected intro clock. */
+.pk-intro { position:absolute; inset:0; visibility:hidden; overflow:hidden; pointer-events:none; z-index:33; background:radial-gradient(ellipse at 50% 75%,#29786624,transparent 65%),linear-gradient(180deg,#071524e8,#081320bb 55%,#07121ff0),url('../assets/matchmaking-art/stadium.webp') center 60%/cover; }
+.pi-sweep { position:absolute; inset:0; pointer-events:none; opacity:0; background:linear-gradient(115deg,transparent 40%,#d2f9e323 50%,transparent 60%); background-size:250% 100%; }
+.pi-body { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:14px 22px; text-align:center; }
+.pi-kicker { display:flex; align-items:center; gap:7px; color:#bed1df; font-size:8px; font-weight:800; letter-spacing:.12em; min-height:20px; }.pi-kicker > span { display:inline-flex; align-items:center; justify-content:center; min-width:27px; height:20px; border:1px solid #bba46688; border-radius:5px; background:#a5832f12; color:#f4db9e; font-size:9px; letter-spacing:0; }
+.pi-body h2 { display:flex; flex-direction:column; gap:4px; font-size:30px; font-weight:900; line-height:1.05; letter-spacing:-.045em; color:#f3f9fd; text-shadow:0 2px 10px #0008; }.pi-body h2 > span { font-size:8px; font-weight:750; color:#dbbf7f; letter-spacing:.2em; line-height:1.2; }
+.pi-matchup { display:grid; grid-template-columns:minmax(0,1fr) 108px minmax(0,1fr); align-items:center; gap:6px; width:100%; max-width:344px; padding:9px 12px; min-height:84px; border:1px solid #a3b9c64a; border-radius:13px; background:linear-gradient(125deg,#2b4151aa,#132636b0); box-shadow:inset 0 1px 0 #ffffff08; }
+.pi-team { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }.pi-team :deep(.duel-crest) { width:35px; }.pi-team :deep(b) { font-size:15px; }.pi-name { display:flex; align-items:center; justify-content:center; gap:4px; color:#e3edf5; font-size:10px; line-height:1.25; font-weight:700; overflow-wrap:anywhere; max-width:100%; }.pi-name i { width:5px; height:7px; flex:none; border-radius:1px; }.pi-team.home .pi-name i { background:var(--home); }.pi-team.away .pi-name i { background:var(--away); }
+.pi-tally { display:flex; flex-direction:column; gap:5px; align-items:center; }.pi-score { font-size:34px; font-weight:900; line-height:1; font-variant-numeric:tabular-nums; color:#f4f9ff; white-space:nowrap; }.pi-score span { color:#8fa9bc; padding:0 5px; font-size:25px; }.pi-level { color:#b3c8d7; font-size:6px; letter-spacing:.08em; font-weight:700; }
+.pi-visual { position:relative; width:180px; height:55px; flex:none; }.pi-visual svg { position:absolute; inset:0; width:100%; height:100%; filter:drop-shadow(0 1px 5px #89c7b91a); }.pi-visual img { position:absolute; left:calc(50% - 14px); bottom:-1px; width:28px; height:28px; object-fit:contain; filter:drop-shadow(0 5px 5px #0008); }
+.pi-body p { margin:0; color:#c2d4e1; font-size:11px; line-height:1.4; }.pi-countdown { display:flex; flex-direction:column; align-items:center; gap:6px; }.pi-countdown > span { color:#8db9aa; font-size:7px; font-weight:750; letter-spacing:.14em; }.pi-track { width:124px; height:3px; background:#a0bcbd26; border-radius:99px; overflow:hidden; }.pi-track i { display:block; height:100%; background:linear-gradient(90deg,#49ce92,#a8f5cf); transform-origin:left; }
+@media(max-width:350px) { .pi-body { padding:12px 14px; gap:7px; }.pi-body h2 { font-size:27px; }.pi-matchup { grid-template-columns:minmax(0,1fr) 90px minmax(0,1fr); padding:8px 10px; }.pi-name { font-size:9px; }.pi-score { font-size:31px; }.pi-visual { height:49px; }.pi-body p { font-size:10px; } }
 </style>

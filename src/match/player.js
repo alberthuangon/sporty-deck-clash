@@ -363,6 +363,8 @@ export function resetStage (stage) {
     gsap.set(intro.root, { visibility: 'hidden' })
     gsap.set(intro.body, { clearProps: 'all' })
     gsap.set(intro.progress, { scaleX: 0 })
+    if (intro.visual) gsap.set(intro.visual, { clearProps: 'all' })
+    if (intro.sweep) gsap.set(intro.sweep, { opacity: 0 })
   }
   for (const side of ['home', 'away']) {
     for (const slot of SLOTS) {
@@ -581,6 +583,8 @@ export function buildPkIntro (stage, beat = BEAT) {
   tl.set(intro.root, { visibility: 'visible' }, 0)
   fromTo(tl, intro.body, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .28, ease: 'power2.out' }, 0)
   fromTo(tl, intro.progress, { scaleX: 0 }, { scaleX: 1, duration: beat.pkIntro - .25, ease: 'none' }, 0)
+  if (intro.visual) fromTo(tl, intro.visual, { opacity: 0, y: 7, scale: .94 }, { opacity: 1, y: 0, scale: 1, duration: .36, ease: 'power2.out' }, .03)
+  if (intro.sweep) fromTo(tl, intro.sweep, { opacity: 0, backgroundPosition: '130% 0%' }, { opacity: .55, backgroundPosition: '-70% 0%', duration: 1.5, ease: 'sine.inOut' }, .06)
   tl.to(intro.body, { opacity: 0, y: -6, duration: .22, ease: 'power1.in' }, beat.pkIntro - .22)
   tl.set(intro.root, { visibility: 'hidden' }, beat.pkIntro)
   return tl
