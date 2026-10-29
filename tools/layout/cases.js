@@ -884,6 +884,18 @@ export const CASES = [
     }
   },
   {
+    id: 'history/compact-layout', screen: 'history', setup () { reset(); richCollection(); settledMatch({ wantWin: true, seed: 3 }) },
+    async act ({ click }) {
+      await click('.row')
+      const content = document.querySelector('.detail-scroll')
+      if (content.querySelector('time') || !content.querySelector('.detail-score .goals-panel')) throw new Error('compact history still has timestamp or separated goals')
+      const sections = ['.detail-hero','.detail-score','.saved-squad','.settlement'].map(s => content.querySelector(s).getBoundingClientRect())
+      if (sections.some((r, i) => i && r.top < sections[i-1].bottom - .5)) throw new Error('history information order is wrong')
+      if (innerHeight >= 740 && content.scrollHeight > content.clientHeight + 1) throw new Error('collapsed history requires scrolling')
+      if (content.querySelector('details[open]')) throw new Error('supplementary history info should begin collapsed')
+    }
+  },
+  {
     id: 'history/expanded', screen: 'history', setup () { reset(); richCollection(); settledMatch({ wantWin: true, seed: 3 }) },
     async act ({ click }) {
       await click('.row'); const y = document.querySelector('.history-actions').getBoundingClientRect().y
