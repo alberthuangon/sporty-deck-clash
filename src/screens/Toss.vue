@@ -1,9 +1,9 @@
 <template>
-  <div class="to">
+  <div class="to" :class="{ 'kickoff-starting': starting }">
     <div class="toss-content scroll">
     <header class="flow-heading"><span class="eyebrow">THE FINAL CALL</span><h1>Let the coin decide.</h1><p>Home or away. Your match starts here.</p></header>
     <div class="coin-stage" :class="{ landed: revealed }" aria-hidden="true">
-      <div class="coin" :class="[{ done: revealed }, revealed ? side : '']" data-sfx="toss">
+      <div ref="coinEl" class="coin" :class="[{ done: revealed }, revealed ? side : '']" data-sfx="toss">
         <span class="coin-face front"><svg class="coin-engraving" viewBox="0 0 128 128"><text v-if="revealed" x="64" y="33" class="coin-brand">SPORTYKICKDECK</text><text x="64" y="86" class="coin-letter">{{ revealed ? (iAmHome ? 'H' : 'A') : '?' }}</text><text v-if="revealed" x="64" y="104" class="coin-label">{{ revealed ? (iAmHome ? 'HOME' : 'AWAY') : 'MATCHDAY' }}</text></svg></span>
         <span class="coin-face back"><svg class="coin-engraving" viewBox="0 0 128 128"><circle cx="64" cy="64" r="32" fill="none" stroke="currentColor" stroke-width="2"/><path d="m64 46 17 12-6 20H53l-6-20 17-12Zm0-14v14M34 54l13 4m34 0 13-4M45 90l8-12m22 0 8 12" fill="currentColor" fill-opacity=".75" stroke="currentColor" stroke-width="2"/></svg></span>
       </div>
@@ -36,15 +36,19 @@
 
     </div>
     <div class="toss-actions">
-    <button v-if="revealed" class="btn btn-cta" @click="go('match')">Kick off</button>
+    <button v-if="revealed" class="btn btn-cta" :disabled="starting" :aria-busy="starting" @click="kickOff">{{ starting ? 'Starting…' : 'Kick off' }}</button>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { go, runToss, matchView, branchQuotes } from '../game.js'
+import { runToss, matchView, branchQuotes } from '../game.js'
 
+import { beginKickoff } from '../ui/kickoff.js'
+import football from '../assets/kickoff-art/football.webp'
+
+const starting = ref(false), coinEl = ref(null)
 const revealed = ref(false)
 const iAmHome = ref(false)
 const quotes = computed(() => branchQuotes())
@@ -62,8 +66,19 @@ function lockClass (isHomeCell) {
   return isHomeCell === iAmHome.value ? 'hit' : 'dead'
 }
 
+function kickOff () {
+  if (!revealed.value || starting.value) return
+  const rect = coinEl.value.getBoundingClientRect(), phone = coinEl.value.closest('.phone').getBoundingClientRect()
+  const viewport = coinEl.value.closest('.toss-content').getBoundingClientRect()
+  const visible = rect.top >= viewport.top && rect.bottom <= viewport.bottom
+  const size = visible ? rect.width : 128
+  const origin = visible ? { x: rect.left - phone.left, y: rect.top - phone.top, size } : { x: (phone.width - size) / 2, y: phone.height * .4 - size / 2, size }
+  starting.value = beginKickoff(origin, iAmHome.value)
+}
+
 let t
 onMounted(() => {
+  const image = new Image(); image.src = football
   const res = runToss()
   iAmHome.value = res.aIsHome
   t = setTimeout(() => { revealed.value = true }, 1600)
@@ -72,6 +87,7 @@ onUnmounted(() => clearTimeout(t))
 </script>
 
 <style scoped>
+.to.kickoff-starting .coin,.to.kickoff-starting .coin-shadow { opacity:0; }
 .to {
   display:flex;
   flex-direction:column;
@@ -205,11 +221,12 @@ p {
 }
 .locks {
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:12px;
   width:100%;
 }
 .lock {
+  min-width:0;
   background:linear-gradient(135deg,#2b3946,#19222e);
   border:1px solid #677a8e66;
   border-radius:14px;
@@ -360,7 +377,7 @@ p {
 }
 /* Keep kick-off reachable on a short phone while the details can scroll. */
 .to { padding: 0; gap: 0; }
-.toss-content { display: flex; flex-direction: column; align-items: center; gap: 16px; min-height: 0; padding: 26px 20px; scrollbar-width: none; }
+.toss-content { width: 100%; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 16px; min-height: 0; padding: 26px 20px; scrollbar-width: none; }
 .toss-content::-webkit-scrollbar { display: none; }
 .toss-content > * { flex-shrink: 0; }
 .toss-actions { flex: none; height: 77px; padding: 14px 20px 18px; width: 100%; background: #141e2b; border-top: 1px solid #8c9aae22; }

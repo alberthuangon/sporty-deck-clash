@@ -20,6 +20,7 @@
            commit and never read; this is what it was waiting for. It sits
            above the tab bar on purpose — a takeover that leaves the tabs
            tappable is not a takeover (PRD §6.7.2). -->
+      <KickoffTransition v-if="kickoff.active" />
       <DrawResult v-if="store.overlay === 'draw'" />
       <RankUp v-else-if="store.overlay === 'rankup'" />
     </div>
@@ -32,6 +33,9 @@ import gsap from 'gsap'
 import { store, go, isTab, screenBack } from './store.js'
 import { canUpgrade, CATALOGUE } from './game.js'
 import TopBar from './components/TopBar.vue'
+import KickoffTransition from './components/KickoffTransition.vue'
+import { kickoff } from './ui/kickoff.js'
+import { reduced } from './ui/motion.js'
 import TabBar from './components/TabBar.vue'
 import DrawResult from './overlays/DrawResult.vue'
 import RankUp from './overlays/RankUp.vue'
@@ -99,10 +103,10 @@ function back () {
 
 /* GSAP-driven screen transition (also proves the GSAP wiring) */
 function onEnter (el, done) {
-  gsap.fromTo(el, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.2, ease: 'power2.out', onComplete: done })
+  gsap.fromTo(el, { autoAlpha: 0, y: kickoff.active ? 0 : 10 }, { autoAlpha: 1, y: 0, duration: kickoff.active ? (reduced.value ? .12 : .16) : .2, ease: 'power2.out', onComplete: done })
 }
 function onLeave (el, done) {
-  gsap.to(el, { autoAlpha: 0, y: -6, duration: 0.12, ease: 'power1.in', onComplete: done })
+  gsap.to(el, { autoAlpha: 0, y: kickoff.active ? 0 : -6, duration: kickoff.active ? .08 : .12, ease: 'power1.in', onComplete: done })
 }
 
 /* hidden demo hatch: tap the title 5x to reach settings */

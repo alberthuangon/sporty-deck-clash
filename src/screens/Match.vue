@@ -1,13 +1,14 @@
 <template>
-  <div class="mt">
+  <div class="mt" :inert="celebrating || undefined">
     <div v-if="ctx.replay" class="replay-bar">REPLAY — nothing is being settled</div>
-    <Stage
+    <Stage v-show="!finished"
       ref="stageRef"
       :home="teams.home" :away="teams.away"
       :home-name="homeName" :away-name="awayName"
       :home-is-me="matchView.aIsHome"
     />
 
+    <template v-if="!finished">
     <div class="feed-title"><span>{{ finished ? 'MATCH HIGHLIGHTS' : 'LIVE COMMENTARY' }}</span><span class="live-indicator" :class="{ ended: finished }">{{ finished ? 'FULL TIME' : '● LIVE' }}</span></div>
     <div class="feed scroll" ref="feedEl" role="log" aria-label="Match commentary">
       <div v-for="(e,i) in feed" :key="i" class="ev" :class="e.cls">
@@ -22,6 +23,10 @@
         {{ ctx.replay ? 'Done' : 'Result' }}
       </button>
     </div>
+    </template>
+    <MatchSummary v-if="finished && !celebrating" :match="matchView" :script="summaryScript"
+                  :home-name="homeName" :away-name="awayName" :replay="summaryReplay" :busy="proceeding" @proceed="toResult" />
+    <VictoryCelebration v-if="celebrating" :replay="summaryReplay" @done="celebrating = false" />
   </div>
 </template>
 
@@ -29,6 +34,8 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import gsap from 'gsap'
 import Stage from '../match/Stage.vue'
+import MatchSummary from '../components/MatchSummary.vue'
+import VictoryCelebration from '../components/VictoryCelebration.vue'
 import { store, go, ctx, matchView, finishMatch, endReplay } from '../game.js'
 import { compileMatch, resetStage, startIdle, stopIdle } from '../match/player.js'
 import { reduced } from '../ui/motion.js'
@@ -38,6 +45,19 @@ const stageRef = ref(null)
 const feedEl = ref(null)
 const feed = ref([])
 const finished = ref(false)
+const celebrating = ref(false)
+const summaryScript = ref(null)
+const summaryReplay = ref(false)
+const proceeding = ref(false)
+let suppressCelebration = false
+function completePresentation () {
+  if (finished.value) return
+  summaryScript.value = ctx.script
+  summaryReplay.value = ctx.replay
+  stopIdle()
+  finished.value = true
+  celebrating.value = matchView.won && !suppressCelebration && !reduced.value
+}
 let compiled = null
 let protectedPacing = false
 
@@ -106,7 +126,7 @@ onMounted(async () => {
   }
 
   compiled = compileMatch(api, ctx.script, ctx.result, BEAT, {
-    onSfx, onRate, onPacing, onEvent: push, onEnd: () => { finished.value = true }
+    onSfx, onRate, onPacing, showFinal: false, onEvent: push, onEnd: completePresentation
   })
 
   // compileMatch already applied any cap compression; fast match multiplies it
@@ -135,6 +155,9 @@ onUnmounted(() => {
 
 function skip () {
   if (!compiled) return
+  // Skip ends live play, but a live win still gets its celebration.
+  suppressCelebration = ctx.replay
+  if (finished.value) { celebrating.value = false; return }
   gsap.killTweensOf(compiled.timeline)
   compiled.timeline.progress(1, false).pause()
   gsap.killTweensOf(compiled.timeline)
@@ -144,13 +167,15 @@ function skip () {
   ctx.script.events.forEach(push)
   if (ctx.script.penalty) ctx.script.penalty.events.forEach(push)
   compiled.applyEnd()
-  finished.value = true
+  completePresentation()
 }
 
 watch(reduced, value => { if (value && compiled) { stopIdle(); skip() } })
 
 function toResult () {
-  if (ctx.replay) { endReplay(); return }    // settles nothing, scores nothing
+  if (proceeding.value || !finished.value || celebrating.value) return
+  proceeding.value = true
+  if (summaryReplay.value) { endReplay(); return }    // settles nothing, scores nothing
   finishMatch()
   go('result')
 }

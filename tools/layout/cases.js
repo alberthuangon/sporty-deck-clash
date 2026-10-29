@@ -11,6 +11,7 @@
    allowed to be different lengths. `scope` narrows a group's comparison to one
    region, for screens that agree down to a point and then deliberately differ. */
 
+import gsap from 'gsap'
 import { store, resetStore } from '../../src/store.js'
 import * as game from '../../src/game.js'
 import { uiRunning, uiLast, UI_TIME, setReduced } from '../../src/ui/motion.js'
@@ -207,6 +208,27 @@ function assertFaceoff (event) {
   if (timeline().labels['penalty-first-camera'] - timeline().labels['penalty-first-faceoff'] < 2.39) throw new Error('face-off hold too short')
 }
 
+
+function prepareLiveOutcome (won, wantPk = true) {
+  reset(); richCollection()
+  for (let i = 0; i < 300; i++) {
+    game.abandonMatch()
+    flow('match', { wantPk, seed: 11 + i * 7 })
+    if (game.matchView.won === won && game.matchView.wentToPk === wantPk) return
+  }
+  throw new Error('could not prepare match outcome')
+}
+function endPresentation () { timeline().pause().progress(1, false) }
+function assertMatchSummary (won) {
+  const summary = document.querySelector('.match-summary')
+  if (!summary || document.querySelector('.vc')) throw new Error('summary not visible by itself')
+  if (summary.querySelector('h1').textContent !== (won ? 'VICTORY' : 'DEFEAT')) throw new Error('wrong summary outcome')
+  const digits = [...summary.querySelectorAll('.primary-score b')].map(el => Number(el.textContent))
+  const m = game.matchView
+  if (digits[0] !== (m.wentToPk ? m.pkHome : m.homeScore) || digits[1] !== (m.wentToPk ? m.pkAway : m.awayScore)) throw new Error('wrong primary score')
+  if (summary.querySelector('details').open) throw new Error('highlights should start collapsed')
+}
+
 /* Seek the payout roll to a named point. uiLast keeps the timeline alive
    after it lands, so this works whether or not the roll already finished —
    which is the only way to get a reproducible frame under virtual time.
@@ -364,6 +386,82 @@ export const CASES = [
     screen: 'home',
     wait: 1800,
     setup () { reset(); richCollection(); store.tickets = 0; game.runSeasonDraw(false); store.overlay = 'draw' }
+  },
+
+  {
+    id: 'draw/celebration', screen: 'home', scope: '.dr',
+    setup () { reset(); richCollection(); store.tickets = 22; game.runSeasonDraw(true); store.overlay = 'draw' },
+    async act ({ sleep }) {
+      const cash = store.cash, season = store.jackpot.season, saved = JSON.stringify(store.jackpot.lastDraw)
+      const root = document.querySelector('.dr'), canvas = root.querySelector('canvas')
+      if (!canvas || !root.classList.contains('motion')) throw new Error('jackpot celebration did not start')
+      const pixels = canvas.toDataURL(), beam = getComputedStyle(root.querySelector('.dr-beams'), '::before').transform
+      await sleep(300)
+      if (pixels === canvas.toDataURL() || beam === getComputedStyle(root.querySelector('.dr-beams'), '::before').transform) throw new Error('jackpot light or particles are static')
+      for (const sibling of root.parentElement.children) if (sibling !== root && !sibling.inert) throw new Error('background remains interactive behind draw')
+      if (document.activeElement !== root) throw new Error('draw does not own keyboard focus')
+      await sleep(900)
+      if (root.querySelector('.dr-prize .count-up').textContent !== '₦' + store.jackpot.lastDraw.prize.toLocaleString()) throw new Error('jackpot count-up did not reach prize')
+      if (store.cash !== cash || store.jackpot.season !== season || JSON.stringify(store.jackpot.lastDraw) !== saved) throw new Error('presentation modified draw settlement')
+    }
+  },
+  {
+    id: 'draw/reduced', screen: 'home', scope: '.dr',
+    setup () { reset(); richCollection(); store.tickets = 22; game.runSeasonDraw(true); store.overlay = 'draw'; setReduced(true) },
+    act () {
+      const root = document.querySelector('.dr')
+      if (root.classList.contains('motion') || root.querySelector('canvas') || root.querySelector('.count-up').textContent !== '₦' + store.jackpot.lastDraw.prize.toLocaleString()) throw new Error('reduced motion draw must show full prize immediately')
+    }
+  },
+  {
+    id: 'draw/large-prize', screen: 'home', scope: '.dr', wait: 1600,
+    setup () { reset(); richCollection(); store.tickets = 22; store.jackpot.pool = 999999999; game.runSeasonDraw(true); store.overlay = 'draw' }
+  },
+  {
+    id: 'draw/single-ticket', screen: 'home', scope: '.dr',
+    setup () { reset(); richCollection(); store.tickets = 1; game.runSeasonDraw(false); store.overlay = 'draw' },
+    act () { if (document.querySelector('.dr-row.odds dd').firstChild.textContent !== '1 in 48,310') throw new Error('single-ticket odds mismatch') }
+  },
+  {
+    id: 'draw/reopen-safe', screen: 'home', scope: '.dr',
+    setup () { reset(); richCollection(); store.tickets = 22; game.runSeasonDraw(true); store.overlay = 'draw' },
+    async act ({ click, sleep }) {
+      const root = document.querySelector('.dr'), saved = JSON.stringify(store.jackpot.lastDraw), cash = store.cash, diamonds = store.diamonds, season = store.jackpot.season
+      await click('.dr-go'); await sleep(100)
+      if (document.querySelector('.dr') || document.querySelector('.topbar').inert || document.querySelector('.screen').inert || store.flags.seenDraw !== season - 1) throw new Error('draw did not dismiss cleanly')
+      game.openLastSeasonDraw(); await sleep(400)
+      if (!document.querySelector('.dr') || document.querySelector('.dr') === root || store.cash !== cash || store.diamonds !== diamonds || store.jackpot.season !== season || JSON.stringify(store.jackpot.lastDraw) !== saved) throw new Error('reopening drew or paid again')
+    }
+  },
+  {
+    id: 'draw/keyboard-close', screen: 'home',
+    setup () { reset(); richCollection(); store.tickets = 22; game.runSeasonDraw(false); store.overlay = 'draw' },
+    async act ({ nextTick }) {
+      const root = document.querySelector('.dr')
+      root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }))
+      if (document.activeElement !== root.querySelector('.dr-go')) throw new Error('draw focus escaped dialog')
+      root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })); await nextTick()
+      if (document.querySelector('.dr') || document.querySelector('.screen').inert) throw new Error('Escape did not close draw or restore background')
+    }
+  },
+  {
+    id: 'draw/focus-return', screen: 'home',
+    setup () { reset(); richCollection(); store.tickets = 22; game.runSeasonDraw(false); store.overlay = null },
+    async act ({ click, nextTick }) {
+      const opener = document.querySelector('.jp-link'); opener.focus(); await click('.jp-link')
+      if (!document.querySelector('.dr') || document.activeElement !== document.querySelector('.dr')) throw new Error('draw did not receive focus')
+      await click('.dr-go'); await nextTick()
+      if (document.activeElement !== opener || opener.closest('[inert]')) throw new Error('closing draw did not restore opener focus')
+    }
+  },
+  {
+    id: 'draw/early-close', screen: 'home',
+    setup () { reset(); richCollection(); store.tickets = 22; game.runSeasonDraw(true); store.overlay = 'draw' },
+    async act ({ click, sleep }) {
+      const cash = store.cash
+      await click('.dr-go'); await sleep(1200)
+      if (document.querySelector('.dr') || document.querySelector('.draw-particles') || store.cash !== cash || document.querySelector('.screen').inert) throw new Error('closing during animation leaked presentation or paid twice')
+    }
   },
 
   /* ------------------------------------------------ Rank-up takeover
@@ -753,6 +851,77 @@ export const CASES = [
     act: ({ click }) => click('.row')
   },
 
+  {
+    id: 'history/filters', screen: 'history', setup () { reset(); richCollection(); settledMatch({ wantWin: true, seed: 3 }); settledMatch({ wantWin: false, seed: 5 }) },
+    async act ({ click }) {
+      const before = JSON.stringify(store.history), cash = store.cash
+      await click('[data-filter="wins"]')
+      if (document.querySelectorAll('.row').length !== store.history.filter(m => m.won).length || document.querySelector('.row.lost')) throw new Error('win filter mismatch')
+      await click('[data-filter="losses"]')
+      if (document.querySelectorAll('.row').length !== store.history.filter(m => !m.won).length || document.querySelector('.row.won')) throw new Error('loss filter mismatch')
+      if (![...document.querySelectorAll('.record-net')].every(el => el.textContent.startsWith('−₦'))) throw new Error('loss net needs a minus sign')
+      await click('[data-filter="all"]')
+      if (store.cash !== cash || JSON.stringify(store.history) !== before) throw new Error('history filtering changed saved data')
+    }
+  },
+  {
+    id: 'history/filter-empty', screen: 'history', setup () { reset(); richCollection(); settledMatch({ wantWin: true, seed: 3 }) },
+    async act ({ click }) { await click('[data-filter="losses"]'); if (!document.querySelector('.history-empty') || document.querySelector('.row')) throw new Error('empty filter state missing') }
+  },
+  {
+    id: 'history/cards-full', screen: 'history', setup () { reset(); richCollection(); settledMatch({ wantWin: true, seed: 3 }); store.ownedCards.G1.level = 9 },
+    async act ({ click, nextTick, sleep }) {
+      await click('.row'); await nextTick(); await sleep(100)
+      const cards = [...document.querySelectorAll('.deck .cf')]
+      if (cards.length !== 4) throw new Error('history squad is incomplete')
+      cards.forEach((card, i) => {
+        const image = card.querySelector('.cf-art img'), box = card.querySelector('.cf-art').getBoundingClientRect(), r = image.getBoundingClientRect()
+        if (!card.classList.contains('cf-full') || Math.abs(box.width-r.width) > 1 || Math.abs(box.height-r.height) > 1 || getComputedStyle(image).objectFit !== 'cover') throw new Error('history player art does not fill card')
+        const saved = store.history[0].decks.you[['gk','df','mf','fw'][i]]
+        if (card.querySelector('.cf-lv').textContent !== 'Lv.' + saved.level) throw new Error('history uses current level instead of saved level')
+      })
+      document.querySelector('.detail-scroll').scrollTop = document.querySelector('.saved-squad').offsetTop - 80
+    }
+  },
+  {
+    id: 'history/expanded', screen: 'history', setup () { reset(); richCollection(); settledMatch({ wantWin: true, seed: 3 }) },
+    async act ({ click }) {
+      await click('.row'); const y = document.querySelector('.history-actions').getBoundingClientRect().y
+      await click('.bet-details summary'); await click('.goals-panel summary')
+      if (!document.querySelector('.bet-details').open || !document.querySelector('.goals-panel').open) throw new Error('detail disclosures did not open')
+      if (Math.abs(document.querySelector('.history-actions').getBoundingClientRect().y-y) > .1) throw new Error('expanding detail moved replay action')
+      if (document.querySelectorAll('.goal-row').length !== store.history[0].script.events.filter(e => e.type === 'GOAL').length) throw new Error('history goals missing')
+    }
+  },
+  {
+    id: 'history/back-position', screen: 'history', setup () { reset(); richCollection(); settledMatch({ wantWin: true, seed: 3 }); settledMatch({ wantWin: true, seed: 9 }); settledMatch({ wantWin: false, seed: 5 }); const originals = [...store.history]; store.history = Array.from({ length: 15 }, (_, i) => ({ ...originals[i % originals.length], id: 'history-scroll-' + i, at: Date.now() - i * 3600000 })) },
+    async act ({ click, nextTick }) {
+      await click('[data-filter="wins"]'); const list = document.querySelector('.history-list'); list.scrollTop = 140; const y = list.scrollTop; if (y < 100) throw new Error('fixture must actually scroll')
+      await click('.row'); await click('.back'); await nextTick()
+      if (Math.abs(document.querySelector('.history-list').scrollTop-y) > .1 || document.querySelector('[data-filter="wins"]').getAttribute('aria-pressed') !== 'true' || !document.activeElement.classList.contains('row')) throw new Error('back lost list position, filter or focus')
+    }
+  },
+  {
+    id: 'history/replay-safe', screen: 'history', setup () { reset(); richCollection(); settledMatch({ wantWin: false, seed: 5 }) },
+    async act ({ sleep, click }) {
+      await click('.row')
+      const cash = store.cash, history = JSON.stringify(store.history), rank = JSON.stringify(store.rank), stats = JSON.stringify(store.stats), script = JSON.stringify(store.history[0].script)
+      await click('.history-actions .btn'); await sleep(450)
+      if (!game.ctx.replay || JSON.stringify(game.ctx.script) !== script || document.querySelector('.vc')) throw new Error('replay did not use saved script')
+      await click('.ctrl .btn'); await click('[data-result-action]'); await sleep(450)
+      if (store.currentScreen !== 'history' || game.ctx.replay) throw new Error('replay did not return to history')
+      if (store.cash !== cash || JSON.stringify(store.history) !== history || JSON.stringify(store.rank) !== rank || JSON.stringify(store.stats) !== stats) throw new Error('replay modified settlement')
+    }
+  },
+  {
+    id: 'history/detail-no-pk', screen: 'history', setup () { reset(); richCollection(); settledMatch({ wantPk: false, wantWin: false, seed: 5 }) },
+    async act ({ click }) { await click('.row'); if (document.querySelector('.regular-score') || document.querySelector('.detail-score h2').textContent !== 'FULL TIME') throw new Error('non-penalty detail duplicated score') }
+  },
+  {
+    id: 'history/long-values', screen: 'history', setup () { reset(); richCollection(); settledMatch({ wantWin: true, seed: 3 }); const m = store.history[0]; m.opponent.handle = 'LagosChampionshipUnited'; m.net = 9876543; m.payout = m.stake + m.net },
+    act: ({ click }) => click('.row')
+  },
+
   /* ------------------------------------------------ Betting flow */
   { id: 'tierselect/locked', screen: 'tierselect', setup () { reset() } },
   { id: 'tierselect/unlocked', screen: 'tierselect', setup () { reset(); richCollection() } },
@@ -870,7 +1039,172 @@ export const CASES = [
     setup () { reset(); richCollection(); flow('toss') }
   },
 
+  {
+    id: 'toss/kickoff-transfer', screen: 'toss', scope: '.ko', wait: 2250,
+    setup () { reset(); richCollection(); flow('toss') },
+    async act ({ click, raf }) {
+      const cash = store.cash, script = JSON.stringify(game.ctx.script)
+      await click('.toss-actions .btn'); await raf()
+      const tl = gsap.globalTimeline.getChildren().find(t => t.data === 'kickoff')
+      if (!tl) throw new Error('kick-off timeline missing')
+      tl.pause(); tl.time(.46, false); await raf()
+      if (document.querySelector('.ko').dataset.phase !== 'football' || !document.querySelector('.toss-actions .btn').disabled) throw new Error('coin did not become football or button not locked')
+      if (store.cash !== cash || JSON.stringify(game.ctx.script) !== script) throw new Error('visual transition changed match or balance')
+    }
+  },
+  {
+    id: 'toss/kickoff-complete', screen: 'match',
+    setup () { reset(); richCollection(); flow('match') },
+    async act ({ sleep }) {
+      game.go('toss'); await sleep(2300)
+      const cash = store.cash, script = JSON.stringify(game.ctx.script), count = store.history.length
+      const button = document.querySelector('.toss-actions .btn'); button.click(); button.click()
+      await sleep(1300)
+      if (store.currentScreen !== 'match' || document.querySelector('.ko') || document.querySelector('.screen').inert) throw new Error('kick-off did not hand control to Live Match')
+      if (store.cash !== cash || store.history.length !== count || JSON.stringify(game.ctx.script) !== script) throw new Error('kick-off redrew or settled match')
+    }
+  },
+  {
+    id: 'toss/kickoff-skip', screen: 'match',
+    setup () { reset(); richCollection(); flow('match') },
+    async act ({ sleep, click }) {
+      game.go('toss'); await sleep(2300); await click('.toss-actions .btn'); await click('.ko'); await sleep(500)
+      if (store.currentScreen !== 'match' || document.querySelector('.ko') || document.querySelector('.screen').inert) throw new Error('skipping kick-off left a blocker')
+    }
+  },
+  {
+    id: 'toss/kickoff-reduced', screen: 'match',
+    setup () { reset(); richCollection(); flow('match'); setReduced(true) },
+    async act ({ sleep, click }) {
+      game.go('toss'); await sleep(2300); await click('.toss-actions .btn')
+      if (document.querySelector('.ko-token') || !document.querySelector('.ko-reduced')) throw new Error('reduced motion still flies the football')
+      await sleep(700)
+      if (store.currentScreen !== 'match' || document.querySelector('.ko')) throw new Error('reduced handoff did not finish')
+    }
+  },
+  {
+    id: 'toss/kickoff-cancel', screen: 'home',
+    setup () { reset(); richCollection(); flow('toss') },
+    async act ({ sleep, click }) {
+      game.go('toss'); await sleep(2300); await click('.toss-actions .btn'); await sleep(50); game.go('home'); await sleep(1100)
+      if (store.currentScreen !== 'home' || document.querySelector('.ko') || document.querySelector('.screen').inert) throw new Error('leaving kick-off caused a late redirect or blocked input')
+    }
+  },
+
   /* ------------------------------------------------ Match */
+
+  {
+    id: 'match/ending-win-celebration', screen: 'match', setup () { prepareLiveOutcome(true) },
+    async act ({ nextTick, sleep }) {
+      const cash = store.cash, records = store.history.length
+      endPresentation(); await nextTick(); await sleep(850)
+      const overlay = document.querySelector('.vc.running')
+      if (!overlay || document.querySelector('.match-summary') || document.querySelector('[data-result-action]')) throw new Error('winner must see celebration before summary')
+      const canvas = overlay.querySelector('canvas'), first = canvas.toDataURL()
+      await sleep(160)
+      if (first === canvas.toDataURL()) throw new Error('victory particle field is static')
+      if (store.cash !== cash || store.history.length !== records) throw new Error('celebration settled money early')
+      overlay.dataset.capture = 'ready'
+    }
+  },
+  {
+    id: 'match/ending-win-auto', screen: 'match', setup () { prepareLiveOutcome(true); store.settings.fastMatch = true },
+    async act ({ nextTick, sleep }) { endPresentation(); await nextTick(); await sleep(4300); assertMatchSummary(true) }
+  },
+  {
+    id: 'match/ending-win-dismiss', screen: 'match', setup () { prepareLiveOutcome(true) },
+    async act ({ nextTick, sleep, click }) { endPresentation(); await nextTick(); await sleep(850); await click('.victory-continue'); await sleep(280); assertMatchSummary(true) }
+  },
+  {
+    id: 'match/ending-loss-pk', screen: 'match', setup () { prepareLiveOutcome(false) },
+    async act ({ nextTick }) { const cash = store.cash; endPresentation(); await nextTick(); assertMatchSummary(false); if (store.cash !== cash) throw new Error('summary settled money early') }
+  },
+  {
+    id: 'match/ending-loss-normal', screen: 'match', setup () { prepareLiveOutcome(false, false) },
+    async act ({ nextTick }) { endPresentation(); await nextTick(); assertMatchSummary(false); if (document.querySelector('.regular-score')) throw new Error('non-penalty result shows duplicate score') }
+  },
+  {
+    id: 'match/ending-win-normal', screen: 'match', setup () { prepareLiveOutcome(true, false) },
+    async act ({ nextTick, sleep, click }) { endPresentation(); await nextTick(); await sleep(850); await click('.victory-continue'); await sleep(280); assertMatchSummary(true) }
+  },
+  {
+    id: 'match/ending-highlights', screen: 'match', setup () { prepareLiveOutcome(false) },
+    async act ({ nextTick, click }) {
+      endPresentation(); await nextTick(); const before = document.querySelector('[data-result-action]').getBoundingClientRect()
+      await click('.summary-highlights summary')
+      if (!document.querySelector('.summary-highlights').open) throw new Error('highlights did not expand')
+      const count = game.ctx.script.events.filter(e => e.type === 'GOAL').length + game.ctx.script.penalty.events.length
+      if (document.querySelectorAll('.highlight-list li').length !== count) throw new Error('missing summary highlights')
+      const after = document.querySelector('[data-result-action]').getBoundingClientRect()
+      if (Math.abs(before.y - after.y) > .1) throw new Error('highlights moved the result action')
+    }
+  },
+  {
+    id: 'match/ending-win-skip', screen: 'match', setup () { prepareLiveOutcome(true) },
+    async act ({ click, sleep }) {
+      const cash = store.cash, count = store.history.length
+      await click('.ctrl .btn')
+      if (!document.querySelector('.vc') || document.querySelector('.match-summary')) throw new Error('live win Skip must show victory first')
+      if (store.cash !== cash || store.history.length !== count) throw new Error('Skip celebration settled early')
+      await sleep(950); document.querySelector('.vc').dataset.skipCapture = 'ready'
+    }
+  },
+  {
+    id: 'match/ending-reduced', screen: 'match', setup () { prepareLiveOutcome(true); setReduced(true) },
+    act () { assertMatchSummary(true) }
+  },
+  {
+    id: 'match/ending-replay-win', screen: 'match', setup () { reset(); richCollection(); game.startReplay(settledMatch({ wantPk: true, wantWin: true })) },
+    async act ({ nextTick, sleep, click }) {
+      const cash = store.cash, played = store.stats.played, count = store.history.length
+      endPresentation(); await nextTick(); await sleep(850); await click('.victory-continue'); await sleep(280); assertMatchSummary(true)
+      if (!document.querySelector('[data-result-action]').textContent.trim().startsWith('Done')) throw new Error('replay summary should return to history')
+      if (store.cash !== cash || store.stats.played !== played || store.history.length !== count) throw new Error('replay changed settlement')
+    }
+  },
+  {
+    id: 'match/ending-replay-win-skip', screen: 'match', setup () { reset(); richCollection(); game.startReplay(settledMatch({ wantPk: true, wantWin: true })) },
+    async act ({ click }) {
+      const cash = store.cash, count = store.history.length, played = store.stats.played
+      await click('.ctrl .btn'); assertMatchSummary(true)
+      if (store.cash !== cash || store.history.length !== count || store.stats.played !== played) throw new Error('replay Skip changed settlement')
+    }
+  },
+  {
+    id: 'match/ending-replay-loss', screen: 'match', setup () { reset(); richCollection(); game.startReplay(settledMatch({ wantPk: true, wantWin: false })) },
+    async act ({ nextTick }) { endPresentation(); await nextTick(); assertMatchSummary(false) }
+  },
+  {
+    id: 'match/ending-settlement', screen: 'result', setup () { prepareLiveOutcome(true) },
+    async act ({ sleep, click }) {
+      game.go('match'); await sleep(550); await click('.ctrl .btn'); await click('.victory-continue'); await sleep(280); assertMatchSummary(true)
+      const cash = store.cash, count = store.history.length, played = store.stats.played
+      const button = document.querySelector('[data-result-action]')
+      button.click(); button.click(); await sleep(550)
+      if (store.currentScreen !== 'result' || store.history.length !== count + 1 || store.stats.played !== played + 1) throw new Error('result action must settle exactly once')
+      if (store.cash !== cash + game.matchView.payout || store.pendingBet) throw new Error('result payout mismatch')
+    }
+  },
+  {
+    id: 'match/ending-replay-return', screen: 'history', setup () { reset(); richCollection(); game.startReplay(settledMatch({ wantPk: true, wantWin: false })) },
+    async act ({ sleep, click }) {
+      game.go('match'); await sleep(550); await click('.ctrl .btn'); assertMatchSummary(false)
+      const cash = store.cash, played = store.stats.played, count = store.history.length
+      await click('[data-result-action]'); await sleep(550)
+      if (store.currentScreen !== 'history' || game.ctx.replay || document.querySelector('.vc')) throw new Error('replay did not return cleanly to history')
+      if (store.cash !== cash || store.stats.played !== played || store.history.length !== count) throw new Error('replay return changed settlement')
+    }
+  },
+  {
+    id: 'match/ending-leave', screen: 'home', setup () { prepareLiveOutcome(true) },
+    async act ({ nextTick, sleep }) {
+      game.go('match'); await sleep(550); endPresentation(); await nextTick(); await sleep(750)
+      if (!document.querySelector('.vc')) throw new Error('no celebration to clean up')
+      game.go('home'); await sleep(400)
+      if (document.querySelector('.vc')) throw new Error('celebration leaked after navigation')
+    }
+  },
+
 
   {
     id: 'match/faceoff-before-entry', screen: 'match', setup () { reset(); richCollection(); flow('match') },
@@ -915,7 +1249,7 @@ export const CASES = [
       await seekMatchBeat('penalty-first-faceoff', .55, raf)
       const cash = store.cash
       await click('.ctrl .btn')
-      if (getComputedStyle(document.querySelector('.final')).visibility !== 'visible' || getComputedStyle(document.querySelector('.pk')).visibility !== 'hidden') throw new Error('Skip did not clear face-off')
+      if (!!document.querySelector('.vc') !== game.matchView.won || (!game.matchView.won && !document.querySelector('.match-summary'))) throw new Error('Skip did not respect live win celebration')
       if (store.cash !== cash) throw new Error('Skip settled the bet')
     }
   },
@@ -953,7 +1287,7 @@ export const CASES = [
       const cash = store.cash
       await click('.ctrl .btn')
       if (getComputedStyle(document.querySelector('.pk-intro')).visibility !== 'hidden') throw new Error('Skip left intro visible')
-      if (getComputedStyle(document.querySelector('.final')).visibility !== 'visible') throw new Error('Skip did not reach result')
+      if (!!document.querySelector('.vc') !== game.matchView.won || (!game.matchView.won && !document.querySelector('.match-summary'))) throw new Error('Skip did not respect live win celebration')
       if (store.cash !== cash) throw new Error('Skip settled the bet')
     }
   },
@@ -961,7 +1295,7 @@ export const CASES = [
     id: 'match/transition-reduced', screen: 'match', setup () { reset(); richCollection(); flow('match'); setReduced(true) },
     act () {
       if (getComputedStyle(document.querySelector('.pk-intro')).visibility !== 'hidden') throw new Error('reduced motion left the intro active')
-      if (getComputedStyle(document.querySelector('.final')).visibility !== 'visible') throw new Error('reduced motion did not reach final state')
+      if (!document.querySelector('.match-summary') || document.querySelector('.vc')) throw new Error('reduced motion did not reach summary')
     }
   },
   {

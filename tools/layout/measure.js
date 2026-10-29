@@ -15,7 +15,7 @@ const TOL = 0.75          // subpixel noise from fractional layout
    with an obligation, checked below: a declared takeover has to actually
    cover the whole frame. An exemption with nothing asked in return is a hole
    in the gate, not an exception to it. */
-const TAKEOVERS = ['.dr', '.ru']
+const TAKEOVERS = ['.dr', '.ru', '.vc', '.ko']
 
 /* Allowed to cover the chrome bars: the takeovers above, plus a bottom sheet
    with a scrim and a toast. Anything else that reaches the TopBar or the
@@ -56,7 +56,7 @@ function blends (el, cs) {
     !el.closest('svg')
 }
 
-const DECORATIONS = ['.ci-streaks', '.ci-bg', '.ci-tint', '.pk-bg', '.pk-vig', '.fi-bg', '.turf', '.sweep']
+const DECORATIONS = ['.ci-streaks', '.ci-bg', '.ci-tint', '.pk-bg', '.pk-vig', '.fi-bg', '.turf', '.sweep', '.ko-token', '.ko-ball', '.ko-coin', '.ko-ring', '.ko-glow']
 const decorative = el => DECORATIONS.some(sel => el.matches(sel))
 
 function clips (cs, axis) {
@@ -74,6 +74,10 @@ function scrolls (cs, axis) {
 function invisible (el) {
   for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
     const cs = getComputedStyle(n)
+    // Closed native disclosures retain descendant geometry in some engines;
+    // only their summary is painted, regardless of the child's display rule.
+    const parent = n.parentElement
+    if (parent?.tagName === 'DETAILS' && !parent.open && n !== [...parent.children].find(child => child.tagName === 'SUMMARY')) return true
     if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) return true
   }
   return false
@@ -382,7 +386,7 @@ export function measure (scope) {
 
   const layered = [...phone.querySelectorAll('*')]
     .filter(el => !invisible(el) && opaque(getComputedStyle(el)) && paintLayer(el) > 0)
-    .map(el => ({ el, z: paintLayer(el), rect: el.getBoundingClientRect(), name: label(el),
+    .map(el => ({ el, z: paintLayer(el), rect: paintedRect(el, el.getBoundingClientRect()), name: label(el),
       declared: CHROME_OVERLAYS.some(sel => el.matches(sel)) }))
 
   for (const sel of TAKEOVERS) {

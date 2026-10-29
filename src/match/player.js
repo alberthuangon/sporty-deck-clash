@@ -621,7 +621,7 @@ function clockRun (tl, stage, from, to, at, duration, label) {
 }
 
 export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
-  const { onSfx = null, onRate = null, onEnd = null, onEvent = null, onPacing = null } = cbs
+  const { onSfx = null, onRate = null, onEnd = null, onEvent = null, onPacing = null, showFinal = true } = cbs
   const announce = (ev, at) => { if (onEvent) master.call(() => onEvent(ev), null, at) }
   const home = result.home
   const away = result.away
@@ -796,8 +796,14 @@ export function compileMatch (stage, script, result, beat = BEAT, cbs = {}) {
   const pkScore = script.penalty
     ? { home: script.penalty.homeGoals, away: script.penalty.awayGoals }
     : null
-  master.add(buildFinalWhistle(stage, { winSide, winText, pk: pkScore }, beat, onSfx), t)
-  t += beat.final
+  if (showFinal) {
+    master.add(buildFinalWhistle(stage, { winSide, winText, pk: pkScore }, beat, onSfx), t)
+    t += beat.final
+  } else {
+    // The app owns the full-screen celebration and accessible summary. Do
+    // not flash the legacy stage result before that presentation begins.
+    master.call(() => applyEnd(), null, t)
+  }
 
   /* Skip jumps the playhead, and GSAP does not reliably fire the .call()s it
      passes on a jump — so the end state is defined here as data and applied
