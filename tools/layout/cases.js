@@ -31,6 +31,13 @@ function seeded (seed, fn) {
 
 export function reset () {
   resetStore()
+  // Historical layout fixtures keep their original baseline. Fresh-demo cases
+  // below exercise the actual new-player defaults directly.
+  store.cash = 5000; store.diamonds = 1000; store.tickets = 0
+  store.rank = { score: 40, tierIndex: 0, subtier: 3, peakNodes: [] }
+  store.history = []; store.stats = { played: 0, won: 0, pkWon: 0 }
+  store.ownedCards = { G1: { level: 1, shards: 0 }, F1: { level: 1, shards: 0 }, F2: { level: 1, shards: 0 }, F3: { level: 1, shards: 0 }, F12: { level: 0, shards: 1 } }
+  store.flags.firstJackpotWinPending = false
   setReduced(false)
   game.abandonMatch()
   store.currentScreen = 'home'
@@ -327,7 +334,7 @@ export const CASES = [
   /* ------------------------------------------------ Home */
   { id: 'home/fresh', screen: 'home', setup () { reset() } },
   { id: 'home/arena-selected', screen: 'home', setup () { reset() }, act () { document.querySelector('.arena:not(:disabled)').click() } },
-  { id: 'home/arenas-unlocked', screen: 'home', setup () { reset(); store.rank = { score: 0, tierIndex: 1, subtier: 3, peakNodes: ['b3', 'b2', 'b1'] }; store.pendingTier = 200 } },
+  { id: 'home/arenas-unlocked', screen: 'home', setup () { reset(); store.rank = { score: 0, tierIndex: 2, subtier: 3, peakNodes: ['b3', 'b2', 'b1', 's3', 's2', 's1'] }; store.pendingTier = 200 } },
   { id: 'home/large-jackpot', screen: 'home', setup () { reset(); store.jackpot.pool = 999999999; store.tickets = 48310 } },
   {
     id: 'home/with-history',
@@ -932,6 +939,63 @@ export const CASES = [
   {
     id: 'history/long-values', screen: 'history', setup () { reset(); richCollection(); settledMatch({ wantWin: true, seed: 3 }); const m = store.history[0]; m.opponent.handle = 'LagosChampionshipUnited'; m.net = 9876543; m.payout = m.stake + m.net },
     act: ({ click }) => click('.row')
+  },
+
+  {
+    id: 'demo/fresh-home', screen: 'home', setup () { resetStore(); setReduced(false); game.abandonMatch() },
+    act () {
+      const h = store.history
+      const pro = game.TIERS.find(t => t.fee === 200)
+      if (game.tierUnlocked(pro)) throw new Error('Pro Arena must be locked at Silver II')
+      store.rank.subtier = 1
+      if (game.tierUnlocked(pro)) throw new Error('Pro Arena must stay locked at Silver I')
+      store.rank.tierIndex = 2; store.rank.subtier = 3
+      if (!game.tierUnlocked(pro)) throw new Error('Pro Arena must unlock at Gold III')
+      store.rank.tierIndex = 1; store.rank.subtier = 2
+      if (store.cash !== 10000 || store.diamonds !== 5000 || store.rank.tierIndex !== 1 || store.rank.subtier !== 2) throw new Error('new demo balances or Silver II rank incorrect')
+      if (h.length !== 5 || h.filter(m => m.won).length !== 3 || new Set(h.map(m => m.opponent.handle)).size !== 5 || new Set(h.map(m => m.homeScore+':'+m.awayScore)).size !== 5 || new Set(h.map(m => m.at)).size !== 5) throw new Error('seeded history variation mismatch')
+      const rarities = game.CATALOGUE.filter(c => store.ownedCards[c.id]?.level > 0).map(c => c.rarity).sort().join('')
+      if (rarities !== 'CCCCELR' || store.stats.played !== 5 || store.stats.won !== 3) throw new Error('initial collection or stats mismatch')
+    }
+  },
+  { id: 'demo/fresh-history', screen: 'history', setup () { resetStore(); setReduced(false); game.abandonMatch() } },
+  { id: 'demo/fresh-cards', screen: 'cards', setup () { resetStore(); setReduced(false); game.abandonMatch() } },
+  {
+    id: 'demo/history-replays', screen: 'history', setup () { resetStore(); setReduced(false); game.abandonMatch() },
+    async act ({ sleep, click }) {
+      const records = [...store.history], cash = store.cash, diamonds = store.diamonds, saved = JSON.stringify(store.history), stats = JSON.stringify(store.stats)
+      for (const record of records) {
+        game.startReplay(record); await sleep(450); await click('.ctrl .btn')
+        if (document.querySelector('.vc')) throw new Error('seeded history Skip should not celebrate')
+        await click('[data-result-action]'); await sleep(400)
+      }
+      if (store.cash !== cash || store.diamonds !== diamonds || JSON.stringify(store.history) !== saved || JSON.stringify(store.stats) !== stats) throw new Error('seeded replay modified the saved demo')
+    }
+  },
+  {
+    id: 'demo/first-jackpot', screen: 'home', scope: '.dr', setup () { resetStore(); setReduced(false); game.abandonMatch() },
+    async act ({ click, nextTick }) {
+      game.openLastSeasonDraw(); await nextTick()
+      const saved = JSON.stringify(store.jackpot.lastDraw), cash = store.cash
+      if (!store.jackpot.lastDraw.won || !store.jackpot.lastDraw.myTickets || cash !== 10000 + store.jackpot.lastDraw.prize || store.flags.firstJackpotWinPending) throw new Error('first jackpot was not won and credited exactly once')
+      await click('.dr-go'); game.openLastSeasonDraw(); await nextTick()
+      if (store.cash !== cash || JSON.stringify(store.jackpot.lastDraw) !== saved) throw new Error('first jackpot paid twice on reopen')
+    }
+  },
+  {
+    id: 'shop/odds-scroll-stable', screen: 'shop', setup () { reset() },
+    async act ({ click, raf }) {
+      const scroller = document.querySelector('.shop-scroll'); scroller.scrollTop = 220
+      await click('[data-odds="gold"]'); await raf()
+      const dialog = document.querySelector('.sheet'), initial = dialog.getBoundingClientRect(), scroll = scroller.scrollTop
+      const sheet = document.querySelector('.sheet-in'); sheet.scrollTop = sheet.scrollHeight
+      dialog.dispatchEvent(new WheelEvent('wheel', { deltaY: 700, bubbles: true })); await raf()
+      const after = dialog.getBoundingClientRect()
+      if (Math.abs(initial.y-after.y) > .1 || Math.abs(initial.height-after.height) > .1 || scroller.scrollTop !== scroll || (!scroller.inert || getComputedStyle(scroller).pointerEvents !== 'none')) throw new Error('drop-rate dialog or background moves while scrolling')
+      await click('.close-odds'); await raf()
+      if (scroller.scrollTop !== scroll || document.querySelector('.sheet') || document.activeElement !== document.querySelector('[data-odds="gold"]')) throw new Error('drop-rate close lost background position or focus')
+      scroller.scrollTop = 0
+    }
   },
 
   /* ------------------------------------------------ Betting flow */

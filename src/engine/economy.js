@@ -138,13 +138,15 @@ export function packRates (pack) {
    So rank is not a risk to Pro Arena's reachability, it is the first thing
    that gives it any.
 
+   On 2026-10-29 Albert moved Pro Arena access to Gold III.
+
    unlockRank is a LADDER INDEX (tierIndex * 3 + (3 - subtier)), the same
    figure the reward road is indexed by, so there is one notion of "how far
    up" rather than a second one invented here. */
 export const TIERS = [
   { id: 't10', fee: 10, name: 'Practice Arena', unlockRank: 0 },   // Bronze III, the start
   { id: 't50', fee: 50, name: 'Home Arena', unlockRank: 1 },       // Bronze II, one win
-  { id: 't200', fee: 200, name: 'Pro Arena', unlockRank: 3 }       // Silver III, four wins
+  { id: 't200', fee: 200, name: 'Pro Arena', unlockRank: 6 }       // Gold III
 ]
 
 /* the inverse of ladderIndex, so a requirement can be printed in the words

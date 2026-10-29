@@ -340,7 +340,7 @@ Tap the top-bar title 5× for demo settings:
 | Force PK scenario | on | Conditions the draw on the tie diagonal of the same matrix, so the shootout always appears. The PK winner is still one sample. |
 | Force a win | **off** | Presenter aid: redraws until the player wins so the promotion beat lands on stage. **This rigs the outcome** — payout and rank figures stop representing the model while it is on. |
 | Fast match | off | 3× timeline, for rehearsals. |
-| Reset demo state | — | Wipes localStorage, back to 80 ◆ / ₦5,000 / Bronze III 40-50. |
+| Reset demo state | — | Wipes localStorage, back to 5,000 diamonds / ₦10,000 / Silver II, with 5 replayable matches (3 wins, 2 losses), one extra Rare/Epic/Legendary, and a guaranteed first jackpot win. |
 
 Neither override is used by `npm run sim`; the gate always samples truthfully.
 

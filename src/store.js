@@ -1,34 +1,31 @@
 import { reactive, ref, watch } from 'vue'
 import { SHARD_COST } from './engine/economy.js'
+import { createDemoHistory } from './demo/history.js'
 
 const KEY = 'skd.v1'
 
-/* Demo starting state — guide §6.
-   Okonkwo arrives with its shard requirement already collected so that the
-   "shards full -> UPGRADE lights up" beat fires the moment the pack reveals it.
-   Shard counts always follow the PRD §6.3 curve (E Lv.1->2 = 1 shard). */
+/* New demo balances are independent of the illustrative settled history.
+   Resetting creates fresh snapshots and makes only the first draw a winner. */
 function initialState () {
+  const history = createDemoHistory()
   return {
-    /* 1000, up from 80, and the old number was worse than it looked: the
-       cheapest pack is 100 diamonds (economy.js), so a new player could not
-       open ANY pack, not merely not a gold one. 1000 buys two gold packs at
-       450 each, which is wider than the ask ("should be able to afford a gold
-       pack") and leaves the first pull a choice rather than a wait. */
-    diamonds: 1000,
-    cash: 5000,
+    diamonds: 5000,
+    cash: 10000,
     tickets: 0,
 
-    // level 0 = card not owned yet, shards already collected
+    // Four starters plus one Rare, Epic and Legendary for the demo.
     ownedCards: {
       G1: { level: 1, shards: 0 },
       F1: { level: 1, shards: 0 },
       F2: { level: 1, shards: 0 },
       F3: { level: 1, shards: 0 },
-      F12: { level: 0, shards: SHARD_COST.E[1] }
+      G3: { level: 1, shards: 0 },
+      F12: { level: 1, shards: SHARD_COST.E[1] },
+      F15: { level: 1, shards: 0 }
     },
     deck: { gk: 'G1', fw: 'F1', mf: 'F2', df: 'F3' },
 
-    rank: { score: 40, tierIndex: 0, subtier: 3, peakNodes: [] },
+    rank: { score: 0, tierIndex: 1, subtier: 2, peakNodes: ['b3', 'b2', 'b1', 's3'] },
 
     tasks: [
       { id: 't1', title: 'Log in to SportyBet', reward: 10, done: true, claimed: true, period: 'Daily' },
@@ -36,7 +33,7 @@ function initialState () {
       { id: 't3', title: 'Play 1 round of Instant Virtuals', reward: 20, done: false, claimed: false, period: 'Daily', progress: '0/1' }
     ],
 
-    stats: { played: 0, won: 0, pkWon: 0 },
+    stats: { played: history.length, won: history.filter(m => m.won).length, pkWon: history.filter(m => m.won && m.wentToPk).length },
 
     /* Jackpot, PRD §6.7. Two lifecycles that must not be merged into one
        card: the standing state (pool / countdown / my tickets) is always
@@ -54,7 +51,7 @@ function initialState () {
        Each row carries its own script and deck snapshots, which is what makes
        replay free: the match was always "decide, then perform", so replaying
        is just handing the same script back to the same player. */
-    history: [],
+    history,
 
     // navigation
     currentScreen: 'home',
@@ -92,7 +89,7 @@ function initialState () {
 
     /* seenDraw holds the season whose draw has already been opened. A draw
        the player has not opened is sealed, and stays sealed across reloads. */
-    flags: { packOpened: false, seenRankUp: false, seenDraw: 0 }
+    flags: { packOpened: false, seenRankUp: false, seenDraw: 0, firstJackpotWinPending: true }
   }
 }
 
@@ -105,6 +102,7 @@ function load () {
     // shallow-merge so new fields added during development don't break saves
     const merged = { ...base, ...saved, settings: { ...base.settings, ...(saved.settings || {}) } }
 
+    merged.flags = { ...base.flags, ...(saved.flags || {}), firstJackpotWinPending: saved.flags?.firstJackpotWinPending ?? (!saved.jackpot?.lastDraw && !saved.flags?.seenDraw) }
     merged.jackpot = { ...base.jackpot, ...(merged.jackpot || {}) }
     /* the draw date is a fixed demo value, so a save left alone for a week
        would count down past zero. Roll it forward rather than show "Draw in

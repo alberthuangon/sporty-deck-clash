@@ -73,7 +73,7 @@
     <div class="card pad">
       <div class="rs muted" style="margin-bottom:10px">
         Wipes localStorage and returns to the demo starting state
-        (80 ◆ · ₦5,000 · Bronze III 40/50).
+        (5,000 diamonds · ₦10,000 · Silver II · 5 saved matches).
       </div>
       <button class="btn" style="background:var(--red)" @click="doReset">Reset demo state</button>
     </div>

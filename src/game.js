@@ -322,7 +322,7 @@ export function openLastSeasonDraw () {
   if (sealed) {
     enterTheDraw()
     const pick = store.settings.jackpotDemo
-    runSeasonDraw(pick === 'won' ? true : pick === 'lost' ? false : Math.random() < 0.5)
+    runSeasonDraw(store.flags.firstJackpotWinPending ? true : pick === 'won' ? true : pick === 'lost' ? false : Math.random() < 0.5)
   }
   store.overlay = 'draw'
 }
@@ -380,6 +380,7 @@ export function runSeasonDraw (won) {
     seed
   }
   if (won) store.cash += j.pool
+  store.flags.firstJackpotWinPending = false
 
   // season N+1 starts now: soft reset, fresh pool, fresh road
   j.season += 1

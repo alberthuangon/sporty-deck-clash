@@ -1,5 +1,6 @@
 <template>
-  <div class="scroll shop-page">
+  <div class="shop-page">
+    <div class="shop-scroll scroll" :inert="!!showOdds" :class="{ 'odds-open': showOdds }">
     <section :inert="!!showOdds" :aria-hidden="showOdds ? true : undefined" class="shop-hero" aria-labelledby="shop-title"><p class="shop-eyebrow">Player packs</p><h1 id="shop-title">Build your collection</h1><div class="hero-sub"><p>5 players in every pack</p><button class="collection-link" @click="go('cards')">{{ ownedCount }} / {{ CATALOGUE.length }} collected <span aria-hidden="true">›</span></button></div></section>
     <div class="shop-body" :inert="!!showOdds" :aria-hidden="showOdds ? true : undefined">
       <section v-for="p in PACKS" :key="p.id" class="pack" :class="p.id" :aria-labelledby="'pack-title-' + p.id">
@@ -19,8 +20,9 @@
       <section class="pity" aria-labelledby="pity-heading"><div class="pity-head"><h2 id="pity-heading">Pity preview</h2><span class="demo-label">Demo</span></div><div class="pity-examples"><div class="example epic"><PackCrest /><div><h3>Epic</h3><span>18 cards</span></div></div><div class="example legendary"><PackCrest /><div><h3>Legendary</h3><span>54 cards</span></div></div></div><p>Illustrative counters — not live progress.</p></section>
       <p class="duplicate-note"><span aria-hidden="true">ⓘ</span> Duplicate players become upgrade shards.</p>
     </div>
+    </div>
     <div v-if="showOdds" ref="sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="odds-heading" @click.self="closeOdds" @keydown.escape.stop.prevent="closeOdds" @keydown.tab="trapFocus">
-      <div class="sheet-in"><div class="sheet-handle" aria-hidden="true"></div><p class="shop-eyebrow">Pack probabilities</p><h2 id="odds-heading">{{ showOdds.name }} — drop rates</h2><p class="odds-caption">Average chance per card</p><div v-for="o in showOdds.odds" :key="o.rarity" class="orow"><span class="ok" :class="'rarity-' + o.rarity"><i aria-hidden="true"></i>{{ o.label }}</span><strong>{{ o.pct }}%</strong></div><p class="fine">Every pack contains {{ showOdds.cards }} cards, including one {{ RARITY[showOdds.guaranteedFrom[0]].label }}-or-better guaranteed card. These per-card rates include that guaranteed slot.</p><button ref="closeButton" class="btn close-odds" @click="closeOdds">Close</button></div>
+      <div class="sheet-in" tabindex="0" aria-label="Drop rate details"><div class="sheet-handle" aria-hidden="true"></div><p class="shop-eyebrow">Pack probabilities</p><h2 id="odds-heading">{{ showOdds.name }} — drop rates</h2><p class="odds-caption">Average chance per card</p><div v-for="o in showOdds.odds" :key="o.rarity" class="orow"><span class="ok" :class="'rarity-' + o.rarity"><i aria-hidden="true"></i>{{ o.label }}</span><strong>{{ o.pct }}%</strong></div><p class="fine">Every pack contains {{ showOdds.cards }} cards, including one {{ RARITY[showOdds.guaranteedFrom[0]].label }}-or-better guaranteed card. These per-card rates include that guaranteed slot.</p><button ref="closeButton" class="btn close-odds" @click="closeOdds">Close</button></div>
     </div>
   </div>
 </template>
@@ -38,10 +40,10 @@ const closeButton = ref(null)
 let oddsTrigger = null
 const ownedCount = computed(() => CATALOGUE.filter(c => owned(c.id)).length)
 function legendaryRate (p) { return p.odds.find(o => o.rarity === 'L')?.pct || 0 }
-function openOdds (pack, event) { oddsTrigger = event.currentTarget; showOdds.value = pack; nextTick(() => closeButton.value?.focus()) }
-function closeOdds () { showOdds.value = null; nextTick(() => oddsTrigger?.focus()) }
+function openOdds (pack, event) { oddsTrigger = event.currentTarget; showOdds.value = pack; nextTick(() => sheet.value?.querySelector('.sheet-in')?.focus({ preventScroll: true })) }
+function closeOdds () { showOdds.value = null; nextTick(() => oddsTrigger?.focus({ preventScroll: true })) }
 function trapFocus (event) {
-  const buttons = sheet.value?.querySelectorAll('button')
+  const buttons = sheet.value?.querySelectorAll('[tabindex="0"], button')
   if (!buttons?.length) return
   const first = buttons[0], last = buttons[buttons.length - 1]
   if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
@@ -57,7 +59,8 @@ function buy (p) {
 </script>
 
 <style scoped>
-.shop-page { background:#191e25; scrollbar-width:thin; scrollbar-color:#505966 transparent; }
+.shop-page { position:relative; min-height:0; background:#191e25; scrollbar-width:thin; scrollbar-color:#505966 transparent; }
+.shop-scroll { min-height:0; overscroll-behavior-y:contain; }.shop-scroll.odds-open { pointer-events:none; }
 .shop-hero { padding:19px 16px 13px; background:linear-gradient(180deg,#16202d22,#191e2522 65%,#191e25),url('../assets/shop-art/stadium.webp') center / cover; }
 .shop-eyebrow { margin:0; text-transform:uppercase; font-size:10px; font-weight:700; letter-spacing:.13em; color:#c3cddd; }
 .shop-hero h1 { font-size:25px; line-height:1.15; letter-spacing:-.03em; margin-top:6px; text-shadow:0 2px 12px #0008; }
@@ -103,7 +106,7 @@ function buy (p) {
 .duplicate-note { margin:0; min-height:28px; display:flex; align-items:center; justify-content:center; gap:7px; color:#b6c3d6; font-size:10px; }
 .duplicate-note > span { font-size:18px; }
 .sheet { position:absolute; inset:0; display:flex; align-items:flex-end; background:#060a11eb; z-index:40; }
-.sheet-in { width:100%; max-height:90%; overflow-y:auto; padding:9px 18px 18px; border-radius:16px 16px 0 0; border:1px solid #5e6a7c; background:linear-gradient(130deg,#303b49,#222b37); box-shadow:0 -10px 40px #0006; }
+.sheet-in { outline:none; overscroll-behavior:contain; width:100%; max-height:90%; overflow-y:auto; padding:9px 18px 18px; border-radius:16px 16px 0 0; border:1px solid #5e6a7c; background:linear-gradient(130deg,#303b49,#222b37); box-shadow:0 -10px 40px #0006; }
 .sheet-handle { width:38px; height:4px; margin:0 auto 16px; background:#8391a5; border-radius:8px; }
 .sheet-in h2 { font-size:20px; letter-spacing:-.02em; margin:5px 0; }
 .odds-caption { color:#bac7d9; font-size:11px; margin:0 0 12px; }
